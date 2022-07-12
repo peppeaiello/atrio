@@ -2,7 +2,7 @@
  * @Author: JerryK
  * @Date: 2021-09-18 21:32:13
  * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2022-06-28 09:32:59
+ * @LastEditTime: 2022-07-12 21:26:51
  * @Description: 
  * @FilePath: \CasaOS-UI\src\service\service.js
  */
@@ -10,18 +10,18 @@ import axios from 'axios'
 import qs from 'qs'
 import router from '@/router'
 import store from '@/store'
-// Set Post Headers
-axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
-axios.defaults.withCredentials = false;
-if (process.env.NODE_ENV === "dev") {
-    axios.defaults.baseURL = `${document.location.protocol}//${process.env.VUE_APP_DEV_IP}:${process.env.VUE_APP_DEV_PORT}/v1`;
-} else {
-    axios.defaults.baseURL = `/v1`
-}
+import { ToastProgrammatic as Toast } from 'buefy'
+
+const axiosBaseURL = (process.env.NODE_ENV === "dev") ? `${document.location.protocol}//${process.env.VUE_APP_DEV_IP}:${process.env.VUE_APP_DEV_PORT}/v1` : `/v1`
 
 //Create a axios instance, And set timeout to 30s
 const instance = axios.create({
-    timeout: 60000,
+    baseURL: axiosBaseURL,
+    timeout: 30000,
+    headers: {
+        "Content-Type": "application/json",
+    },
+    withCredentials: false,
 });
 
 const getLangFromBrowser = () => {
@@ -37,45 +37,68 @@ const getInitLang = () => {
 
 
 // Interception before request initiation
-instance.interceptors.request.use((config) => {
-    let token = ''
-    if (localStorage.getItem("user_token")) {
-        token = localStorage.getItem("user_token")
+instance.interceptors.request.use(
+    (config) => {
+        config.headers.common["Language"] = getInitLang()
+        const token = localStorage.getItem("user_token")
+        if (token) {
+            config.headers.Authorization = token
+            store.commit('setToken', token)
+        }
+        return config;
+    }, (error) => {
+        // Do something with request error
+        return Promise.reject(error)
     }
-    config.headers.Authorization = token
-    config.headers.common["Language"] = getInitLang()
-    store.commit('setToken', token)
-    return config;
-}, (error) => {
-    // Do something with request error
-    return Promise.reject(error)
-})
+)
 
 // Response interception
-instance.interceptors.response.use(response => {
-    return response;
-}, error => {
-    if (error.response) {
+instance.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    async (error) => {
+        const originalConfig = error.config;
+        if (originalConfig.url !== "/user/register" && error.response) {
+            // Access Token was expired
+            if (error.response.status === 401 && !originalConfig._retry) {
+                originalConfig._retry = true;
+                try {
+                    const refresh_token = localStorage.getItem("refresh_token")
+                    if (refresh_token) {
+                        const res = await instance.post("/user/refresh", {
+                            refreshToken: localStorage.getItem("refresh_token"),
+                        });
+                        // const { accessToken } = res.data;
+                        console.log(res.data);
+                    } else {
+                        router.replace({ //Jump to the 404 page
+                            path: '/404'
+                        })
+                    }
 
-        switch (error.response.status) {
-            case 401:
-                localStorage.removeItem('user_token') //Maybe the token is expired, clear it
-                router.replace({ //Jump to the login page
-                    path: '/login'
-                })
-                break;
-            case 404:
+
+                    // 这里要检测返回，如果能获取token继续，如果获取到错误则跳转到登录页面
+                    // store.commit('setToken', accessToken)
+                    // localStorage.setItem("user_token", accessToken)
+                    return instance(originalConfig);
+                } catch (_error) {
+                    return Promise.reject(_error);
+                }
+            } else if (error.response.status === 404) {
+                Toast.open('Toasty!')
+            } else if (error.response.status === 500) {
+                Toast.open('Toasty!')
                 store.commit('setServiceError', true);
-                break;
-            case 500:
-                break;
-        }
-    } else {
+            } else if (error.response.status === 502) {
+                store.commit('setServiceError', true);
+            }
 
-        store.commit('setServiceError', true);
+        }
+        return Promise.reject(error)
     }
-    return Promise.reject(error)
-})
+)
+
 
 const CancelToken = axios.CancelToken;
 // Wrapping of axios by request type
