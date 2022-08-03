@@ -2,7 +2,7 @@
  * @Author: JerryK
  * @Date: 2022-03-03 13:10:35
  * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2022-08-01 18:38:25
+ * @LastEditTime: 2022-08-03 13:53:30
  * @Description: 
  * @FilePath: /CasaOS-UI/src/components/filebrowser/sidebar/TreeList.vue
 -->
@@ -18,13 +18,14 @@
     </li>
     <li v-for="item in initFolders" :key="item.path">
       <div class="is-flex list-item new-list-item" :class="{'active':checkActive(item)}" @click="open(item.path)" v-if="item.visible">
-        <div class="cover mr-2 is-flex-shrink-0">
+        <div class="cover mr-2 is-flex-shrink-0 is-relative">
           <b-icon :pack="item.pack" :icon="item.icon" custom-size="casa-28px" class="casa-color-blue"></b-icon>
+          <div class="overlay-layer" v-if="checkSharevisibility(item)">
+            <b-icon :pack="item.pack" icon="share" custom-size="casa-10px" class="casa-color-green casa-shape-rounded casa-shape-12px"></b-icon>
+          </div>
         </div>
         <div class=" is-flex-grow-1">{{item.name}}</div>
-        <div class=" is-flex-shrink-0" v-if="checkSharevisibility(item)">
-          <b-icon :pack="item.pack" icon="share" custom-size="casa-14px" class="casa-color-green casa-shape-rounded casa-shape-16px"></b-icon>
-        </div>
+
       </div>
     </li>
 
@@ -179,5 +180,18 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss" scoped>
+.overlay-layer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+
+  .icon {
+    position: absolute;
+    right: -0.15rem;
+    bottom: -0.1rem;
+  }
+}
 </style>
