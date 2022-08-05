@@ -2,7 +2,7 @@
  * @Author: Jerryk jerry@icewhale.org
  * @Date: 2022-05-02 17:44:02
  * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2022-07-27 18:14:20
+ * @LastEditTime: 2022-08-05 15:26:14
  * @FilePath: /CasaOS-UI/src/components/settings/UpdateModal.vue
  * @Description: 
  * 
@@ -125,7 +125,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped >
+<style lang="scss" >
 .update-info-container {
   border-radius: 4px;
   overflow: hidden;
