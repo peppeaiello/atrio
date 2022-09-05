@@ -4,7 +4,7 @@ on:
   push:
     # tags:
     #   - v*
-    branches: [ "dev-0.3.6-ezreal" ]
+    branches: [ "main" ]
 # pull_request:
 #   branches: [ "dev-0.3.6-ezreal", "main" ]
 jobs:
