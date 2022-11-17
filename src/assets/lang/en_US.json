@@ -300,8 +300,6 @@
   "Address": "Address",
   "Performance": "Performance",
   "Please choose a location with enough storage space and stable connection.": "Please choose a location with enough storage space and stable connection.",
-  "Single Drive Storage": "Single Drive Storage",
-  "CasaOS reserves 1% of file space when creating storage in EXT4 format.": "CasaOS reserves 1% of file space when creating storage in EXT4 format.",
   "undefined": "undefined",
   "Apps Installation Location": "Apps Installation Location",
   "(Cannot be changed)": "(Cannot be changed)",
