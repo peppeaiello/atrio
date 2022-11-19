@@ -3,11 +3,11 @@
  * @Date: 2021-11-10 17:48:25
  * @LastEditors: Jerryk jerry@icewhale.org
  * @LastEditTime: 2022-07-25 19:19:02
- * @Description: 
+ * @Description:
  * @FilePath: /CasaOS-UI/src/components/syncthing/SyncBlock.vue
 -->
 <template>
-  <div class="column is-one-half">
+  <div class="column is-half">
     <div class="common-card">
 
       <div class="blur-background"></div>
