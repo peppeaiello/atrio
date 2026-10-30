@@ -83,6 +83,11 @@ Object.assign(app.config.globalProperties, {
 
 app.mount('#app')
 
+// Atrio 0.1.1 reloaded after an update with ?v=<version> in the address: drop it
+if (new URLSearchParams(window.location.search).has('v')) {
+	window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`)
+}
+
 // The browser may still run a cached build after an update (see plugins/reloadFresh.js).
 // When the server has another version, reload once with a fresh copy.
 /* global __ATRIO_VERSION__ */
