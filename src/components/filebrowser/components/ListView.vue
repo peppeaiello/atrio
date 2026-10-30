@@ -91,12 +91,14 @@
 <script>
 import { mixin } from "@/mixins/mixin";
 import ListViewMixin from "@/mixins/ListViewMixin";
-import BreakpointMixin from "vue-breakpoint-mixin";
+import BreakpointMixin from "@/mixins/BreakpointMixin";
 import ActionButton from "./ActionButton.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ListIconContainer from "./ListIconContainer.vue";
 
 export default {
+	// Uses Vue 2 v-model through ListViewMixin's model option
+	compatConfig: { COMPONENT_V_MODEL: true },
 	name: "list-view",
 	components: {
 		ActionButton,

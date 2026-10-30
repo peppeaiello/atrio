@@ -1,6 +1,6 @@
 <script>
 import VMdEditor from '@kangc/v-md-editor'
-import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
+import { Swiper, SwiperSlide } from '@/components/base/Swiper'
 import YAML from 'yaml'
 import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
@@ -184,8 +184,8 @@ export default {
                 <div
                   class="custom-install-button-content"
                   @click.self="
-                    $emit('install', appDetailData.id, appDetailData)
-                    $messageBus('appstore_install', i18n(appDetailData.title))
+                    $emit('install', appDetailData.id, appDetailData);
+                    $messageBus('appstore_install', i18n(appDetailData.title));
                   "
                 >
                   {{ $t('Install') }}

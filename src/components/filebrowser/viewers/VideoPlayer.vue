@@ -27,13 +27,12 @@
 			<div class="video-container" :class="{ 'is-align-items-center': isAudio }">
 				<div key="video-player" ref="artRef" v-if="isVideo" class="player">
 				</div>
-				<aplayer :key="item.path" :autoplay="true" v-if="isAudio" preload="auto" class="player-audio"
-					theme="#41b883" :music="{
-						title: audioTitle,
-						artist: audioArtist,
-						src: this.getFileUrl(this.item),
-						pic: poster
-					}" />
+				<div v-if="isAudio" :key="item.path" class="player-audio has-text-centered">
+					<img v-if="poster" :src="poster" alt="" class="mb-3" style="max-width: 240px; border-radius: 12px;">
+					<p class="has-text-weight-semibold">{{ audioTitle }}</p>
+					<p class="mb-3">{{ audioArtist }}</p>
+					<audio :src="getFileUrl(item)" autoplay controls preload="auto" style="width: 100%;"></audio>
+				</div>
 			</div>
 		</div>
 		<!-- Player Start -->
@@ -47,10 +46,8 @@
   
 <script>
 import { mixin } from "@/mixins/mixin";
-import Aplayer from 'vue-aplayer'
 import Artplayer from 'artplayer';
 import * as mm from 'music-metadata-browser';
-Aplayer.disableVersionBadge = true
 export default {
 	mixins: [mixin],
 	props: {
@@ -71,7 +68,6 @@ export default {
 		},
 	},
 	components: {
-		Aplayer,
 	},
 	data() {
 		return {

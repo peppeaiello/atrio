@@ -27,7 +27,8 @@ The codebase inherited from CasaOS-UI uses Vue 2.7 (end of life), Buefy/Bulma an
 goes onto a modern base first:
 
 1. **Migrate to Vue 3 + Vite** while keeping today's features working against the CasaOS v0.4.x API.
-   Buefy has no Vue 3 version, so its components are replaced along the way.
+   The app runs on the Vue 3 compatibility build (`@vue/compat`) with Buefy 3, still styled with the
+   Bulma 0.9 / Buefy 0.9 SCSS; components move to plain Vue 3 one by one until compat can be dropped.
 2. **Build the new design system** (tokens, glass panels, buttons, inputs) as plain Vue components.
 3. **Ship the priorities above**, one screen at a time.
 

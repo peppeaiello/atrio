@@ -27,17 +27,16 @@
 
 				<operation-status-item v-for="task in taskList" :key="task.id" :data="task"></operation-status-item>
 			</div>
-			<b-button slot="reference" rounded size="is-small" type="is-primary is-light">
+			<template #reference><b-button rounded size="is-small" type="is-primary is-light">
 				<b-icon custom-class="mdi-spin" custom-size=" mdi-18px" icon="autorenew"></b-icon>
-			</b-button>
+			</b-button></template>
 		</popper>
 	</div>
 </template>
 
 <script>
-import Popper              from 'vue-popperjs';
+import Popper from '@/components/base/Popper.vue'
 
-import 'vue-popperjs/dist/vue-popper.css';
 import OperationStatusItem from './OperationStatusItem.vue';
 
 export default {

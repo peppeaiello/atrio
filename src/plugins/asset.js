@@ -25,7 +25,7 @@ export function builtInWallpaper(path) {
 }
 
 export default {
-	install(Vue) {
-		Vue.prototype.$asset = asset
+	install(app) {
+		app.config.globalProperties.$asset = asset
 	},
 }

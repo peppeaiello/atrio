@@ -45,6 +45,8 @@ const widgetsComponents = import.meta.glob('@/widgets/*.vue', { eager: true })
 
 
 export default {
+	// Uses Vue 2 v-model (value prop, input event)
+	compatConfig: { COMPONENT_V_MODEL: true },
 	// eslint-disable-next-line vue/multi-word-component-names
 	name: "settings",
 	data() {

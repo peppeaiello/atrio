@@ -62,7 +62,6 @@
 
 <script>
 // import VueApexCharts from 'vue-apexcharts'
-import smoothReflow from "vue-smooth-reflow";
 import orderBy from "lodash/orderBy";
 import has from "lodash/has";
 import slice from "lodash/slice";
@@ -75,7 +74,7 @@ export default {
 	icon: "system-outline",
 	title: "System Status",
 	initShow: true,
-	mixins: [smoothReflow, mixin],
+	mixins: [mixin],
 	components: {
 		RadialBar,
 	},
@@ -138,10 +137,6 @@ export default {
 		}, 1000);
 	},
 	mounted() {
-		this.$smoothReflow({
-			el: ".widget",
-			property: ["height"],
-		});
 	},
 	beforeDestroy() {
 		clearInterval(this.timer);

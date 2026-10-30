@@ -1,5 +1,5 @@
 <script>
-import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
+import { Swiper, SwiperSlide } from '@/components/base/Swiper'
 import sortBy from 'lodash/sortBy'
 import noticeBlock from '@/components/noticBlock/noticeBlock'
 import { mixin } from '@/mixins/mixin'
@@ -153,7 +153,6 @@ export default {
 
       this.$EventBus.$on('casaUI:openDiskLearnMore', () => {
         this.$buefy.modal.open({
-          parent: this,
           component: DiskLearnMore,
           hasModalCard: true,
           customClass: 'storage-modal',
@@ -598,7 +597,7 @@ export default {
 	width: 100% !important;
 }
 
-.swiper-container {
+.swiper {
 
 	&:hover>.swiper-button-next:not(.swiper-button-disabled),
 	&:hover>.swiper-button-prev:not(.swiper-button-disabled) {

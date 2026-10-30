@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
-import vue from '@vitejs/plugin-vue2'
+import vue from '@vitejs/plugin-vue'
 import { defineConfig, loadEnv } from 'vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
@@ -12,10 +12,15 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		// Node built-ins (path, buffer, ...) used by the file browser and some dependencies
-		plugins: [vue(), nodePolyfills()],
+		plugins: [
+			// Vue 3 compiler in Vue 2 compatibility mode, while the code is migrated
+			vue({ template: { compilerOptions: { compatConfig: { MODE: 2 } } } }),
+			nodePolyfills(),
+		],
 		resolve: {
 			alias: [
 				{ find: /^@\//, replacement: `${src}/` },
+				{ find: /^vue$/, replacement: '@vue/compat' },
 				// webpack-style "~package" imports in SCSS
 				{ find: /^~(.*)$/, replacement: '$1' },
 			],
@@ -40,8 +45,11 @@ export default defineConfig(({ mode }) => {
 		server: {
 			port: 8080,
 			host: '0.0.0.0',
+			// Local worktrees and build output are not part of the app
+			watch: { ignored: ['**/.claude/**', '**/build/**'] },
 			proxy: { '/v1': proxy, '/v2': proxy },
 		},
+		optimizeDeps: { entries: ['index.html'] },
 		build: {
 			outDir: 'build/sysroot/var/lib/casaos/www',
 			emptyOutDir: true,
