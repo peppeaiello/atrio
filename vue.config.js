@@ -87,5 +87,13 @@ module.exports = {
 				changeOrigin: true,
 			},
 		},
+		// Keep the overlay for build errors only: unhandled API rejections are logged in the console
+		client: {
+			overlay: {
+				errors: true,
+				warnings: false,
+				runtimeErrors: false,
+			},
+		},
 	},
 };
