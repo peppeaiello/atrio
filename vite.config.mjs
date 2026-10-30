@@ -1,9 +1,19 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, loadEnv } from 'vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 const src = fileURLToPath(new URL('./src', import.meta.url))
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+
+// atrio-version.json next to index.html tells the updater which version is installed
+const versionFile = {
+	name: 'atrio-version',
+	generateBundle() {
+		this.emitFile({ type: 'asset', fileName: 'atrio-version.json', source: `${JSON.stringify({ version })}\n` })
+	},
+}
 
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, process.cwd(), 'VUE_APP_')
@@ -16,6 +26,7 @@ export default defineConfig(({ mode }) => {
 			// Vue 3 compiler in Vue 2 compatibility mode, while the code is migrated
 			vue({ template: { compilerOptions: { compatConfig: { MODE: 2 } } } }),
 			nodePolyfills(),
+			versionFile,
 		],
 		resolve: {
 			alias: [
@@ -33,6 +44,7 @@ export default defineConfig(({ mode }) => {
 				NODE_ENV: mode === 'dev' ? 'dev' : 'prod',
 				BASE_URL: '/',
 			}),
+			__ATRIO_VERSION__: JSON.stringify(version),
 		},
 		css: {
 			preprocessorOptions: {

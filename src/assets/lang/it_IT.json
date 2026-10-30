@@ -462,5 +462,15 @@
   "No logs yet": "Ancora nessun log",
   "High system load": "Sistema sotto carico",
   "System healthy": "Sistema in salute",
-  "{running} of {total} apps running": "{running} di {total} app attive"
+  "{running} of {total} apps running": "{running} di {total} app attive",
+  "Starting the update…": "Avvio dell'aggiornamento…",
+  "Could not reach the updater on the server": "Impossibile raggiungere l'aggiornamento sul server",
+  "Updated, reloading…": "Aggiornato, ricarico…",
+  "The update is taking too long": "L'aggiornamento sta impiegando troppo",
+  "Development build": "Versione di sviluppo",
+  "Checking for updates…": "Controllo aggiornamenti…",
+  "Could not check for updates": "Impossibile controllare gli aggiornamenti",
+  "Version {version} is available": "È disponibile la versione {version}",
+  "How to update": "Come aggiornare",
+  "You have the latest version": "Hai la versione più recente"
 }
