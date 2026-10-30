@@ -3,7 +3,13 @@
 		<figure class="image _is-wordmark mb-3">
 			<img alt="Atrio" src="../assets/img/logo/atrio-wordmark-light.svg">
 		</figure>
-		<span v-if="!rssShow || rss.length === 0" class="intro-text ml-4">Built on CasaOS-UI by IceWhale, with ❤️</span>
+		<span v-if="!rssShow || rss.length === 0" class="intro-text atrio-brand-line ml-4">
+			<a :href="`https://github.com/peppeaiello/atrio/releases/tag/v${version}`" rel="noopener" target="_blank">v{{ version }}</a>
+			<span aria-hidden="true">·</span>
+			<span>{{ $t('The front door of your home server') }}</span>
+			<span aria-hidden="true">·</span>
+			<a href="https://github.com/IceWhaleTech/CasaOS-UI" rel="noopener" target="_blank">{{ $t('based on CasaOS-UI by IceWhale') }}</a>
+		</span>
 		<span v-else class="window ml-4">
 			<ul :style="{ '--time': 5 * line + 's', '--perc': perc, '--line': line }" class="scroll">
 				<li v-for="(item, key) in rss" :key="key" class="has-text-left" @click="$messageBus('connect_news')">
@@ -25,6 +31,10 @@ export default {
 	name: "brand-bar",
 	components: {},
 	computed: {
+		version() {
+			/* global __ATRIO_VERSION__ */
+			return __ATRIO_VERSION__
+		},
 		rssShow() {
 			let which = this.$store.state.rssSwitch
 			if (which) {
@@ -179,4 +189,20 @@ export default {
 }
 
 // -----------------scroll end-----------------
+
+.atrio-brand-line {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem;
+	color: var(--atrio-text-muted);
+
+	a {
+		color: var(--atrio-text-soft);
+
+		&:hover {
+			color: var(--atrio-text);
+		}
+	}
+}
 </style>

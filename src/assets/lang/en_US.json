@@ -472,5 +472,7 @@
   "Could not check for updates": "Could not check for updates",
   "Version {version} is available": "Version {version} is available",
   "How to update": "How to update",
-  "You have the latest version": "You have the latest version"
+  "You have the latest version": "You have the latest version",
+  "The front door of your home server": "The front door of your home server",
+  "based on CasaOS-UI by IceWhale": "based on CasaOS-UI by IceWhale"
 }

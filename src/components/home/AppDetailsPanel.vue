@@ -115,7 +115,9 @@ export default {
 			if (event.key === 'Escape' && this.open) this.close()
 		},
 		async refresh() {
-			await Promise.all([this.loadContainers(), this.loadLogs(), this.loadUsage()])
+			// Usage needs the container names
+			await Promise.all([this.loadContainers(), this.loadLogs()])
+			this.loadUsage()
 		},
 		poll() {
 			this.loadLogs()
@@ -150,10 +152,12 @@ export default {
 			}
 		},
 		async loadUsage() {
+			const app = this.app?.name
 			const names = new Set(this.containers.map((c) => c.Name))
 			if (!names.size) return
 			try {
 				const res = await this.$api.container.getHardwareUsage()
+				if (app !== this.app?.name) return
 				const mine = (res.data.data || []).filter((item) => names.has(item.title))
 				this.push(this.cpuHistory, mine.reduce((sum, item) => sum + cpuPercent(item), 0))
 				this.push(this.memHistory, mine.reduce((sum, item) => sum + memoryBytes(item), 0))
@@ -325,7 +329,8 @@ export default {
 	gap: 1.25rem;
 	width: min(34rem, calc(100% - 2rem));
 	padding: 1.5rem;
-	overflow: hidden;
+	// Scrolls on short screens so the footer stays reachable
+	overflow-y: auto;
 	border-radius: 28px;
 	background: var(--atrio-glass-bg-strong);
 	backdrop-filter: blur(32px) saturate(150%);

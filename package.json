@@ -5,9 +5,7 @@
   "scripts": {
     "dev": "vite --mode dev",
     "build": "node message_bus.build.mjs && vite build",
-    "lint": "vue-cli-service lint",
     "build:messagebus": "node message_bus.build.mjs",
-    "test": "vitest",
     "preview": "vite preview"
   },
   "installConfig": {

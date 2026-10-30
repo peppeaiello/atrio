@@ -208,6 +208,10 @@ export default {
 		dragOptions () {
 			return {
 				animation: 300,
+				// On touch screens a swipe scrolls the page: press and hold an app to move it
+				delay: 400,
+				delayOnTouchOnly: true,
+				touchStartThreshold: 5,
 				group: 'description',
 				disabled: false,
 				ghostClass: 'ghost'
@@ -222,7 +226,7 @@ export default {
 	},
 	created () {
 		this.getList()
-		this.draggable = this.isMobile() ? '' : '.handle'
+		this.draggable = '.handle'
 		this.$EventBus.$on(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, () => {
 			this.showInstall(SYNCTHING_STORE_ID)
 		})

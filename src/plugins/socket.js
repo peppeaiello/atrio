@@ -4,8 +4,17 @@
 export default {
 	install(app, socket) {
 		// vue-socket.io-extended's helpers for listeners added outside the `sockets` option
-		socket.$subscribe = (event, handler) => socket.on(event, handler)
-		socket.$unsubscribe = (event) => socket.off(event)
+		// $unsubscribe removes only what $subscribe added, not the `sockets` option handlers
+		const subscribed = new Map()
+		socket.$subscribe = (event, handler) => {
+			if (!subscribed.has(event)) subscribed.set(event, new Set())
+			subscribed.get(event).add(handler)
+			socket.on(event, handler)
+		}
+		socket.$unsubscribe = (event) => {
+			subscribed.get(event)?.forEach((handler) => socket.off(event, handler))
+			subscribed.delete(event)
+		}
 		app.config.globalProperties.$socket = socket
 		app.mixin({
 			created() {

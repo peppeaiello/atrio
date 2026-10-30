@@ -43,6 +43,8 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          # v0.2.0-rc.1 and the like are not offered to installed copies
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             atrio.tar.gz
             atrio.tar.gz.sha256

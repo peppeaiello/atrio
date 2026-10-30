@@ -29,7 +29,9 @@ function findValue(vnodes) {
 		if (!vnode || typeof vnode !== 'object') continue
 		const props = vnode.props || {}
 		if (typeof vnode.type === 'object' || typeof vnode.type === 'string') {
+			// Templates may write either :modelValue or :model-value, vnode props keep the spelling
 			if ('modelValue' in props) return props.modelValue
+			if ('model-value' in props) return props['model-value']
 			if ('value' in props && vnode.type !== 'option') return props.value
 		}
 		if (Array.isArray(vnode.children)) {
@@ -46,6 +48,8 @@ function findValue(vnodes) {
 export const ValidationObserver = {
 	name: 'ValidationObserver',
 	compatConfig: { MODE: 3 },
+	// An observer inside another one validates with it, as in vee-validate 3
+	inject: { validationObserver: { default: null } },
 	props: { slim: Boolean, tag: { type: String, default: 'span' } },
 	provide() {
 		return { validationObserver: this }
@@ -57,6 +61,15 @@ export const ValidationObserver = {
 		invalid() {
 			return this.providers.some((p) => !p.isValid)
 		},
+		isValid() {
+			return !this.invalid
+		},
+	},
+	created() {
+		this.validationObserver?.register(this)
+	},
+	beforeUnmount() {
+		this.validationObserver?.unregister(this)
 	},
 	methods: {
 		register(provider) {
@@ -66,7 +79,12 @@ export const ValidationObserver = {
 			this.providers = this.providers.filter((p) => p !== provider)
 		},
 		findByVid(vid) {
-			return this.providers.find((p) => p.vid === vid)
+			for (const p of this.providers) {
+				if (p.vid === vid) return p
+				const nested = p.findByVid?.(vid)
+				if (nested) return nested
+			}
+			return undefined
 		},
 		async validate() {
 			const results = await Promise.all(this.providers.map((p) => p.validate()))
@@ -173,7 +191,7 @@ export const ValidationProvider = {
 
 // Built-in rules used by the app, with vee-validate 3 semantics
 export const builtInRules = {
-	required: { validate: (value) => !(value === undefined || value === null || value === '' || (Array.isArray(value) && !value.length)), computesRequired: true },
+	required: { validate: (value) => !(value === undefined || value === null || String(value).trim() === '' || (Array.isArray(value) && !value.length)), computesRequired: true },
 	email: { validate: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) },
 	min: { validate: (value, [length]) => String(value).length >= Number(length) },
 	length: { validate: (value, [length]) => (Array.isArray(value) ? value.length : String(value).length) === Number(length) },

@@ -30,7 +30,12 @@ export const Swiper = {
 		this.swiper?.destroy(true, false)
 	},
 	render() {
-		return h('div', { class: 'swiper' }, [h('div', { class: 'swiper-wrapper' }, this.$slots.default?.())])
+		return h('div', { class: 'swiper' }, [
+			h('div', { class: 'swiper-wrapper' }, this.$slots.default?.()),
+			this.$slots.pagination?.(),
+			this.$slots['button-prev']?.(),
+			this.$slots['button-next']?.(),
+		])
 	},
 }
 

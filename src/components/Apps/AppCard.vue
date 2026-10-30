@@ -821,7 +821,7 @@ export default {
 
             <!-- Loading Bar Start -->
             <b-loading
-              :active="isLoading" :can-cancel="false" :is-full-page="false"
+              :model-value="isLoading" :can-cancel="false" :is-full-page="false"
               class="has-background-gray-800 op80 is-64x64"
               style="top: auto;bottom: auto; right: auto; left: auto; border-radius: 11.5px"
             >

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Installs the latest Atrio release from GitHub into the CasaOS web UI folder.
-# Run by atrio-update.service when Atrio asks for an update (it creates the request
-# file through the CasaOS file API), or by hand: sudo atrio-update
+# Run by atrio-update.service when Atrio asks for an update (it writes the request file
+# through the CasaOS file API), or by hand: sudo atrio-update [--force]
 set -euo pipefail
 
 REPO="peppeaiello/atrio"
@@ -12,7 +12,20 @@ REQUEST="$STATE/update-request"
 DOWNLOAD="https://github.com/$REPO/releases/latest/download"
 
 mkdir -p "$STATE"
-rm -f "$REQUEST"
+
+# One run at a time (the path unit and a manual run could overlap)
+exec 9>"$STATE/lock"
+if ! flock -n 9; then
+	echo "Another Atrio update is running" >&2
+	exit 0
+fi
+
+# The request may carry a token that the web UI uses to recognise this run's status
+TOKEN=""
+if [ -f "$REQUEST" ]; then
+	TOKEN=$(head -c 64 "$REQUEST" | tr -cd 'A-Za-z0-9-')
+	rm -f "$REQUEST"
+fi
 
 installed_version() {
 	sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$1/atrio-version.json" 2>/dev/null || true
@@ -20,25 +33,34 @@ installed_version() {
 
 # The web UI reads this file to follow the update
 write_status() {
-	printf '{"state":"%s","version":"%s","message":"%s","time":"%s"}\n' \
-		"$1" "$(installed_version "$WWW")" "$2" "$(date -Iseconds)" > "$STATUS.tmp"
+	printf '{"state":"%s","version":"%s","message":"%s","token":"%s","time":"%s"}\n' \
+		"$1" "$(installed_version "$WWW")" "$2" "$TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
 	mv "$STATUS.tmp" "$STATUS"
 }
 
+fail() {
+	write_status error "$1"
+	echo "$1" >&2
+	exit 1
+}
+
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP" "$WWW.new"' EXIT
 trap 'write_status error "The update failed, Atrio was not changed"' ERR
 
 write_status running "Downloading the latest release"
-curl -fsSL -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz"
-curl -fsSL -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256"
-(cd "$TMP" && sha256sum --check --quiet atrio.tar.gz.sha256)
+CURL=(curl -fsSL --connect-timeout 20 --max-time 300 --retry 2)
+"${CURL[@]}" -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz"
+"${CURL[@]}" -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256"
+(cd "$TMP" && sha256sum -c atrio.tar.gz.sha256 >/dev/null)
 
 mkdir "$TMP/www"
-tar -xzf "$TMP/atrio.tar.gz" -C "$TMP/www"
+tar -xzf "$TMP/atrio.tar.gz" -C "$TMP/www" --no-same-owner --no-same-permissions
+if [ -n "$(find "$TMP/www" ! -type f ! -type d)" ]; then
+	fail "The downloaded release contains unexpected files"
+fi
 if [ ! -f "$TMP/www/index.html" ] || [ ! -f "$TMP/www/atrio-version.json" ]; then
-	write_status error "The downloaded release is not a valid Atrio build"
-	exit 1
+	fail "The downloaded release is not a valid Atrio build"
 fi
 
 latest=$(installed_version "$TMP/www")
@@ -48,15 +70,32 @@ if [ "$latest" = "$(installed_version "$WWW")" ] && [ "${1:-}" != "--force" ]; t
 fi
 
 write_status running "Installing Atrio $latest"
-if command -v rsync >/dev/null; then
-	rsync -a --delete "$TMP/www/" "$WWW/"
-else
-	rm -rf "$WWW.new" "$WWW.old"
-	cp -a "$TMP/www" "$WWW.new"
-	mv "$WWW" "$WWW.old" && mv "$WWW.new" "$WWW" && rm -rf "$WWW.old"
+
+# Keep the previous build's assets for a while: browsers that still have the old index.html
+# cached (the CasaOS gateway answers 304 to it) can load, then reload into the new version.
+if [ -d "$WWW/assets" ]; then
+	cp -a -n "$WWW/assets/." "$TMP/www/assets/" 2>/dev/null || true
+	find "$TMP/www/assets" -type f -mtime +30 -delete
 fi
-chown -R root:root "$WWW"
-chmod 755 "$WWW"
+# The user's own customisations survive updates
+for file in js/custom.js css/custom.css; do
+	if [ -f "$WWW/$file" ]; then
+		cp -a "$WWW/$file" "$TMP/www/$file"
+	fi
+done
+
+# Stage next to the live folder (same filesystem), then swap with two renames and a rollback,
+# so the UI is never half old and half new
+rm -rf "$WWW.new" "$WWW.old"
+cp -a "$TMP/www" "$WWW.new" || fail "Not enough space to install Atrio $latest, Atrio was not changed"
+chown -R root:root "$WWW.new"
+chmod 755 "$WWW.new"
+mv "$WWW" "$WWW.old" || fail "Could not replace the web UI folder, Atrio was not changed"
+if ! mv "$WWW.new" "$WWW"; then
+	mv "$WWW.old" "$WWW"
+	fail "Could not replace the web UI folder, Atrio was not changed"
+fi
+rm -rf "$WWW.old"
 
 write_status done "Atrio $latest installed"
 echo "Atrio $latest installed"
