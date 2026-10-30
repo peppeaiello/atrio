@@ -39,11 +39,10 @@ export default {
 		}
 	},
 	mounted() {
-		this.$EventBus.$on(events.SHOW_HOME_CONTEXT_MENU, (data) => {
-			this.open(data)
-		});
-
-
+		this.$EventBus.$on(events.SHOW_HOME_CONTEXT_MENU, this.open);
+	},
+	beforeUnmount() {
+		this.$EventBus.$off(events.SHOW_HOME_CONTEXT_MENU, this.open);
 	},
 	methods: {
 		open(event) {

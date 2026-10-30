@@ -59,7 +59,7 @@ export default defineConfig(({ mode }) => {
 			host: '0.0.0.0',
 			// Local worktrees and build output are not part of the app
 			watch: { ignored: ['**/.claude/**', '**/build/**'] },
-			proxy: { '/v1': proxy, '/v2': proxy },
+			proxy: { '/v1': proxy, '/v2': proxy, '/v3': proxy },
 		},
 		optimizeDeps: { entries: ['index.html'] },
 		build: {

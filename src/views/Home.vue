@@ -1,4 +1,5 @@
 <script>
+import { defineAsyncComponent } from 'vue'
 import { nanoid } from 'nanoid'
 import SideBar from '@/components/SideBar.vue'
 import TopBar from '@/components/TopBar.vue'
@@ -123,7 +124,25 @@ export default {
      * @return {*}
      */
     async getConfig() {
-      let systemConfig = await this.$api.users.getCustomStorage('system')
+      const defaults = {
+        lang: this.getLangFromBrowser(),
+        search_engine: 'https://duckduckgo.com/?q=',
+        search_switch: true,
+        recommend_switch: true,
+        shortcuts_switch: true,
+        widgets_switch: true,
+        existing_apps_switch: true,
+        rss_switch: this.barData.rss_switch,
+      }
+      let systemConfig
+      try {
+        systemConfig = await this.$api.users.getCustomStorage('system')
+      }
+      catch (e) {
+        // Backend unreachable: show the dashboard with the defaults instead of a blank page
+        console.error(e)
+        systemConfig = { data: { success: 200, data: defaults } }
+      }
       if (systemConfig.data.success != 200 || systemConfig.data.data == '') {
         const barData = {
           lang: this.getLangFromBrowser(),
@@ -136,11 +155,8 @@ export default {
           rss_switch: this.barData.rss_switch,
         }
         // save
-        const saveRes = await this.$api.users.setCustomStorage('system', barData)
-        if (saveRes.data.success === 200) {
-          systemConfig = saveRes
-          this.barData = saveRes.data.data
-        }
+        const saveRes = await this.$api.users.setCustomStorage('system', barData).catch(() => null)
+        systemConfig = saveRes?.data.success === 200 ? saveRes : { data: { success: 200, data: barData } }
       }
 
       this.$store.commit('SET_SEARCH_ENGINE_SWITCH', systemConfig.data.data.search_switch)
@@ -261,7 +277,7 @@ export default {
     async showStorageManagerPanelModal() {
       this.$messageBus('widget_storagemanager')
       this.$buefy.modal.open({
-        component: () => import('@/components/Storage/StorageManagerPanel.vue'),
+        component: defineAsyncComponent(() => import('@/components/Storage/StorageManagerPanel.vue')),
         hasModalCard: true,
         customClass: 'storage-modal',
         trapFocus: true,

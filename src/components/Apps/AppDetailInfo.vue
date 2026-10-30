@@ -300,7 +300,7 @@ export default {
 
       <!-- App Info  Start -->
       <div class="app-desc mt-4 mb-6 is-size-14px">
-        <VMdEditor :value="i18n(appDetailData.description)" mode="preview" left-toolbar right-toolbar />
+        <VMdEditor :model-value="i18n(appDetailData.description)" mode="preview" left-toolbar right-toolbar />
       </div>
       <!-- App Info  End -->
     </section>

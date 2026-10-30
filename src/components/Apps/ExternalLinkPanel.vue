@@ -98,6 +98,11 @@ export default {
           }
           this.saveLinkApp(listLinkApp)
         }
+        else {
+          this.isLoading = false
+        }
+      }).catch(() => {
+        this.isLoading = false
       })
     },
 

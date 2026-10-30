@@ -70,7 +70,8 @@ export default {
 		this.initNetwork = this.$store.state.hardwareInfo.net
 
 		// select the network last time
-		localStorage.getItem('networkId') && (this.networkId = localStorage.getItem('networkId'))
+		const saved = Number(localStorage.getItem('networkId'))
+		if (Number.isInteger(saved) && saved >= 0 && saved < (this.initNetwork?.length || 0)) this.networkId = saved
 
 	},
 

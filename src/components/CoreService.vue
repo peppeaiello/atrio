@@ -78,7 +78,7 @@ export default {
         }
         // skip new notice card
         this.$nextTick(() => {
-          this.$refs.mySwiper.$swiper.slideTo(val - 1, 1000, true)
+          this.$refs.mySwiper?.swiper?.slideTo(val - 1, 1000, true)
         })
       },
     },

@@ -83,6 +83,20 @@ Object.assign(app.config.globalProperties, {
 
 app.mount('#app')
 
+// A lazy chunk of an older build was removed by an update: load the current build
+window.addEventListener('vite:preloadError', (event) => {
+	try {
+		// Once a minute at most, in case the chunk is really missing
+		const last = Number(sessionStorage.getItem('atrio:preload-reload')) || 0
+		if (Date.now() - last < 60000) return
+		sessionStorage.setItem('atrio:preload-reload', String(Date.now()))
+	} catch {
+		return
+	}
+	event.preventDefault()
+	reloadFresh()
+})
+
 // Atrio 0.1.1 reloaded after an update with ?v=<version> in the address: drop it
 if (new URLSearchParams(window.location.search).has('v')) {
 	window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`)

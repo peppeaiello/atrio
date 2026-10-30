@@ -56,6 +56,10 @@ export default {
 			return marked.parse(this.updateLogs);
 		}
 	},
+	beforeUnmount() {
+		clearInterval(this.updateTimer);
+		clearInterval(this.timer);
+	},
 	methods: {
 		/**
 		 * @description: Update System Version and check update state
@@ -63,8 +67,13 @@ export default {
 		 */
 		async updateSystem() {
 			this.isUpdating = true;
-			await this.$api.sys.updateCasaOS();
-			// this.checkUpdateState();
+			try {
+				await this.$api.sys.updateCasaOS();
+			} catch (e) {
+				this.isUpdating = false;
+				this.$buefy.toast.open({ message: this.$t('Unable to update at the moment!'), type: 'is-danger' })
+				return
+			}
 			this.getUpdateLogs()
 		},
 
@@ -76,7 +85,8 @@ export default {
 			this.updateTimer = setInterval(() => {
 				this.$api.file.getContent(`/var/log/casaos/upgrade.log`).then(res => {
 
-					this.updateLogs = res.data.data;
+					// The log file appears only once the upgrade starts
+					this.updateLogs = String(res.data.data || '');
 					if (this.updateLogs.includes(`CasaOS upgrade successfully`)) {
 						localStorage.setItem('is_update', 'true')
 						clearInterval(this.updateTimer);

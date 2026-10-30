@@ -472,5 +472,7 @@
   "Could not check for updates": "Impossibile controllare gli aggiornamenti",
   "Version {version} is available": "È disponibile la versione {version}",
   "How to update": "Come aggiornare",
-  "You have the latest version": "Hai la versione più recente"
+  "You have the latest version": "Hai la versione più recente",
+  "The front door of your home server": "L'ingresso del tuo home server",
+  "based on CasaOS-UI by IceWhale": "basato su CasaOS-UI di IceWhale"
 }

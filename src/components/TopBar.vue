@@ -149,6 +149,9 @@ export default {
     this.getHardwareInfo()
   },
 
+  beforeUnmount() {
+    clearInterval(this.powerTimer)
+  },
   methods: {
     /*************************************************
 		 * PART 0  Common
@@ -426,23 +429,30 @@ export default {
           this.showPowerMessage = 'Please wait for about 30 seconds before cutting off the power.'
           break
       }
-      let timer
       const path = key === 'Shutdown' ? 'off' : 'restart'
       this.$api.sys.power(path).then((res) => {
-        if (res.data.success === 200) {
+        // After a shutdown there is nothing to wait for
+        if (res.data.success === 200 && key !== 'Shutdown') {
           this.showPowerMessage = res.data.data
-          timer = setInterval(() => {
+          clearInterval(this.powerTimer)
+          this.powerTimer = setInterval(() => {
             this.$api.users.getUserStatus().then((res) => {
               if (res.data.data.initialized) {
-                clearInterval(timer)
+                clearInterval(this.powerTimer)
                 location.reload()
               }
+            }).catch(() => {
+              // Still restarting
             })
           }, 30000)
         }
+      }).catch(() => {
+        this.resetPower()
+        this.$buefy.toast.open({ message: this.$t('the action failed'), type: 'is-danger' })
       })
     },
     resetPower() {
+      clearInterval(this.powerTimer)
       this.showPower = false
       this.restart = 'Restart'
       this.shutdown = 'Shutdown'

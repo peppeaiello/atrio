@@ -12,11 +12,28 @@ const TIMEOUT_MS = 5 * 60 * 1000
 /* global __ATRIO_VERSION__ */
 const CURRENT = __ATRIO_VERSION__
 
+// Semantic versions: 1.2.0 > 1.2.0-rc.2 > 1.2.0-rc.1
+function parseVersion(version) {
+	const [core, pre = ''] = version.replace(/^v/, '').split('-', 2)
+	return { core: core.split('.').map((n) => Number(n) || 0), pre: pre ? pre.split('.') : [] }
+}
+
 function isNewer(latest, current) {
-	const a = latest.replace(/^v/, '').split('.').map(Number)
-	const b = current.replace(/^v/, '').split('.').map(Number)
-	for (let i = 0; i < Math.max(a.length, b.length); i++) {
-		if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0)
+	const a = parseVersion(latest)
+	const b = parseVersion(current)
+	for (let i = 0; i < 3; i++) {
+		if ((a.core[i] || 0) !== (b.core[i] || 0)) return (a.core[i] || 0) > (b.core[i] || 0)
+	}
+	if (!a.pre.length || !b.pre.length) return !a.pre.length && b.pre.length > 0
+	for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
+		const x = a.pre[i]
+		const y = b.pre[i]
+		if (x === undefined || y === undefined) return y === undefined
+		if (x === y) continue
+		const nx = Number(x)
+		const ny = Number(y)
+		if (!Number.isNaN(nx) && !Number.isNaN(ny)) return nx > ny
+		return x > y
 	}
 	return false
 }
@@ -78,15 +95,23 @@ export default {
 			this.updating = true
 			this.progress = this.$t('Starting the update…')
 			const started = Date.now()
+			// The updater copies this token into its status, so we know the status is about this run
+			const token = `${started.toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 			try {
-				await this.$api.file.create(`${STATE}/update-request`)
+				const request = `${STATE}/update-request.tmp`
+				const created = await this.$api.file.create(request)
+				const written = await this.$api.file.update(request, token)
+				if (created.data.success !== 200 || written.data.success !== 200) throw new Error('request')
+				// Renamed in place so the updater only ever sees a complete request
+				const renamed = await this.$api.file.rename(request, `${STATE}/update-request`)
+				if (renamed.data.success !== 200) throw new Error('request')
 			} catch (e) {
 				this.fail(this.$t('Could not reach the updater on the server'))
 				return
 			}
 			const poll = async () => {
 				const status = await this.readStatus()
-				const fresh = status && Date.parse(status.time) >= started - 5000
+				const fresh = status && status.token === token
 				if (fresh && status.state === 'done') {
 					this.progress = this.$t('Updated, reloading…')
 					setTimeout(reloadFresh, 1500)

@@ -112,7 +112,7 @@ export default {
 		}
 	},
 	destroyed() {
-		window.addEventListener('resize', this.onRezise);
+		window.removeEventListener('resize', this.onRezise);
 	},
 }
 </script>

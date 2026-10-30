@@ -161,6 +161,7 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue'
 import LottieAnimation from "lottie-web-vue";
 import delay from 'lodash/delay';
 import max from 'lodash/max';
@@ -440,7 +441,7 @@ export default {
 			}
 
 			this.$buefy.modal.open({
-				component: () => import('@/components/Storage/MergeStorages.vue'),
+				component: defineAsyncComponent(() => import('@/components/Storage/MergeStorages.vue')),
 				hasModalCard: true,
 				trapFocus: true,
 				ariaModal: true,

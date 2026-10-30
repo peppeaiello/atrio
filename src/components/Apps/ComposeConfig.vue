@@ -391,9 +391,10 @@ export default {
           ? composeServicesItemInput.environment
           : Object.entries(composeServicesItemInput.environment)
         composeServicesItem.environment = envArray.map((item) => {
-          const ii = typeof item === 'object' ? Array.from(item) : item.split('=')
+          const ii = typeof item === 'object' ? Array.from(item) : String(item).split('=')
           return {
-            host: ii[1].replace(/"/g, ''),
+            // "KEY", "KEY:" or numbers (PUID: 1000) are valid compose environments too
+            host: String(ii.slice(1).join('=') ?? '').replace(/"/g, ''),
             container: ii[0],
           }
         })
@@ -422,8 +423,9 @@ export default {
             = /(^(?<host>(\d{1,3}\.){1,3}\d{1,3}):?)?(?<published>(\d{1,5})(-(\d{1,5}))?)(:(?<target>(\d{1,5})(-(\d{1,5}))?))?(\/(?<protocol>.*)$)?/
           const match = item.match(regex).groups
           const host_ip = match.host
-          const target = Number(match.target?.split('-')?.[0])
-          const published = match.published
+          // "3000" alone is a container port with a random host port
+          const target = Number((match.target || match.published)?.split('-')?.[0])
+          const published = match.target ? match.published : ''
           const protocol = match.protocol || 'tcp'
 
           return {
@@ -896,7 +898,7 @@ export default {
           </b-field>
 
           <b-field :label="$t('Memory Limit')" class="mb-5">
-            <VueSlider :max="totalMemory" :min="memory_min" class="mx-2" :marks="true" :data="markData" :value="service.deploy.resources.limits.memory | duplexDisplay" @change="(v) => (service.deploy.resources.limits.memory = v)" />
+            <VueSlider :max="totalMemory" :min="memory_min" class="mx-2" :marks="true" :data="markData" :model-value="$options.filters.duplexDisplay(service.deploy.resources.limits.memory)" @change="(v) => (service.deploy.resources.limits.memory = v)" />
           </b-field>
 
           <b-field :label="$t('CPU Shares')">

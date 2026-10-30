@@ -108,6 +108,10 @@ export default {
   methods: {
     goto(val) {
       this.state = val
+      // Edit a copy of the current user: the store may have been refreshed since this panel was
+      // created, and Back must not leave unsaved changes in the header
+      if (val === 2)
+        this.user = { ...this.userInfo }
       if (val === 1) {
         if (this.image.src) {
           URL.revokeObjectURL(this.image.src)
@@ -301,7 +305,7 @@ export default {
           </ValidationProvider>
           <ValidationProvider v-slot="{ errors, valid }" name="Password Confirmation" rules="required|confirmed:password">
             <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0">
-              <b-input v-model="confirmation" :placeholder="$t('Confirm the new password again')" password-reveal type="password" @keyup.enter.native="savePassword(savePassword)" />
+              <b-input v-model="confirmation" :placeholder="$t('Confirm the new password again')" password-reveal type="password" @keyup.enter.native="handleSubmit(savePassword)" />
             </b-field>
           </ValidationProvider>
         </template>

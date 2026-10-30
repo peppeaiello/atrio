@@ -80,7 +80,10 @@ export default {
 					return words.every((word) => text.includes(word))
 				})
 				: this.actions
-			return this.webSearch ? [...matches, this.webSearch] : matches
+			const list = this.webSearch ? [...matches, this.webSearch] : matches
+			// Same order as the groups on screen, so the arrow keys move down the list
+			const order = [...new Set(list.map((item) => item.group))]
+			return [...list].sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group))
 		},
 		groups() {
 			const groups = []
@@ -95,6 +98,9 @@ export default {
 	watch: {
 		query() {
 			this.active = 0
+		},
+		active() {
+			this.$nextTick(() => this.$el?.ownerDocument?.querySelector('.atrio-palette-item.is-active')?.scrollIntoView({ block: 'nearest' }))
 		},
 	},
 	mounted() {
@@ -140,6 +146,8 @@ export default {
 				event.preventDefault()
 				this.active = Math.max(this.active - 1, 0)
 			} else if (event.key === 'Enter' && this.results[this.active]) {
+				// Otherwise a focused result button would also get a click
+				event.preventDefault()
 				this.run(this.results[this.active])
 			}
 		},
