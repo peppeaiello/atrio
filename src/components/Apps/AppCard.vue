@@ -328,7 +328,6 @@ export default {
         }).then(res => res.data)
         this.$refs.dro.isActive = false
         this.$buefy.modal.open({
-          parent: this,
           component: tipEditorModal,
           hasModalCard: true,
           customClass: 'network-storage-modal',
@@ -736,7 +735,7 @@ export default {
             {{
               $t('Check then update')
             }}
-            <b-loading :active="isCheckThenUpdate || isUpdating" :is-full-page="false">
+            <b-loading :model-value="isCheckThenUpdate || isUpdating" :is-full-page="false">
               <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
             </b-loading>
           </b-button>

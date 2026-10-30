@@ -129,7 +129,6 @@ export default {
 			}
 
 			this.$buefy.modal.open({
-				parent: this,
 				component: MergeStorages,
 				hasModalCard: true,
 				trapFocus: true,

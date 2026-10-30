@@ -79,15 +79,13 @@
 </template>
 
 <script>
-import {ValidationObserver, ValidationProvider} from "vee-validate";
+import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 import "@/plugins/vee-validate";
 import LottieAnimation                          from "lottie-web-vue";
-import smoothReflow                             from 'vue-smooth-reflow'
 
 export default {
 
 	name: "welcome-page",
-	mixins: [smoothReflow],
 	data() {
 		return {
 			step: 1,
@@ -132,10 +130,6 @@ export default {
 	},
 
 	mounted() {
-		this.$smoothReflow({
-			el: '.login-panel',
-			property: ['height', 'width'],
-		})
 		this.isLoading = false;
 
 	},

@@ -1,13 +1,12 @@
 <script>
-import smoothReflow from 'vue-smooth-reflow'
-import { ValidationObserver, ValidationProvider } from 'vee-validate'
+import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 import '@/plugins/vee-validate'
 import Business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
 import Business_LinkApp from '@/mixins/app/Business_LinkApp'
 
 export default {
   components: { ValidationProvider, ValidationObserver },
-  mixins: [smoothReflow, Business_ShowNewAppTag, Business_LinkApp],
+  mixins: [Business_ShowNewAppTag, Business_LinkApp],
   props: {
     linkName: {
       type: String,

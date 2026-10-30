@@ -228,7 +228,6 @@ export default {
     showPortPanel() {
       this.$refs.settingsDrop.toggle()
       this.$buefy.modal.open({
-        parent: this,
         component: PortPanel,
         hasModalCard: true,
         customClass: 'account-modal',
@@ -326,7 +325,6 @@ export default {
     showUpdateModal() {
       this.$messageBus('dashboardsetting_versionupdate', true.toString())
       this.$buefy.modal.open({
-        parent: this,
         component: UpdateModal,
         hasModalCard: true,
         trapFocus: true,
@@ -372,7 +370,6 @@ export default {
       this.$messageBus('terminallogs')
       this.$store.commit('SET_SIDEBAR_CLOSE')
       this.$buefy.modal.open({
-        parent: this,
         component: TerminalPanel,
         hasModalCard: true,
         customClass: 'terminal-modal',

@@ -20,11 +20,11 @@
 							<div v-show="unDiskData.length == 0" class="popper  tooltip-content dark">
 								{{ $t('Please insert a Drive to Create Storage') }}
 							</div>
-							<div slot="reference">
+							<template #reference><div>
 								<b-button :disabled="unDiskData.length == 0" :type="state_createstorage_operability"
 									class="o" rounded size="is-small" @click="showCreate">{{ $t('Create Storage') }}
 								</b-button>
-							</div>
+							</div></template>
 						</popper>
 
 					</div>
@@ -162,15 +162,14 @@
 
 <script>
 import LottieAnimation from "lottie-web-vue";
-import smoothReflow from 'vue-smooth-reflow'
 import delay from 'lodash/delay';
 import max from 'lodash/max';
 import orderBy from 'lodash/orderBy';
-import { ValidationObserver, ValidationProvider } from "vee-validate";
+import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 import { mixin } from '@/mixins/mixin';
 import DriveItem from './DriveItem.vue'
 import StorageItem from './StorageItem.vue'
-import Popper from 'vue-popperjs';
+import Popper from '@/components/base/Popper.vue'
 import StorageCombination from "./StorageCombination.vue";
 import cToolTip from '@/components/basicComponents/tooltip/tooltip.vue';
 import events from '@/events/events';
@@ -187,7 +186,7 @@ export default {
 		StorageCombination,
 		cToolTip: cToolTip,
 	},
-	mixins: [smoothReflow, mixin],
+	mixins: [mixin],
 	data() {
 		return {
 			isLoading: true,
@@ -252,11 +251,6 @@ export default {
 	},
 	mounted() {
 		//Smooth
-		this.$smoothReflow({
-			el: '.modal-card',
-			property: ['height', 'width'],
-			transition: 'height .25s ease, width .75s ease-out'
-		})
 
 		//Get disk list
 		let _this = this
@@ -446,7 +440,6 @@ export default {
 			}
 
 			this.$buefy.modal.open({
-				parent: this,
 				component: () => import('@/components/Storage/MergeStorages.vue'),
 				hasModalCard: true,
 				trapFocus: true,

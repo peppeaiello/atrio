@@ -31,8 +31,10 @@
 
 		<!-- App List Start -->
 		<draggable
+			v-if="!isLoading"
 			v-model="appList"
 			:draggable="draggable"
+			:item-key="(item) => 'app-' + item.name"
 			class="app-list contextmenu-canvas"
 			tag="div"
 			v-bind="dragOptions"
@@ -40,8 +42,8 @@
 			@start="drag = true"
 		>
 			<!-- App Icon Card Start -->
-			<template v-if="!isLoading">
-				<div v-for="item in appList" :id="'app-' + item.name" :key="'app-' + item.name" class="handle">
+			<template #item="{ element: item }">
+				<div :id="'app-' + item.name" class="handle">
 					<app-card
 						:item="item"
 						@configApp="showConfigPanel"
@@ -50,14 +52,13 @@
 					></app-card>
 				</div>
 			</template>
-			<template v-else>
-				<div v-for="index in skCount" :id="'app-' + index" :key="'app-' + index" class="handle">
-					<app-card-skeleton :index="index"></app-card-skeleton>
-				</div>
-			</template>
 			<!-- App Icon Card End -->
-			<!-- <b-loading slot="footer" v-model="isLoading" :is-full-page="false"></b-loading> -->
 		</draggable>
+		<div v-else class="app-list contextmenu-canvas">
+			<div v-for="index in skCount" :id="'app-' + index" :key="'app-' + index" class="handle">
+				<app-card-skeleton :index="index"></app-card-skeleton>
+			</div>
+		</div>
 		<!-- App List End -->
 
 		<template v-if="oldAppList.length > 0">
@@ -360,7 +361,6 @@ export default {
 			}
 			this.isShowing = false
 			this.$buefy.modal.open({
-				parent: this,
 				component: AppPanel,
 				hasModalCard: true,
 				customClass: 'app-panel',
@@ -410,7 +410,6 @@ export default {
 					}
 				})
 				this.$buefy.modal.open({
-					parent: this,
 					component: AppPanel,
 					hasModalCard: true,
 					customClass: '',
@@ -450,7 +449,6 @@ export default {
 			}
 			const ret = await this.$api.container.getInfo(id)
 			this.$buefy.modal.open({
-				parent: this,
 				component: AppPanel,
 				hasModalCard: true,
 				customClass: '',
@@ -476,7 +474,6 @@ export default {
 
 		async showExternalLinkPanel (item = {}) {
 			this.$buefy.modal.open({
-				parent: this,
 				component: ExternalLinkPanel,
 				hasModalCard: true,
 				customClass: '',

@@ -1,5 +1,5 @@
 import 'intersection-observer'
-import Vue from 'vue'
+import { configureCompat, createApp } from 'vue'
 import App from '@/App.vue'
 import router from '@/router'
 import store from '@/store'
@@ -8,18 +8,17 @@ import api from '@/service/api.js'
 import openAPI from '@/service/index.js'
 import Buefy from 'buefy'
 import VueFullscreen from 'vue-fullscreen'
-import Vue2TouchEvents from 'vue2-touch-events'
 import VueSocialSharing from 'vue-social-sharing'
-import VueSocketIOExt from 'vue-socket.io-extended';
 import messageBus from '@/events/index.js'
-import VueDOMPurifyHTML from 'vue-dompurify-html'
+import createEventBus from '@/events/bus.js'
+import { buildVueDompurifyHTMLDirective } from 'vue-dompurify-html'
 import io from 'socket.io-client'
 import Asset from '@/plugins/asset'
-
+import Socket from '@/plugins/socket'
+import Animate from '@/plugins/animate'
 
 // Import Styles
 import '@/assets/scss/app.scss'
-import VAnimateCss from 'v-animate-css';
 
 const isDev = process.env.NODE_ENV === 'dev';
 const protocol = document.location.protocol
@@ -30,47 +29,50 @@ const localhost = document.location.host
 const localhostName = document.location.hostname
 const baseIp = isDev ? `${devIp}` : `${localhostName}`
 const baseURL = isDev ? `${devIp}:${devPort}` : `${localhost}`
-const wsURL = `${wsProtocol}//${baseURL}`
 
 const socket = io( {
 	transports: ['websocket', 'polling'],
 	path: '/v2/message_bus/socket.io/',
 });
 
-Vue.use(Buefy)
-Vue.use(Asset)
-Vue.use(VueFullscreen)
-Vue.use(VAnimateCss, { animateCSSPath: '/css/animate.min.css' });
-Vue.use(Vue2TouchEvents)
-Vue.use(VueSocketIOExt, socket);
-Vue.use(VueSocialSharing);
-Vue.use(VueDOMPurifyHTML, {
+// Vue 3 behaviour where nothing in the app relies on Vue 2's, so Vue 3 libraries
+// (Buefy 3, vuedraggable, ...) work; the rest stays in compat mode while code is migrated.
+configureCompat({
+	RENDER_FUNCTION: false,
+	INSTANCE_SCOPED_SLOTS: false,
+	COMPONENT_V_MODEL: false,
+})
+
+const app = createApp(App)
+
+app.use(router)
+app.use(store)
+app.use(i18n)
+app.use(Buefy)
+// Buefy 3 is written for Vue 3: run its components without the Vue 2 compat behaviours
+for (const [name, component] of Object.entries(app._context.components)) {
+	if (name.startsWith('B')) component.compatConfig = { MODE: 3 }
+}
+app.use(Asset)
+app.use(Animate)
+app.use(VueFullscreen)
+app.use(Socket, socket)
+app.use(VueSocialSharing)
+app.directive('dompurify-html', buildVueDompurifyHTMLDirective({
 	default: {
 		ALLOWED_ATTR: ['target', 'href']
 	}
-});
+}))
 
-Vue.config.productionTip = false
-Vue.prototype.$api = api;
-Vue.prototype.$openAPI = openAPI;
-Vue.prototype.$baseIp = baseIp;
-Vue.prototype.$baseURL = baseURL;
-Vue.prototype.$protocol = protocol;
-Vue.prototype.$wsProtocol = wsProtocol;
+Object.assign(app.config.globalProperties, {
+	$api: api,
+	$openAPI: openAPI,
+	$baseIp: baseIp,
+	$baseURL: baseURL,
+	$protocol: protocol,
+	$wsProtocol: wsProtocol,
+	$EventBus: createEventBus(),
+	$messageBus: messageBus,
+})
 
-
-// Create an EventBus
-Vue.prototype.$EventBus = new Vue();
-Vue.prototype.$messageBus = messageBus;
-
-new Vue({
-	router,
-	i18n,
-	store,
-	render: h => h(App)
-}).$mount('#app')
-
-
-
-
-
+app.mount('#app')

@@ -8,8 +8,8 @@ import isNull from 'lodash/isNull'
 import orderBy from 'lodash/orderBy'
 import debounce from 'lodash/debounce'
 import FileSaver from 'file-saver'
-import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
-import { ValidationObserver, ValidationProvider } from 'vee-validate'
+import { Swiper, SwiperSlide } from '@/components/base/Swiper'
+import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 import { parse } from 'yaml'
 import { vOnClickOutside } from '@vueuse/components'
 import AppTerminalPanel from './AppTerminalPanel.vue'
@@ -627,7 +627,6 @@ export default {
             const composeJSON = parse(res.data)
             if (composeJSON['x-casaos']?.tips?.before_install?.en_us) {
               this.$buefy.modal.open({
-                parent: this,
                 component: () => import('@/components/Apps/TipEditorModal.vue'),
                 hasModalCard: true,
                 customClass: '',
@@ -858,7 +857,6 @@ export default {
      */
     showImportPanel() {
       this.$buefy.modal.open({
-        parent: this,
         component: ImportPanel,
         hasModalCard: true,
         customClass: '',
@@ -974,7 +972,6 @@ export default {
             const containers = res.data.data.containers
             const containerId = containers[this.dockerComposeServiceName].ID
             this.$buefy.modal.open({
-              parent: this,
               component: AppTerminalPanel,
               hasModalCard: true,
               customClass: 'terminal-modal',
@@ -1205,8 +1202,8 @@ export default {
           icon="close-outline"
           pack="casa"
           @click.native="
-            $emit('close')
-            $messageBus('appstore_close')
+            $emit('close');
+            $messageBus('appstore_close');
           "
         />
       </header>
@@ -1231,7 +1228,7 @@ export default {
     <template v-else>
       <!-- Sidebar Start -->
       <AppSideBar v-model="sidebarOpen" :overlay="true" :right="true" position="absolute">
-        <template slot-scope="{ close }">
+        <template #default="{ close }">
           <AppDetailInfo
             :app-detail-data="appDetailData"
             :arch="arch"
@@ -1336,8 +1333,8 @@ export default {
                     <div
                       class="is-flex-grow-1 mr-4 is-clickable"
                       @click="
-                        showAppDetial(item.id)
-                        $messageBus('appstore_detail', item.title)
+                        showAppDetial(item.id);
+                        $messageBus('appstore_detail', item.title);
                       "
                     >
                       <h6 class="title is-6 mb-2">
@@ -1366,8 +1363,8 @@ export default {
                         size="is-small"
                         type="is-primary is-light"
                         @click="
-                          quickInstall(item.id)
-                          $messageBus('appstore_install', item.title)
+                          quickInstall(item.id);
+                          $messageBus('appstore_install', item.title);
                         "
                       >
                         {{ $t('Install') }}
@@ -1530,8 +1527,8 @@ export default {
                 <div
                   class="is-flex-grow-1 mr-4 is-clickable"
                   @click="
-                    showAppDetial(item.id)
-                    $messageBus('appstore_detail', item.title)
+                    showAppDetial(item.id);
+                    $messageBus('appstore_detail', item.title);
                   "
                 >
                   <h6 class="title is-6 mb-2">
@@ -1564,8 +1561,8 @@ export default {
                   size="is-small"
                   type="is-primary is-light"
                   @click="
-                    quickInstall(item.id)
-                    $messageBus('appstore_install', item.title)
+                    quickInstall(item.id);
+                    $messageBus('appstore_install', item.title);
                   "
                 >
                   {{ $t('Install') }}
@@ -1607,8 +1604,8 @@ export default {
                   <div
                     class="is-flex-grow-1 mr-4 is-clickable"
                     @click="
-                      showAppDetial(item.id)
-                      $messageBus('appstorecommunity_detail', item.title)
+                      showAppDetial(item.id);
+                      $messageBus('appstorecommunity_detail', item.title);
                     "
                   >
                     <h6 class="title is-6 mb-2">
@@ -1641,8 +1638,8 @@ export default {
                     size="is-small"
                     type="is-primary is-light"
                     @click="
-                      quickInstall(item.id)
-                      $messageBus('appstorecommunity_install', item.title)
+                      quickInstall(item.id);
+                      $messageBus('appstorecommunity_install', item.title);
                     "
                   >
                     {{ $t('Install') }}
