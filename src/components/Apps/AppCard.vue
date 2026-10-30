@@ -827,6 +827,14 @@ export default {
               {{ i18n(item.title) }}
             </a>
           </p>
+          <!-- Atrio: status as a dot shape plus a label, never colour alone -->
+          <p
+            :class="[item.status === 'running' ? 'is-running' : 'is-stopped', { 'is-invisible': item.app_type === 'system' || !item.status }]"
+            class="atrio-app-status"
+          >
+            <span class="atrio-app-dot" />
+            {{ item.status === 'running' ? $t('Running') : $t('Stopped') }}
+          </p>
         </div>
       </b-tooltip>
       <!-- Card Content End -->
@@ -1051,5 +1059,38 @@ export default {
       background: hsla(208, 100%, 45%, 1);
     }
   }
+}
+
+.atrio-app-status {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	margin-top: 0.125rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+
+	.atrio-app-dot {
+		width: 0.5rem;
+		height: 0.5rem;
+	}
+
+	&.is-running {
+		color: var(--atrio-ok-text);
+
+		.atrio-app-dot {
+			border-radius: 50%;
+			background: var(--atrio-ok);
+		}
+	}
+
+	&.is-stopped {
+		color: var(--atrio-warn-text);
+
+		.atrio-app-dot {
+			border-radius: 2px;
+			background: var(--atrio-warn);
+		}
+	}
 }
 </style>

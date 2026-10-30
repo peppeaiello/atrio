@@ -450,8 +450,21 @@ export default {
 </script>
 
 <template>
-  <div class="navbar top-bar is-flex is-align-items-center _fixed-height">
-    <div class="navbar-brand ml-4 _fixed-height">
+  <div class="atrio-header-wrap">
+  <div class="navbar top-bar atrio-header container is-flex is-align-items-center">
+    <a class="atrio-brand" href="#/" aria-label="Atrio">
+      <img :src="$asset('@/assets/img/logo/atrio-mark.svg')" alt="">
+      <span>atrio</span>
+    </a>
+
+    <!-- Search / command palette -->
+    <button class="atrio-search" type="button" @click="$EventBus.$emit('atrio:open-palette')">
+      <b-icon icon="search-outline" pack="casa" size="is-20" />
+      <span class="atrio-search-label">{{ $t('Search apps, actions and settings…') }}</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+
+    <div class="navbar-brand atrio-actions _fixed-height">
       <!-- SideBar Button Start -->
       <div id="sidebar-btn" class="is-flex is-align-items-center navbar-item">
         <b-tooltip
@@ -803,11 +816,6 @@ export default {
       <!-- Terminal  End -->
     </div>
 
-    <div class="navbar-menu">
-      <div class="navbar-end mr-3">
-        <!-- <b-icon pack="far" icon="comment-alt"></b-icon> -->
-      </div>
-    </div>
 
     <b-modal v-model="showPower" :can-cancel="false" class="_modal" scroll="clip" width="20rem">
       <b-message @close="resetPower">
@@ -839,6 +847,7 @@ export default {
         </button>
       </footer>
     </b-modal>
+  </div>
   </div>
 </template>
 
@@ -1148,6 +1157,119 @@ export default {
 					height: 1.25rem;
 				}
 			}
+		}
+	}
+}
+
+// Atrio header (Calm glass)
+.atrio-header-wrap {
+	position: relative;
+	z-index: 20;
+	padding: 1rem 0 0;
+}
+
+.top-bar.atrio-header {
+	height: auto;
+	min-height: 3.75rem;
+	padding: 0.5rem 0.75rem 0.5rem 1rem;
+	gap: 1rem;
+	background: var(--atrio-glass-bg);
+	backdrop-filter: var(--atrio-glass-blur);
+	-webkit-backdrop-filter: var(--atrio-glass-blur);
+	border-radius: 20px;
+	box-shadow: inset 0 0 0 1px var(--atrio-glass-border);
+	color: var(--atrio-text);
+
+	.navbar-brand.atrio-actions {
+		order: 3;
+		margin-left: 0;
+		align-items: center;
+
+		.picon,
+		.icon {
+			color: var(--atrio-text);
+		}
+
+		.navbar-item {
+			border-radius: var(--atrio-radius-sm);
+			transition: background 0.2s;
+
+			&:hover {
+				background: var(--atrio-glass-hover);
+			}
+		}
+	}
+}
+
+.atrio-brand {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.625rem;
+	color: var(--atrio-text);
+	font-size: 1.25rem;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+
+	img {
+		width: 1.875rem;
+		height: 1.875rem;
+	}
+
+	&:hover {
+		color: var(--atrio-text);
+	}
+}
+
+.atrio-search {
+	flex: 1 1 18rem;
+	max-width: 32rem;
+	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	height: 2.75rem;
+	padding: 0 0.5rem 0 0.875rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: var(--atrio-radius-sm);
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--atrio-text-soft);
+	font: inherit;
+	font-size: 0.875rem;
+	cursor: pointer;
+	transition: background 0.2s;
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.atrio-search-label {
+		flex: 1;
+		overflow: hidden;
+		text-align: left;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	kbd {
+		padding: 0.1875rem 0.5rem;
+		border-radius: 0.5rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--atrio-text);
+		font: inherit;
+		font-size: 0.75rem;
+	}
+}
+
+@media screen and (max-width: 768px) {
+	.atrio-search {
+		flex: 0 0 2.75rem;
+		justify-content: center;
+		padding: 0;
+
+		.atrio-search-label,
+		kbd {
+			display: none;
 		}
 	}
 }

@@ -18,6 +18,11 @@ import Socket from '@/plugins/socket'
 import Animate from '@/plugins/animate'
 
 // Import Styles
+import '@fontsource/manrope/400.css'
+import '@fontsource/manrope/500.css'
+import '@fontsource/manrope/600.css'
+import '@fontsource/manrope/700.css'
+import '@fontsource/manrope/800.css'
 import '@/assets/scss/app.scss'
 
 const isDev = process.env.NODE_ENV === 'dev';

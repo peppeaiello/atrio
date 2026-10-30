@@ -1,5 +1,5 @@
 {
-  "lang_name":"English",
+  "lang_name": "English",
   "OK": "OK",
   "Cancel": "Cancel",
   "Submit": "Submit",
@@ -409,5 +409,25 @@
   "Installing {title}": "Installing {title}",
   "Legacy app (To be rebuilt).": "Legacy app (To be rebuilt).",
   "To be rebuilt.": "To be rebuilt.",
-  "launch-and-open": "Launch and open"
+  "launch-and-open": "Launch and open",
+  "Good morning": "Good morning",
+  "Good afternoon": "Good afternoon",
+  "Good evening": "Good evening",
+  "Search apps, actions and settings…": "Search apps, actions and settings…",
+  "Open the file manager": "Open the file manager",
+  "Install new apps": "Install new apps",
+  "Change the wallpaper": "Change the wallpaper",
+  "System": "System",
+  "Actions": "Actions",
+  "Start and open": "Start and open",
+  "Running": "Running",
+  "Stopped": "Stopped",
+  "Restarts the containers of the app": "Restarts the containers of the app",
+  "restarted": "restarted",
+  "restart failed": "restart failed",
+  "No results": "No results",
+  "move": "move",
+  "run": "run",
+  "close": "close",
+  "Search": "Search"
 }

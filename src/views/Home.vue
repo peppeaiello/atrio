@@ -5,6 +5,7 @@ import SideBar from '@/components/SideBar.vue'
 import TopBar from '@/components/TopBar.vue'
 import CoreService from '@/components/CoreService.vue'
 import AppSection from '@/components/Apps/AppSection.vue'
+import CommandPalette from '@/components/home/CommandPalette.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
@@ -21,11 +22,13 @@ export default {
     TopBar,
     CoreService,
     FilePanel,
+    CommandPalette,
   },
   mixins: [mixin],
   provide() {
     return {
       homeShowFiles: this.showFiles,
+      homeShowAppStore: () => this.$refs.apps?.showInstall(),
     }
   },
   data() {
@@ -43,6 +46,21 @@ export default {
   },
 
   computed: {
+    // "it_it" -> "it-IT" for Intl
+    locale() {
+      const [lang, region] = (this.$i18n.locale || 'en_us').split('_')
+      return region ? `${lang}-${region.toUpperCase()}` : lang
+    },
+    today() {
+      const date = new Intl.DateTimeFormat(this.locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
+      return date.charAt(0).toUpperCase() + date.slice(1)
+    },
+    greeting() {
+      const hour = new Date().getHours()
+      const part = hour < 5 ? 'Good evening' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+      const name = this.$store.state.user?.username
+      return name ? `${this.$t(part)}, ${name}` : this.$t(part)
+    },
     sidebarOpen() {
       return this.$store.state.sidebarOpen
     },
@@ -248,8 +266,14 @@ export default {
     <!-- NavBar End -->
 
     <!-- Content Start -->
-    <div class="contents  pt-55 contextmenu-canvas" @contextmenu.prevent="openHomeContaxtMenu">
+    <div class="contents contextmenu-canvas" @contextmenu.prevent="openHomeContaxtMenu">
       <div class="container">
+        <!-- Greeting Start -->
+        <section class="atrio-greeting">
+          <p class="atrio-greeting-date">{{ today }}</p>
+          <h1 class="atrio-greeting-title">{{ greeting }}</h1>
+        </section>
+        <!-- Greeting End -->
         <div class="columns is-variable is-2">
           <div class="column is-one-quarter slider-content">
             <!-- SideBar Start -->
@@ -294,6 +318,8 @@ export default {
     </div>
     <!-- Content End -->
 
+    <CommandPalette />
+
     <!-- File Panel Start -->
     <b-modal
       v-model="isFileActive" :can-cancel="[]" :destroy-on-hide="false" animation="zoom-in" aria-modal
@@ -308,6 +334,31 @@ export default {
 </template>
 
 <style lang="scss" scoped>
+.atrio-greeting {
+    padding: 1.75rem 0.25rem 1.25rem;
+    color: var(--atrio-text);
+
+    .atrio-greeting-date {
+        color: var(--atrio-text-soft);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .atrio-greeting-title {
+        margin-top: 0.25rem;
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+    }
+
+    @include mobile {
+        .atrio-greeting-title {
+            font-size: 1.75rem;
+        }
+    }
+}
+
 .out-container {
     position: relative;
     height: 100%;
