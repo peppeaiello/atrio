@@ -462,5 +462,15 @@
   "No logs yet": "No logs yet",
   "High system load": "High system load",
   "System healthy": "System healthy",
-  "{running} of {total} apps running": "{running} of {total} apps running"
+  "{running} of {total} apps running": "{running} of {total} apps running",
+  "Starting the update…": "Starting the update…",
+  "Could not reach the updater on the server": "Could not reach the updater on the server",
+  "Updated, reloading…": "Updated, reloading…",
+  "The update is taking too long": "The update is taking too long",
+  "Development build": "Development build",
+  "Checking for updates…": "Checking for updates…",
+  "Could not check for updates": "Could not check for updates",
+  "Version {version} is available": "Version {version} is available",
+  "How to update": "How to update",
+  "You have the latest version": "You have the latest version"
 }

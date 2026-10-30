@@ -16,7 +16,8 @@ Atrio is a fork of [CasaOS-UI](https://github.com/IceWhaleTech/CasaOS-UI) by [Ic
 It talks to the standard CasaOS backend, so it replaces only the web interface: your apps, settings and data stay
 the same.
 
-> **Status:** early days. Right now Atrio is CasaOS-UI with a new identity; the redesign is in progress.
+> **Status:** early days. The home page is redesigned (glass look, live widgets, command palette, app details
+> panel); the other screens still look like CasaOS.
 
 Atrio is an independent project, not affiliated with or endorsed by IceWhale Technology. CasaOS is a trademark of
 its respective owners.
@@ -24,6 +25,42 @@ its respective owners.
 ## Compatibility
 
 Tested with CasaOS **v0.4.15**.
+
+## Install
+
+On the machine that runs CasaOS:
+
+```shell
+curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/install.sh | sudo bash
+```
+
+Then reload CasaOS in your browser with `Ctrl+F5`. The script:
+
+- saves a copy of the original CasaOS UI in `/var/lib/casaos/atrio/casaos-ui-original`;
+- installs the latest [release](https://github.com/peppeaiello/atrio/releases) in `/var/lib/casaos/www`, the folder
+  CasaOS serves its UI from;
+- installs a small updater (`/usr/local/bin/atrio-update` and the `atrio-update.path` systemd unit).
+
+Nothing else changes: CasaOS, your apps and their data are left as they are.
+
+## Update
+
+Open the settings menu (the sliders icon at the top): the **Atrio** row shows your version and, when a new release is
+out, an **Update** button. Atrio asks the updater on the server to download the release from GitHub, checks its
+checksum and installs it, then reloads the page.
+
+From a terminal you can do the same with `sudo atrio-update`.
+
+## Uninstall
+
+```shell
+curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/uninstall.sh | sudo bash
+```
+
+It puts the original CasaOS UI back and removes the updater. Reload the page with `Ctrl+F5`.
+
+> Updating CasaOS itself may replace Atrio with the CasaOS UI again. Run the install command once more to get Atrio
+> back.
 
 ## Development
 
@@ -56,11 +93,18 @@ pnpm build
 
 The build goes to `build/sysroot/var/lib/casaos/www/`, which is the folder CasaOS serves its UI from.
 
-### Test
+### Release
+
+1. Set the new version in `package.json` (for example `0.2.0`) and commit it.
+2. Tag the commit and push the tag:
 
 ```shell
-pnpm test
+git tag v0.2.0
+git push origin v0.2.0
 ```
+
+The [Release workflow](.github/workflows/release.yml) builds Atrio and publishes `atrio.tar.gz` with its checksum.
+Installed copies see the new version in their settings.
 
 ## Credits
 

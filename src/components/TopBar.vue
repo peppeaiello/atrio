@@ -1,4 +1,5 @@
 <script>
+import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
 import AccountPanel from './account/AccountPanel.vue'
 import TerminalPanel from './logsAndTerminal/TerminalPanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -13,6 +14,7 @@ const systemConfigName = 'system'
 export default {
   name: 'TopBar',
   components: {
+    AtrioUpdate,
     AccountPanel,
   },
   mixins: [mixin],
@@ -772,6 +774,7 @@ export default {
             </div>
           </div>
           <!-- Update End -->
+          <AtrioUpdate />
           <!-- Restart or Shutdown Start -->
           <div
             class="is-flex is-align-content-center is-justify-content-center _footer mt-4 pl-3 pr-3 pt-2 pb-2"

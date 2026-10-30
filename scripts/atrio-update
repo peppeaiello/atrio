@@ -1,0 +1,62 @@
+#!/bin/bash
+# Installs the latest Atrio release from GitHub into the CasaOS web UI folder.
+# Run by atrio-update.service when Atrio asks for an update (it creates the request
+# file through the CasaOS file API), or by hand: sudo atrio-update
+set -euo pipefail
+
+REPO="peppeaiello/atrio"
+WWW="/var/lib/casaos/www"
+STATE="/var/lib/casaos/atrio"
+STATUS="$STATE/update-status.json"
+REQUEST="$STATE/update-request"
+DOWNLOAD="https://github.com/$REPO/releases/latest/download"
+
+mkdir -p "$STATE"
+rm -f "$REQUEST"
+
+installed_version() {
+	sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$1/atrio-version.json" 2>/dev/null || true
+}
+
+# The web UI reads this file to follow the update
+write_status() {
+	printf '{"state":"%s","version":"%s","message":"%s","time":"%s"}\n' \
+		"$1" "$(installed_version "$WWW")" "$2" "$(date -Iseconds)" > "$STATUS.tmp"
+	mv "$STATUS.tmp" "$STATUS"
+}
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+trap 'write_status error "The update failed, Atrio was not changed"' ERR
+
+write_status running "Downloading the latest release"
+curl -fsSL -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz"
+curl -fsSL -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256"
+(cd "$TMP" && sha256sum --check --quiet atrio.tar.gz.sha256)
+
+mkdir "$TMP/www"
+tar -xzf "$TMP/atrio.tar.gz" -C "$TMP/www"
+if [ ! -f "$TMP/www/index.html" ] || [ ! -f "$TMP/www/atrio-version.json" ]; then
+	write_status error "The downloaded release is not a valid Atrio build"
+	exit 1
+fi
+
+latest=$(installed_version "$TMP/www")
+if [ "$latest" = "$(installed_version "$WWW")" ] && [ "${1:-}" != "--force" ]; then
+	write_status done "Atrio $latest is already installed"
+	exit 0
+fi
+
+write_status running "Installing Atrio $latest"
+if command -v rsync >/dev/null; then
+	rsync -a --delete "$TMP/www/" "$WWW/"
+else
+	rm -rf "$WWW.new" "$WWW.old"
+	cp -a "$TMP/www" "$WWW.new"
+	mv "$WWW" "$WWW.old" && mv "$WWW.new" "$WWW" && rm -rf "$WWW.old"
+fi
+chown -R root:root "$WWW"
+chmod 755 "$WWW"
+
+write_status done "Atrio $latest installed"
+echo "Atrio $latest installed"
