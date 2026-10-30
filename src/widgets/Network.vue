@@ -23,32 +23,28 @@
 				</div>
 			</div>
 			<!-- Header End -->
-			<!-- Chart Start -->
-			<div class="chart-container">
-				<vue-apex-charts ref="chart" :options="chartOptions" :series="chartSeries" height="130"
-					type="area" />
-			</div>
-			<!-- Chart End -->
-			<!-- Status Start -->
-			<div class="is-flex ">
-				<div class=" is-flex-shrink-0 is-size-65 is-flex is-align-items-center has-text-grey-100">
-					<div>
-						<b-icon class="up" icon="up-arrow" pack="casa" size="is-small">
-						</b-icon>
-						{{ currentUpSpeed * 1024 | renderSize }}/s
-						<b-icon class="down ml-2" icon="down-arrow" pack="casa" size="is-small">
-						</b-icon>
-						{{ currentDownSpeed * 1024 | renderSize }}/s
+			<div class="atrio-metrics">
+				<div class="atrio-metric">
+					<div class="atrio-metric-value">
+						<span class="atrio-metric-label">Upload</span>
+						<span class="atrio-metric-number">{{ renderSize(currentUpSpeed * 1024) }}/s</span>
 					</div>
+					<Sparkline :capacity="60" :values="upHistory" color="#22D3EE" />
+				</div>
+				<div class="atrio-metric">
+					<div class="atrio-metric-value">
+						<span class="atrio-metric-label">Download</span>
+						<span class="atrio-metric-number">{{ renderSize(currentDownSpeed * 1024) }}/s</span>
+					</div>
+					<Sparkline :capacity="60" :values="downHistory" color="#6EE7B7" />
 				</div>
 			</div>
-			<!-- Status End -->
 		</div>
 	</div>
 </template>
 
 <script>
-// import VueApexCharts from 'vue-apexcharts'
+import Sparkline from '@/components/widgets/Sparkline.vue'
 import { mixin } from '@/mixins/mixin';
 
 export default {
@@ -59,7 +55,7 @@ export default {
 	title: "Network Status",
 	initShow: true,
 	components: {
-		VueApexCharts: () => import("vue3-apexcharts")
+		Sparkline,
 	},
 	data() {
 		return {
@@ -68,89 +64,6 @@ export default {
 			networks: [],
 			currentUpSpeed: 0,
 			currentDownSpeed: 0,
-			chartOptions: {
-				chart: {
-					offsetX: -5,
-					offsetY: -10,
-					zoom: {
-						enabled: false,
-					},
-					toolbar: {
-						show: false,
-					},
-					stacked: false,
-					animations: {
-						enabled: false,
-					},
-				},
-
-				markers: {
-					size: 0,
-				},
-				dataLabels: {
-					enabled: false,
-				},
-				stroke: {
-					curve: 'smooth',
-					width: 1,
-				},
-				grid: {
-					xaxis: {
-						lines: {
-							show: false,
-						},
-					},
-					yaxis: {
-						lines: {
-							show: true
-						}
-					},
-				},
-				tooltip: {
-					enabled: false,
-				},
-				xaxis: {
-					type: 'numeric',
-					range: 60,
-					labels: {
-						show: false,
-					},
-					tooltip: {
-						enabled: false
-					},
-					axisBorder: {
-						show: false,
-					}
-				},
-				yaxis: {
-					labels: {
-						show: true,
-						rotate: 0,
-						rotateAlways: false,
-						hideOverlappingLabels: true,
-						showDuplicates: false,
-						trim: false,
-						minHeight: undefined,
-						maxHeight: 120,
-						style: {
-							colors: '#ffffff',
-							fontSize: '10px',
-							fontWeight: 400,
-							cssClass: 'apexcharts-xaxis-label',
-						},
-						offsetX: 0,
-						offsetY: 0,
-						format: undefined,
-						formatter: undefined,
-						datetimeUTC: true,
-					},
-				},
-				legend: {
-					show: false,
-					position: 'top',
-					horizontalAlign: 'left'
-				}
-			},
 		}
 	},
 	created() {
@@ -162,9 +75,11 @@ export default {
 	},
 
 	computed: {
-		// ApexCharts needs plain arrays, not reactive proxies
-		chartSeries() {
-			return (this.networks[this.networkId] || []).map(({ name, data }) => ({ name, data: [...data] }))
+		upHistory() {
+			return (this.networks[this.networkId]?.[0]?.data || []).map(Number)
+		},
+		downHistory() {
+			return (this.networks[this.networkId]?.[1]?.data || []).map(Number)
 		},
 	},
 
@@ -221,7 +136,6 @@ export default {
 				this.networks[index][1].cacheTime = el.time;
 			});
 			this.networkId = this.networkId > this.networks.length - 1 ? 0 : this.networkId
-			this.$refs.chart?.updateSeries(this.chartSeries)
 			if (this.networks) {
 				const upSpeed = this.networks[this.networkId][0].data[this.networks[this.networkId][0].data.length - 1]
 				const downSpeed = this.networks[this.networkId][1].data[this.networks[this.networkId][1].data.length - 1]

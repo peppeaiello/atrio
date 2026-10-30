@@ -20,7 +20,7 @@
 					</b-field>
 				</ValidationProvider>
 				<ValidationProvider v-slot="{ errors, valid }" name="Password" rules="required|min:5" vid="password">
-					<b-field :label="$t('Password')" :message="$t(errors)"
+					<b-field :label="$t('Password')" :message="(errors[0] ? $t(errors[0]) : '')"
 							 :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mt-2">
 						<b-input v-model="password" :autofocus="username" password-reveal
 								 type="password" v-on:keyup.enter.native="handleSubmit(login)"></b-input>

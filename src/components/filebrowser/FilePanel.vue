@@ -122,7 +122,7 @@
 									<div class="is-flex-grow-1 has-text-left is-flex is-align-items-center">
 										<b-field class="ml-1 is-flex is-size-14px mb-0" expanded >
 											<b-checkbox v-model="isSelectAll" :class="selectState" size="is-small"
-												@input="handleSelect">
+												@update:model-value="handleSelect">
 												{{
 													selectState != "none"
 													? $t("select-items", selectLabel)

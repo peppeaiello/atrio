@@ -7,20 +7,31 @@
 				<div class="widget-title is-flex-grow-1">
 					{{ $t("System Status") }}
 				</div>
+				<span class="atrio-widget-hint mr-2">{{ $t('live') }}</span>
 				<div class="widget-icon-button is-flex-shrink-0" @click="showMoreInfo">
 					<b-icon :class="{ open: showMore }" class="arrow-btn" icon="right-outline" pack="casa"></b-icon>
 				</div>
 			</div>
 			<!-- Header End -->
 
-			<div class="columns is-mobile mt-0 mb-1">
-				<div class="column is-half has-text-centered">
-					<radial-bar :extendContent="power + temperature" :extendContentClickable="true"
-						:percent="parseInt(cpuSeries)" label="CPU" @extendContentClick="changeFormat"></radial-bar>
+			<div class="atrio-metrics">
+				<div class="atrio-metric">
+					<div class="atrio-metric-value">
+						<span class="atrio-metric-label">CPU</span>
+						<span class="atrio-metric-number">{{ parseInt(cpuSeries) }}%</span>
+					</div>
+					<Sparkline :capacity="historySize" :values="cpuHistory" color="#22D3EE" />
+					<button class="atrio-metric-note" type="button" :title="$t('Switch °C / °F')" @click="changeFormat">
+						{{ power + temperature }}
+					</button>
 				</div>
-				<div class="column is-half has-text-centered">
-					<radial-bar :extendContent="renderSize(totalMemory)" :percent="parseInt(ramSeries)"
-						label="RAM"></radial-bar>
+				<div class="atrio-metric">
+					<div class="atrio-metric-value">
+						<span class="atrio-metric-label">RAM</span>
+						<span class="atrio-metric-number">{{ parseInt(ramSeries) }}%</span>
+					</div>
+					<Sparkline :capacity="historySize" :values="ramHistory" color="#818CF8" />
+					<span class="atrio-metric-note">{{ renderSize(usedMemory) }} / {{ renderSize(totalMemory) }}</span>
 				</div>
 			</div>
 			<div v-if="showMore">
@@ -66,7 +77,10 @@ import orderBy from "lodash/orderBy";
 import has from "lodash/has";
 import slice from "lodash/slice";
 import { mixin } from "@/mixins/mixin";
-import RadialBar from "@/components/widgets/RadialBar.vue";
+import Sparkline from "@/components/widgets/Sparkline.vue";
+
+// Samples kept for the charts (the server sends one every few seconds)
+const HISTORY = 30;
 
 export default {
 	// eslint-disable-next-line vue/multi-word-component-names
@@ -76,7 +90,7 @@ export default {
 	initShow: true,
 	mixins: [mixin],
 	components: {
-		RadialBar,
+		Sparkline,
 	},
 
 	data() {
@@ -89,6 +103,10 @@ export default {
 			barHeight: 132,
 			cpuSeries: 0,
 			ramSeries: 0,
+			usedMemory: 0,
+			cpuHistory: [],
+			ramHistory: [],
+			historySize: HISTORY,
 			containerCpuList: [],
 			containerRamList: [],
 			temperatureFormat: localStorage.getItem("temperatureFormat")
@@ -178,6 +196,9 @@ export default {
 			}
 			// Memory
 			this.ramSeries = mem.usedPercent;
+			this.usedMemory = mem.used || 0;
+			this.pushHistory(this.cpuHistory, Number(cpu.percent) || 0);
+			this.pushHistory(this.ramHistory, Number(mem.usedPercent) || 0);
 		},
 		/**
 		 * @description: Get Docker apps cpu and memory usage
@@ -247,6 +268,11 @@ export default {
 			}
 		},
 
+		pushHistory(list, value) {
+			list.push(value);
+			if (list.length > HISTORY) list.shift();
+		},
+
 		pushPower(power) {
 			if (this.powerList.length >= 2) {
 				this.powerList.shift();
@@ -311,4 +337,5 @@ export default {
 		}
 	}
 }
+
 </style>

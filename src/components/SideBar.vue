@@ -62,6 +62,12 @@ export default {
     this.getConfig()
 
     window.addEventListener('resize', this.handleResize)
+    this.scroller = document.querySelector('.contents')
+    this.scroller?.addEventListener('scroll', this.handleResize, { passive: true })
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.handleResize)
+    this.scroller?.removeEventListener('scroll', this.handleResize)
   },
 
   methods: {
@@ -139,13 +145,23 @@ export default {
     },
 
     handleResize() {
-      const ww = window.innerWidth
       if (this.isLoading)
         return false
-      const parentWidth = document.querySelector('.slider-content').offsetWidth
       this.$nextTick(() => {
-        const padding = ww <= 480 ? 0 : -16
-        this.$refs.sidebar.style.width = `${parentWidth + padding}px`
+        const el = this.$refs.sidebar
+        if (!el)
+          return
+        // On phones the column is a drawer as wide as its parent
+        if (window.innerWidth <= 480) {
+          el.style.width = `${document.querySelector('.slider-content').offsetWidth}px`
+          el.style.maxHeight = ''
+          return
+        }
+        el.style.width = ''
+        // Fit between the column's top edge and the brand bar at the bottom of the screen
+        const contentsTop = document.querySelector('.contents')?.getBoundingClientRect().top || 0
+        const top = Math.max(el.getBoundingClientRect().top, contentsTop)
+        el.style.maxHeight = `${window.innerHeight - top - 56}px`
       })
     },
 
@@ -165,17 +181,21 @@ export default {
 </template>
 
 <style lang="scss">
+// The column stays in view while the page scrolls, and scrolls on its own when the widgets are taller
 .side-bar {
+    position: sticky;
+    top: 0;
     z-index: 10;
-    // height: calc(100vh - 6rem);
-    height: calc(var(--vh, 1vh) * 100 - 6rem);
-    overflow: inherit !important;
-    position: fixed;
+    display: flex;
+    flex-direction: column;
 
     @include until(480px) {
+        position: fixed;
         z-index: 20;
         left: 0rem;
         width: auto;
+        height: calc(var(--vh, 1vh) * 100 - 6rem);
+        max-height: none;
         margin: 0 0 0 1rem !important;
         transform: translateX(-100vw);
         transition: all 0.3s ease-in-out;
@@ -187,55 +207,9 @@ export default {
 }
 
 .scroll-area {
-    position: relative;
-    padding: 0 16px 0 0;
-    margin-right: -16px;
-    max-height: calc(100% - 7.5rem);
-    overflow-x: inherit !important;
-    overflow-y: hidden !important;
-
-    @include until(480px) {
-        max-height: calc(100% - 4rem);
-        height: 100% !important;
-    }
-}
-
-.ps__thumb-x,
-.ps__thumb-y {
-    background-color: rgba(255, 255, 255, 0.4);
-    width: 8px;
-    right: 5px;
-}
-
-.ps:hover>.ps__rail-x,
-.ps:hover>.ps__rail-y,
-.ps--focus>.ps__rail-x,
-.ps--focus>.ps__rail-y,
-.ps--scrolling-x>.ps__rail-x,
-.ps--scrolling-y>.ps__rail-y {
-    opacity: 0.6;
-    width: 8px;
-}
-
-.ps .ps__rail-x:hover,
-.ps .ps__rail-y:hover,
-.ps .ps__rail-x:focus,
-.ps .ps__rail-y:focus,
-.ps .ps__rail-x.ps--clicking,
-.ps .ps__rail-y.ps--clicking {
-    background-color: transparent;
-    opacity: 0.6;
-}
-
-.ps__rail-x:hover>.ps__thumb-x,
-.ps__rail-x:focus>.ps__thumb-x,
-.ps__rail-x.ps--clicking .ps__thumb-x {
-    height: 8px;
-}
-
-.ps__rail-y:hover>.ps__thumb-y,
-.ps__rail-y:focus>.ps__thumb-y,
-.ps__rail-y.ps--clicking .ps__thumb-y {
-    width: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-right: 0.25rem;
+    margin-right: -0.25rem;
 }
 </style>

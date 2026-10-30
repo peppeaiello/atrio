@@ -1,99 +1,17 @@
 <template>
 	<div class="contact-bar is-flex is-align-items-center has-text-white">
-
-		<popper :options="{
-			placement: 'top',
-			modifiers: { offset: { offset: '0,4px' } }
-		}" enter-active-class="fade-enter-active" leave-active-class="" transition='fade' trigger="hover">
-			<div class="popper  tooltip-content">
-				{{ $t('Submit a feedback or report an issue') }}
-			</div>
-			<template #reference><a @click="showFeedback">
-				<b-icon icon="eedback" pack="casa"></b-icon>
-			</a></template>
-		</popper>
-
-		<popper :options="{
-			placement: 'top',
-			modifiers: { offset: { offset: '0,4px' } }
-		}" enter-active-class="fade-enter-active" leave-active-class="" transition='fade' trigger="hover">
-			<div class="popper  tooltip-content">
-				{{ $t('Join Discord') }}
-			</div>
-			<template #reference><a rel="noopener" href="https://discord.gg/knqAbbBbeX" target="_blank"
-				@click="$messageBus('connect_discord')">
-				<b-icon icon="discord" pack="casa"></b-icon>
-			</a></template>
-		</popper>
-
-		<popper :options="{
-			placement: 'top',
-			modifiers: { offset: { offset: '0,4px' } }
-		}" enter-active-class="fade-enter-active" leave-active-class="" transition='fade' trigger="hover">
-			<div class="popper  tooltip-content">
-				{{ $t('Visit our Github') }}
-			</div>
-			<template #reference><a rel="noopener" href="https://github.com/IceWhaleTech/CasaOS" target="_blank"
-				@click="$messageBus('connect_github')">
-				<b-icon icon="github" pack="casa"></b-icon>
-			</a></template>
-		</popper>
-
-		<popper :options="{
-			placement: 'top',
-			modifiers: { offset: { offset: '0,4px' } }
-		}" enter-active-class="fade-enter-active" leave-active-class="" transition='fade' trigger="hover">
-			<div class="popper  tooltip-content">
-				{{ $t('Share CasaOS') }}
-			</div>
-			<template #reference><a @click="showShareModal">
-				<b-icon icon="chat" pack="casa"></b-icon>
-			</a></template>
-		</popper>
-
+		<a :aria-label="$t('Atrio on GitHub')" :data-tooltip="$t('Atrio on GitHub')" href="https://github.com/peppeaiello/atrio" rel="noopener" target="_blank">
+			<b-icon icon="github" pack="casa"></b-icon>
+		</a>
+		<a :aria-label="$t('Support Atrio on Ko-fi')" :data-tooltip="$t('Support Atrio on Ko-fi')" href="https://ko-fi.com/peppeaiello" rel="noopener" target="_blank">
+			<b-icon icon="coffee-outline" pack="mdi"></b-icon>
+		</a>
 	</div>
 </template>
 
 <script>
-import FeedbackPanel from './feedback/FeedbackPanel.vue'
-import ShareModal from '@/components/share/ShareModal.vue'
-import Popper from '@/components/base/Popper.vue'
-
-
 export default {
 	name: "contact-bar",
-	components: {
-		Popper,
-	},
-	methods: {
-		showFeedback() {
-			// messageBus :: feedback
-			this.$messageBus('connect_feedback');
-			this.$buefy.modal.open({
-				component: FeedbackPanel,
-				hasModalCard: true,
-				customClass: 'feedback-modal',
-				trapFocus: true,
-				canCancel: [],
-				scroll: "keep",
-				animation: "zoom-in",
-			})
-		},
-
-		showShareModal() {
-			// messageBus :: share
-			this.$messageBus('connect_sharecasaos');
-			this.$buefy.modal.open({
-				component: ShareModal,
-				hasModalCard: true,
-				customClass: 'network-storage-modal',
-				trapFocus: true,
-				canCancel: [],
-				scroll: "keep",
-				animation: "zoom-in",
-			})
-		}
-	},
 }
 </script>
 
@@ -116,15 +34,34 @@ export default {
 	}
 }
 
-.popper {
-	background-color: $primary;
-	padding: 0.35rem 0.75rem;
-	box-shadow: 0px 1px 2px 1px rgba(0, 1, 0, 0.2);
-	border: none;
-	color: #ffffff;
-	border-radius: 6px;
-	font-size: 0.85rem;
-	font-weight: 400;
+// Tooltip drawn in CSS: nothing to measure or position, so it cannot flicker
+a[data-tooltip] {
+	position: relative;
+
+	&::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 0.375rem);
+		padding: 0.35rem 0.75rem;
+		border-radius: 0.5rem;
+		background: var(--atrio-glass-bg-strong);
+		backdrop-filter: var(--atrio-glass-blur);
+		box-shadow: inset 0 0 0 1px var(--atrio-glass-border);
+		color: var(--atrio-text);
+		font-size: 0.8125rem;
+		white-space: nowrap;
+		opacity: 0;
+		pointer-events: none;
+		transform: translateY(0.25rem);
+		transition: opacity 0.15s ease, transform 0.15s ease;
+	}
+
+	&:hover::after,
+	&:focus-visible::after {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 
@@ -141,8 +78,3 @@ export default {
 }
 </style>
 
-<style lang="scss">
-.popper .popper__arrow {
-	border-color: $primary transparent transparent transparent !important;
-}
-</style>

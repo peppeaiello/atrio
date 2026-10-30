@@ -14,15 +14,17 @@ export default {
 		transition: { type: String, default: '' },
 		enterActiveClass: { type: String, default: undefined },
 		leaveActiveClass: { type: String, default: undefined },
-		delayOnMouseOut: { type: Number, default: 10 },
+		// Grace period so the pointer can cross the gap between reference and popper
+		delayOnMouseOut: { type: Number, default: 150 },
 	},
 	emits: ['show', 'hide'],
 	data() {
-		return { showPopper: false }
+		return { showPopper: false, positioned: false }
 	},
 	watch: {
 		showPopper(value) {
 			if (value) {
+				this.positioned = false
 				this.$nextTick(this.createInstance)
 				this.$emit('show')
 			} else {
@@ -46,6 +48,7 @@ export default {
 			this.instance = createPopper(this.$refs.reference, this.$refs.popper, {
 				placement: this.options.placement || 'bottom',
 				modifiers: [{ name: 'offset', options: { offset: [0, 4] } }],
+				onFirstUpdate: () => (this.positioned = true),
 			})
 		},
 		destroyInstance() {
@@ -87,7 +90,7 @@ export default {
 		</span>
 		<Teleport to="body" :disabled="!appendToBody">
 			<transition :name="transition" :enter-active-class="enterActiveClass" :leave-active-class="leaveActiveClass">
-				<div v-show="showPopper" ref="popper" class="popper-layer" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+				<div v-show="showPopper" ref="popper" :class="{ 'is-positioned': positioned }" class="popper-layer" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
 					<slot />
 				</div>
 			</transition>
@@ -95,13 +98,26 @@ export default {
 	</span>
 </template>
 
-<style>
+<style lang="scss">
 .popper-root,
 .popper-reference {
 	display: inline-block;
 }
 
+// Out of the layout from the first frame: otherwise showing it moves the reference,
+// the pointer leaves it and a hover popper flickers
 .popper-layer {
+	position: absolute;
+	top: 0;
+	left: 0;
 	z-index: 1000;
+	width: max-content;
+	max-width: 20rem;
+	// Hidden until Popper has placed it, so it never flashes at the corner
+	visibility: hidden;
+
+	&.is-positioned {
+		visibility: visible;
+	}
 }
 </style>

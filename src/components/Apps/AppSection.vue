@@ -10,6 +10,16 @@
 			>
 			</app-section-title-tip>
 
+			<!-- Atrio: filter by status -->
+			<div :aria-label="$t('Filter apps')" class="atrio-segmented mr-3" role="group">
+				<button
+					v-for="option in filterOptions" :key="option.value" :aria-pressed="filter === option.value"
+					:class="{ 'is-active': filter === option.value }" type="button" @click="setFilter(option.value)"
+				>
+					{{ option.label }}
+				</button>
+			</div>
+
 			<b-dropdown animation="fade1" aria-role="menu" class="file-dropdown" position="is-bottom-left">
 				<template #trigger>
 					<b-icon
@@ -34,6 +44,7 @@
 			v-if="!isLoading"
 			v-model="appList"
 			:draggable="draggable"
+			:disabled="filter !== 'all'"
 			:item-key="(item) => 'app-' + item.name"
 			class="app-list contextmenu-canvas"
 			tag="div"
@@ -43,7 +54,7 @@
 		>
 			<!-- App Icon Card Start -->
 			<template #item="{ element: item }">
-				<div :id="'app-' + item.name" class="handle">
+				<div v-show="matchesFilter(item)" :id="'app-' + item.name" class="handle">
 					<app-card
 						:item="item"
 						@configApp="showConfigPanel"
@@ -54,7 +65,10 @@
 			</template>
 			<!-- App Icon Card End -->
 		</draggable>
-		<div v-else class="app-list contextmenu-canvas">
+		<p v-if="!isLoading && filter !== 'all' && !appList.some(matchesFilter)" class="atrio-empty-filter">
+			{{ filter === 'running' ? $t('No running apps') : $t('No stopped apps') }}
+		</p>
+		<div v-else-if="isLoading" class="app-list contextmenu-canvas">
 			<div v-for="index in skCount" :id="'app-' + index" :key="'app-' + index" class="handle">
 				<app-card-skeleton :index="index"></app-card-skeleton>
 			</div>
@@ -139,10 +153,23 @@ const builtInApplications = [
 
 const orderConfig = 'app_order'
 
+const FILTER_KEY = 'atrio:app-filter'
+
+function readFilter () {
+	try {
+		const value = localStorage.getItem(FILTER_KEY)
+		return ['all', 'running', 'stopped'].includes(value) ? value : 'all'
+	} catch {
+		return 'all'
+	}
+}
+
 export default {
 	mixins: [business_ShowNewAppTag, business_LinkApp],
 	data () {
 		return {
+			// Atrio status filter, remembered in this browser
+			filter: readFilter(),
 			user_id: localStorage.getItem('user_id'),
 			appList: [],
 			oldAppList: [],
@@ -171,6 +198,13 @@ export default {
 		}
 	},
 	computed: {
+		filterOptions () {
+			return [
+				{ value: 'all', label: this.$t('All') },
+				{ value: 'running', label: this.$t('Running apps') },
+				{ value: 'stopped', label: this.$t('Stopped apps') },
+			]
+		},
 		dragOptions () {
 			return {
 				animation: 300,
@@ -203,6 +237,8 @@ export default {
 	},
 	beforeDestroy () {
 		this.$EventBus.$off(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING)
+		this.$EventBus.$off('atrio:refresh-apps', this.getList)
+		this.$EventBus.$off('atrio:config-app', this.openConfigFromPanel)
 		window.removeEventListener('resize', this.getSkCount)
 
 		clearInterval(this.ListRefreshTimer)
@@ -210,8 +246,40 @@ export default {
 	mounted () {
 		window.addEventListener('resize', this.getSkCount)
 		this.getSkCount()
+		// From the app details panel
+		this.$EventBus.$on('atrio:refresh-apps', this.getList)
+		this.$EventBus.$on('atrio:config-app', this.openConfigFromPanel)
+	},
+	watch: {
+		// Running / total apps for the status chips next to the greeting
+		appList: {
+			deep: true,
+			handler (list) {
+				const apps = list.filter(item => item.app_type !== 'system' && item.status)
+				this.$EventBus.$emit('atrio:apps-summary', {
+					running: apps.filter(item => item.status === 'running').length,
+					total: apps.length,
+				})
+			},
+		},
 	},
 	methods: {
+		openConfigFromPanel (item) {
+			this.showConfigPanel(item, true)
+		},
+		setFilter (value) {
+			this.filter = value
+			try {
+				localStorage.setItem(FILTER_KEY, value)
+			} catch {
+				// Not remembered when storage is unavailable
+			}
+		},
+		matchesFilter (item) {
+			if (this.filter === 'running') return item.status === 'running'
+			if (this.filter === 'stopped') return Boolean(item.status) && item.status !== 'running'
+			return true
+		},
 		isMobile () {
 			const userAgent = navigator.userAgent
 			const mobileRegex =

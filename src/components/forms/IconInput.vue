@@ -1,7 +1,7 @@
 
 <template>
 	<b-input v-model="path" :placeholder="placeholder" expanded icon-right="image-filter-center-focus-strong"
-		icon-right-clickable @input="handleInput" @icon-right-click="selectFile"></b-input>
+		icon-right-clickable @update:model-value="handleInput" @icon-right-click="selectFile"></b-input>
 </template>
 
 <script>

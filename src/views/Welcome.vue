@@ -38,7 +38,7 @@
 				</div>
 				<ValidationObserver ref="observer" v-slot="{ handleSubmit }">
 					<ValidationProvider v-slot="{ errors, valid }" name="User" rules="required">
-						<b-field :label="$t('Username')" :message="$t(errors)"
+						<b-field :label="$t('Username')" :message="(errors[0] ? $t(errors[0]) : '')"
 								 :type="{ 'is-danger': errors[0], 'is-success': valid }">
 							<b-input v-model="username" type="text"
 									 v-on:keyup.enter.native="handleSubmit(register)"></b-input>
@@ -46,7 +46,7 @@
 					</ValidationProvider>
 					<ValidationProvider v-slot="{ errors, valid }" name="Password" rules="required|min:5"
 										vid="password">
-						<b-field :label="$t('Password')" :message="$t(errors)"
+						<b-field :label="$t('Password')" :message="(errors[0] ? $t(errors[0]) : '')"
 								 :type="{ 'is-danger': errors[0], 'is-success': valid }"
 								 class="mt-4">
 							<b-input v-model="password" password-reveal type="password"
@@ -55,7 +55,7 @@
 					</ValidationProvider>
 					<ValidationProvider v-slot="{ errors, valid }" name="Password Confirmation"
 										rules="required|confirmed:password">
-						<b-field :label="$t('Confirm Password')" :message="$t(errors)"
+						<b-field :label="$t('Confirm Password')" :message="(errors[0] ? $t(errors[0]) : '')"
 								 :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mt-4">
 							<b-input v-model="confirmation" password-reveal type="password"
 									 v-on:keyup.enter.native="handleSubmit(register)"></b-input>

@@ -32,6 +32,17 @@ export default {
 					keywords: name,
 					run: () => (running ? this.openThirdApp(app, true) : this.firstOpenThirdApp(app)),
 				}]
+				if (app.app_type === 'v2app') {
+					items.push({
+						id: `details-${app.name}`,
+						label: `${this.$t('Details')}: ${name}`,
+						hint: this.$t('Health, resources and live logs'),
+						image: app.icon,
+						group: this.$t('Apps'),
+						keywords: `${name} log dettagli details`,
+						run: () => this.$EventBus.$emit('atrio:open-app', app),
+					})
+				}
 				if (running && app.app_type === 'v2app') {
 					items.push({
 						id: `restart-${app.name}`,
@@ -47,13 +58,29 @@ export default {
 			})
 			return [...apps, ...system]
 		},
+		// The web search that used to live in the search bar above the apps
+		webSearch() {
+			const query = this.query.trim()
+			if (!query || !this.$store.state.searchEngineSwitch) return null
+			const engine = this.$store.state.searchEngine || 'https://duckduckgo.com/?q='
+			return {
+				id: 'web-search',
+				label: this.$t('Search “{query}” on the web', { query }),
+				hint: new URL(engine).hostname.replace(/^www\./, ''),
+				icon: 'search-outline',
+				group: this.$t('Web'),
+				run: () => window.open(engine + encodeURIComponent(query), '_blank', 'noopener'),
+			}
+		},
 		results() {
 			const words = this.query.toLowerCase().split(/\s+/).filter(Boolean)
-			if (!words.length) return this.actions
-			return this.actions.filter((item) => {
-				const text = `${item.label} ${item.keywords || ''} ${item.hint || ''}`.toLowerCase()
-				return words.every((word) => text.includes(word))
-			})
+			const matches = words.length
+				? this.actions.filter((item) => {
+					const text = `${item.label} ${item.keywords || ''} ${item.hint || ''}`.toLowerCase()
+					return words.every((word) => text.includes(word))
+				})
+				: this.actions
+			return this.webSearch ? [...matches, this.webSearch] : matches
 		},
 		groups() {
 			const groups = []
