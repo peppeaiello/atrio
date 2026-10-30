@@ -16,6 +16,7 @@ import io from 'socket.io-client'
 import Asset from '@/plugins/asset'
 import Socket from '@/plugins/socket'
 import Animate from '@/plugins/animate'
+import { reloadFresh } from '@/plugins/reloadFresh'
 
 // Import Styles
 import '@fontsource/manrope/400.css'
@@ -82,8 +83,8 @@ Object.assign(app.config.globalProperties, {
 
 app.mount('#app')
 
-// CasaOS serves the UI without cache headers, so after an update the browser may still run
-// the previous build. When the server has another version, reload once from a fresh URL.
+// The browser may still run a cached build after an update (see plugins/reloadFresh.js).
+// When the server has another version, reload once with a fresh copy.
 /* global __ATRIO_VERSION__ */
 if (!import.meta.env.DEV) {
 	fetch(`/atrio-version.json?t=${Date.now()}`, { cache: 'no-store' })
@@ -97,7 +98,7 @@ if (!import.meta.env.DEV) {
 			} catch {
 				return
 			}
-			window.location.replace(`${window.location.pathname}?v=${server.version}${window.location.hash}`)
+			reloadFresh()
 		})
 		.catch(() => {})
 }
