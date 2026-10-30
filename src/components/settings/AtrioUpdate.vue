@@ -2,6 +2,8 @@
 // Atrio's own version and updates, in the settings menu next to the CasaOS update.
 // The update itself runs on the server: we create the request file through the CasaOS
 // file API and atrio-update (installed by scripts/install.sh) reports in the status file.
+import { reloadFresh } from '@/plugins/reloadFresh'
+
 const REPO = 'peppeaiello/atrio'
 const STATE = '/var/lib/casaos/atrio'
 const POLL_MS = 2000
@@ -87,8 +89,7 @@ export default {
 				const fresh = status && Date.parse(status.time) >= started - 5000
 				if (fresh && status.state === 'done') {
 					this.progress = this.$t('Updated, reloading…')
-					// A new URL, so the browser cannot reuse its cached index.html
-					setTimeout(() => window.location.replace(`${window.location.pathname}?v=${status.version}${window.location.hash}`), 1500)
+					setTimeout(reloadFresh, 1500)
 					return
 				}
 				if (fresh && status.state === 'error') {
