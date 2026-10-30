@@ -12,7 +12,7 @@ export const Swiper = {
 	props: {
 		options: { type: Object, default: () => ({}) },
 	},
-	emits: ['ready'],
+	// No `emits`: every Swiper event is forwarded as a component event
 	mounted() {
 		this.swiper = new SwiperCore(this.$el, {
 			modules: [Autoplay, Navigation, Pagination],
