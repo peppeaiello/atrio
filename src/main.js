@@ -81,3 +81,23 @@ Object.assign(app.config.globalProperties, {
 })
 
 app.mount('#app')
+
+// CasaOS serves the UI without cache headers, so after an update the browser may still run
+// the previous build. When the server has another version, reload once from a fresh URL.
+/* global __ATRIO_VERSION__ */
+if (!import.meta.env.DEV) {
+	fetch(`/atrio-version.json?t=${Date.now()}`, { cache: 'no-store' })
+		.then((res) => (res.ok ? res.json() : null))
+		.then((server) => {
+			if (!server || server.version === __ATRIO_VERSION__) return
+			const key = 'atrio:reloaded-for'
+			try {
+				if (sessionStorage.getItem(key) === server.version) return
+				sessionStorage.setItem(key, server.version)
+			} catch {
+				return
+			}
+			window.location.replace(`${window.location.pathname}?v=${server.version}${window.location.hash}`)
+		})
+		.catch(() => {})
+}
