@@ -1,68 +1,70 @@
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=IceWhaleTech_CasaOS-UI&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=IceWhaleTech_CasaOS-UI)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=IceWhaleTech_CasaOS-UI&metric=bugs)](https://sonarcloud.io/summary/new_code?id=IceWhaleTech_CasaOS-UI)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=IceWhaleTech_CasaOS-UI&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=IceWhaleTech_CasaOS-UI)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=IceWhaleTech_CasaOS-UI&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=IceWhaleTech_CasaOS-UI)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=IceWhaleTech_CasaOS-UI&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=IceWhaleTech_CasaOS-UI)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/assets/img/logo/atrio-wordmark-light.svg">
+    <img alt="Atrio" src="src/assets/img/logo/atrio-wordmark-dark.svg" height="64">
+  </picture>
+</p>
 
-# How to develop this project
+<p align="center">A modern, redesigned web UI for <a href="https://casaos.zimaspace.com">CasaOS</a>.</p>
 
-## Prerequisites
-1. Node 18 ([installation instructions](https://github.com/nvm-sh/nvm?tab=readme-ov-file#usage))
-2. pnpm@9.0.6 ([installation instructions](https://pnpm.io/installation))
+---
 
-## Environment variables
-If you want to connect dev UI version to your local CasaOS server, you will need to set up a couple of env variables:
-1. Copy `.env.dev` to `.env.dev.local` (this file is git-ignored)
-2. Set `VUE_APP_DEV_IP` to IP address of your local CasaOS server
+The atrium is the room you walk through when you enter a home. Atrio wants to be that for your home server: the first
+thing you see, clean and quick to get around.
 
-## Set up dev server
+Atrio is a fork of [CasaOS-UI](https://github.com/IceWhaleTech/CasaOS-UI) by [IceWhale Technology](https://github.com/IceWhaleTech).
+It talks to the standard CasaOS backend, so it replaces only the web interface: your apps, settings and data stay
+the same.
+
+> **Status:** early days. Right now Atrio is CasaOS-UI with a new identity; the redesign is in progress.
+
+Atrio is an independent project, not affiliated with or endorsed by IceWhale Technology. CasaOS is a trademark of
+its respective owners.
+
+## Compatibility
+
+Tested with CasaOS **v0.4.15**.
+
+## Development
+
+### Prerequisites
+
+- Node.js 22 LTS
+- pnpm 9
+
+### Run against your CasaOS server
+
+1. Copy `.env.dev` to `.env.dev.local` (git-ignored).
+2. Set `VUE_APP_DEV_IP` to the address of your CasaOS server (`127.0.0.1` if you develop on the server itself).
+3. Start the dev server:
+
 ```shell
-# install dependencies
 pnpm install
-
-# build
-pnpm dev 
+pnpm dev
 ```
 
-# How to build this project
+API calls to `/v1` and `/v2` are proxied to your CasaOS server, so you can use the dev UI with your real account.
+
+### Build
 
 ```shell
-# install dependencies
 pnpm install
-
-# build
-pnpm build 
+pnpm build
 ```
 
-# How to test this project
+The build goes to `build/sysroot/var/lib/casaos/www/`, which is the folder CasaOS serves its UI from.
+
+### Test
 
 ```shell
 pnpm test
 ```
 
-# How to contribute to this project
+## Credits
 
-CasaOS is a community-driven open source project and the people involved are CasaOS users. That means CasaOS will always
-need contributions from community members just like you!
+Atrio builds on the work of the IceWhale team and the CasaOS community: thank you for making CasaOS and releasing
+it as open source. The full commit history of CasaOS-UI is preserved in this repository.
 
-- See <https://wiki.casaos.io/en/contribute> for ways of contribution to CasaOS
-- See <https://wiki.casaos.io/en/contribute/development> if you want to be involved in code contribution specificially
+## License
 
-
-# How to contact this project
-
-The word Casa comes from the Spanish word for "home". Project CasaOS originated as a pre-installed system for
-crowdfunded product [ZimaBoard](https://www.zimaboard.com) on Kickstarter.
-
-After looking at many systems and software on the market, the team found no server system designed for home scenarios,
-sadly true.
-
-So, we set out to build this open source project to develop CasaOS with our own hands, everyone in the community, and
-you.
-
-We believes that through community-driven collaborative innovation and open communication with global developers, we can
-reshape the digital home experience like never before.
-
-**A warm welcome for you to get help or share great ideas in the [Discord](https://discord.gg/knqAbbBbeX)!**
-
-[![Discord Card](https://discordapp.com/api/guilds/884667213326463016/widget.png?style=banner2)](https://discord.gg/knqAbbBbeX)
+[Apache License 2.0](LICENSE), same as the original project. See [NOTICE](NOTICE) for attribution.
