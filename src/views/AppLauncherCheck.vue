@@ -24,7 +24,7 @@
       <a @click="openThirdApp(appDetailData);">{{ $t('Click here') }}
       </a> {{ $t('to open the app. If it does not work, please restart or try again later.') }}
     </span>
-		<img :src="require('@/assets/img/logo/logo.svg')" alt="" class="is-absolute position"/>
+		<img :src="require('@/assets/img/logo/atrio-wordmark-dark.svg')" alt="" class="is-absolute position"/>
 	</div>
 </template>
 
