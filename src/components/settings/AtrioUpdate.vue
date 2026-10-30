@@ -87,7 +87,8 @@ export default {
 				const fresh = status && Date.parse(status.time) >= started - 5000
 				if (fresh && status.state === 'done') {
 					this.progress = this.$t('Updated, reloading…')
-					setTimeout(() => window.location.reload(), 1500)
+					// A new URL, so the browser cannot reuse its cached index.html
+					setTimeout(() => window.location.replace(`${window.location.pathname}?v=${status.version}${window.location.hash}`), 1500)
 					return
 				}
 				if (fresh && status.state === 'error') {
