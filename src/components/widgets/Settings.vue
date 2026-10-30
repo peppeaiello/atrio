@@ -28,7 +28,7 @@
 						</div>
 						<b-field>
 							<b-switch v-model="item.show" class="is-flex-direction-row-reverse mr-0" size="is-small"
-								type="is-dark" @input="handleInput"></b-switch>
+								type="is-dark" @update:model-value="handleInput"></b-switch>
 						</b-field>
 					</div>
 				</b-dropdown-item>

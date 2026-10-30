@@ -350,6 +350,11 @@ export default {
      * @description: Emit the event that the app has been updated with custom_id
      * @return {*} void
      */
+    openDetails() {
+      this.$refs.dro.isActive = false
+      this.$EventBus.$emit('atrio:open-app', this.item)
+    },
+
     configApp() {
       this.$messageBus('apps_setting', this.item.name)
       this.$refs.dro.isActive = false
@@ -711,6 +716,9 @@ export default {
         </template>
 
         <b-dropdown-item :focusable="false" aria-role="menu-item" custom>
+          <b-button v-if="isV2App" expanded type="is-text" @click="openDetails()">
+            {{ $t('Details') }}
+          </b-button>
           <b-button v-if="item.status === 'running'" expanded tag="a" type="is-text" @click="openApp(item)">
             {{
               $t('Open') }}

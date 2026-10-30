@@ -49,7 +49,7 @@
 				<div v-if="creatIsShow" class="is-flex-grow-1 is-relative">
 					<ValidationObserver ref="ob1">
 						<ValidationProvider v-slot="{ errors, valid }" name="StorageName" rules="required">
-							<b-field :label="$t('Storage Name')" :message="$t(errors)"
+							<b-field :label="$t('Storage Name')" :message="(errors[0] ? $t(errors[0]) : '')"
 								:type="{ 'is-danger': errors[0], 'is-success': valid }">
 								<b-input v-model="createStorageName" ref="inputs"
 									@keyup.native="createStorageName = createStorageName.replace(/[^\w]/g, '')"
@@ -58,7 +58,7 @@
 						</ValidationProvider>
 
 						<b-field :label="$t('Choose Drive')">
-							<b-select v-model="activeDisk" expanded @input="onDiskChoose">
+							<b-select v-model="activeDisk" expanded @update:model-value="onDiskChoose">
 								<option v-for="(option, index) in unDiskData" :key="option.path" :value="index">
 									{{ option.name }} ({{ option.model }} - {{ renderSize(option.size) }})
 								</option>

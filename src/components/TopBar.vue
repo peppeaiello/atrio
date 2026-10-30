@@ -546,7 +546,7 @@ export default {
           >
             <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
               <b-icon class="mr-1 ml-2" icon="show-search-outline" pack="casa" size="is-20" />
-              {{ $t("Show Search Bar") }}
+              {{ $t("Web search in the search") }}
             </div>
             <div>
               <b-field>
@@ -554,7 +554,7 @@ export default {
                   v-model="barData.search_switch"
                   class="is-flex-direction-row-reverse mr-0 _small"
                   type="is-dark"
-                  @input="saveData"
+                  @update:model-value="saveData"
                 />
               </b-field>
             </div>
@@ -576,7 +576,7 @@ export default {
                   v-model="barData.search_engine"
                   class="set-select"
                   size="is-small"
-                  @input="saveData"
+                  @update:model-value="saveData"
                 >
                   <option v-for="item in searchEngines" :key="item.name" :value="item.url">
                     {{ item.name }}
@@ -597,7 +597,7 @@ export default {
             </div>
             <div>
               <b-field>
-                <b-select v-model="barData.lang" class="set-select" size="is-small" @input="saveData">
+                <b-select v-model="barData.lang" class="set-select" size="is-small" @update:model-value="saveData">
                   <option v-for="lang in languages" :key="lang.lang" :value="lang.lang">
                     {{ lang.name }}
                   </option>
@@ -657,7 +657,7 @@ export default {
                   v-model="barData.existing_apps_switch"
                   class="is-flex-direction-row-reverse mr-0 _small"
                   type="is-dark"
-                  @input="saveData"
+                  @update:model-value="saveData"
                 />
               </b-field>
             </div>
@@ -679,7 +679,7 @@ export default {
                   :native-value="barData.rss_switch"
                   class="is-flex-direction-row-reverse mr-0 _small"
                   type="is-dark"
-                  @input="rssConfirm"
+                  @update:model-value="rssConfirm"
                 />
               </b-field>
             </div>
@@ -704,7 +704,7 @@ export default {
                   v-model="barData.recommend_switch"
                   class="is-flex-direction-row-reverse mr-0 _small"
                   type="is-dark"
-                  @input="saveData"
+                  @update:model-value="saveData"
                 />
               </b-field>
             </div>
@@ -737,7 +737,7 @@ export default {
                   v-model="autoUsbMount"
                   class="is-flex-direction-row-reverse mr-0 _small"
                   type="is-dark"
-                  @input="usbAutoMount"
+                  @update:model-value="usbAutoMount"
                 />
               </b-field>
             </div>

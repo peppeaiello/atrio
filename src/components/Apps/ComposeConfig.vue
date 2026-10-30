@@ -781,18 +781,18 @@ export default {
 
 <template>
   <section style="height: calc(100vh - 12.8125rem)">
-    <b-tabs class="has-text-full-03" style="height: 100%" :value="firstAppName">
+    <b-tabs class="has-text-full-03" style="height: 100%" :model-value="firstAppName">
       <b-tab-item v-for="(service, key) in configData.services" :key="key" :label="key" :value="key" @click="current_service = key">
         <ValidationObserver :ref="`${key}valida`">
           <b-field grouped>
             <ValidationProvider v-slot="{ errors, valid }" class="is-flex-grow-1 mr-3" name="Image0" rules="required">
-              <b-field :label="`${$t('Docker Image')} *`" :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-3">
+              <b-field :label="`${$t('Docker Image')} *`" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-3">
                 <b-input
-                  :key="service.image" :readonly="state === 'update' || serviceStableVersion !== ''" :value="getFirstField(service.image)" :placeholder="$t('e.g.,hello-world:latest')" @input="(V) => changeIcon(V)" @blur="
+                  :key="service.image" :readonly="state === 'update' || serviceStableVersion !== ''" :model-value="getFirstField(service.image)" :placeholder="$t('e.g.,hello-world:latest')" @update:model-value="(V) => changeIcon(V)" @blur="
                     (E) => {
                       return (service.image = service.image.split(':')[1]
-                        ? `${E.target._value}:${service.image.split(':')[1]}`
-                        : E.target._value);
+                        ? `${E.target.value}:${service.image.split(':')[1]}`
+                        : E.target.value);
                     }
                   "
                 />
@@ -804,15 +804,15 @@ export default {
                 <ValidationProvider v-slot="{ errors, valid }" name="Image1" rules="required">
                   <b-field
                     :label="$t('Tag')"
-                    :message="$t(errors) || '123'"
+                    :message="(errors[0] ? $t(errors[0]) : '')"
                     :type="{ 'is-danger': errors[0], 'is-success': valid }"
                   >
                     <b-input
                       icon-pack="casa"
                       icon-right="down-outline"
                       class="is-flex-grow-1"
-                      :value="getLateField(service.image)"
-                      @input="
+                      :model-value="getLateField(service.image)"
+                      @update:model-value="
                         (V) => {
                           service.image = `${service.image.split(':')[0]}:${V}`;
                         }
@@ -846,8 +846,8 @@ export default {
           </b-field>
 
           <ValidationProvider v-slot="{ errors, valid }" name="composeAppName" rules="required">
-            <b-field :label="`${$t('App Name')} *`" :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }">
-              <b-input :placeholder="$t('e.g.,Your App Name')" :value="ice_i18n(configData['x-casaos'].title)" @blur="(E) => (configData['x-casaos'].title.custom = E.target._value)" />
+            <b-field :label="`${$t('App Name')} *`" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
+              <b-input :placeholder="$t('e.g.,Your App Name')" :model-value="ice_i18n(configData['x-casaos'].title)" @blur="(E) => (configData['x-casaos'].title.custom = E.target.value)" />
             </b-field>
           </ValidationProvider>
 
@@ -875,7 +875,7 @@ export default {
           </b-field>
 
           <b-field :label="$t('Network')">
-            <b-select :value="service.network_mode || service?.networks?.[0]" expanded placeholder="Select" @input="(v) => patchNetworkValue(v, service)">
+            <b-select :model-value="service.network_mode || service?.networks?.[0]" expanded placeholder="Select" @update:model-value="(v) => patchNetworkValue(v, service)">
               <optgroup v-for="net in appendNetworks" :key="net.driver" :label="net.driver">
                 <option v-for="(option, index) in net.networks" :key="option.name + index" :value="option.name">
                   {{ option.name }}
@@ -944,8 +944,8 @@ export default {
           </b-field>
 
           <ValidationProvider v-slot="{ errors, valid }" name="Name" rules="ContainerName">
-            <b-field :label="$t('Container Name')" :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid && service.container_name }">
-              <b-input v-model="service.container_name" :placeholder="$t('Name of app container')" value="" />
+            <b-field :label="$t('Container Name')" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid && service.container_name }">
+              <b-input v-model="service.container_name" :placeholder="$t('Name of app container')" />
             </b-field>
           </ValidationProvider>
         </ValidationObserver>

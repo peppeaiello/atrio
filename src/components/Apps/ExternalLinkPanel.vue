@@ -173,7 +173,7 @@ export default {
           <ValidationObserver ref="ob1">
             <ValidationProvider v-slot="{ errors, valid }" rules="required">
               <b-field
-                :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }"
+                :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }"
                 class="is-flex-wrap-nowrap"
               >
                 <template #label>
@@ -199,7 +199,7 @@ export default {
 
             <ValidationProvider v-slot="{ errors, valid }" rules="required">
               <b-field
-                :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }"
+                :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }"
                 class="is-flex-wrap-nowrap"
               >
                 <template #label>

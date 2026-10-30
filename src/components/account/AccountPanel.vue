@@ -279,7 +279,7 @@ export default {
 
         <template v-else-if="state === 2">
           <ValidationProvider v-slot="{ errors, valid }" name="User" rules="required">
-            <b-field :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0 has-text-light">
+            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0 has-text-light">
               <b-input v-model="user.username" type="text" @keyup.enter.native="handleSubmit(saveUser)" />
             </b-field>
           </ValidationProvider>
@@ -290,17 +290,17 @@ export default {
             {{ message }}
           </b-notification>
           <ValidationProvider v-slot="{ errors, valid }" name="oriPassword" rules="required|min:5" vid="oriPassword">
-            <b-field :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-5 has-text-light">
+            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-5 has-text-light">
               <b-input v-model="oriPassword" :placeholder="$t('Original password')" password-reveal type="password" />
             </b-field>
           </ValidationProvider>
           <ValidationProvider v-slot="{ errors, valid }" name="Password" rules="required|min:5" vid="password">
-            <b-field :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-5 has-text-light">
+            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-5 has-text-light">
               <b-input v-model="password" :placeholder="$t('New password')" password-reveal type="password" />
             </b-field>
           </ValidationProvider>
           <ValidationProvider v-slot="{ errors, valid }" name="Password Confirmation" rules="required|confirmed:password">
-            <b-field :message="$t(errors)" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0">
+            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0">
               <b-input v-model="confirmation" :placeholder="$t('Confirm the new password again')" password-reveal type="password" @keyup.enter.native="savePassword(savePassword)" />
             </b-field>
           </ValidationProvider>

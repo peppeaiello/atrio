@@ -1492,7 +1492,7 @@ export default {
                 v-on-click-outside="resetSearchAndSourcesStatus"
                 :placeholder="$t('Search an app...')"
                 class="app-search ml-2"
-                @input="debounceSearchInput"
+                @update:model-value="debounceSearchInput"
                 @keyup.enter.native="counterPatchGetStoreList++"
               />
             </transition>
@@ -1690,7 +1690,7 @@ export default {
             <ValidationProvider v-slot="{ errors, valid }" name="appName" rules="required">
               <b-field
                 :label="`${$t('App name')} *`"
-                :message="$t(errors)"
+                :message="(errors[0] ? $t(errors[0]) : '')"
                 :type="{ 'is-danger': errors[0], 'is-success': valid }"
               >
                 <b-input

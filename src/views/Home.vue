@@ -1,11 +1,11 @@
 <script>
 import { nanoid } from 'nanoid'
-import SearchBar from '@/components/SearchBar.vue'
 import SideBar from '@/components/SideBar.vue'
 import TopBar from '@/components/TopBar.vue'
 import CoreService from '@/components/CoreService.vue'
 import AppSection from '@/components/Apps/AppSection.vue'
 import CommandPalette from '@/components/home/CommandPalette.vue'
+import AppDetailsPanel from '@/components/home/AppDetailsPanel.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
@@ -17,12 +17,12 @@ export default {
   name: 'HomePage',
   components: {
     SideBar,
-    SearchBar,
     AppSection,
     TopBar,
     CoreService,
     FilePanel,
     CommandPalette,
+    AppDetailsPanel,
   },
   mixins: [mixin],
   provide() {
@@ -34,6 +34,11 @@ export default {
   data() {
     return {
       isLoading: true,
+      // Drives the date, time and greeting above the dashboard
+      now: new Date(),
+      // Status chips next to the greeting
+      systemLoad: null,
+      appsSummary: { running: 0, total: 0 },
       hardwareInfoLoading: true,
       user_id: localStorage.getItem('user_id') ? localStorage.getItem('user_id') : 1,
       isFileActive: false,
@@ -52,20 +57,18 @@ export default {
       return region ? `${lang}-${region.toUpperCase()}` : lang
     },
     today() {
-      const date = new Intl.DateTimeFormat(this.locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
-      return date.charAt(0).toUpperCase() + date.slice(1)
+      const date = new Intl.DateTimeFormat(this.locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(this.now)
+      const time = new Intl.DateTimeFormat(this.locale, { hour: '2-digit', minute: '2-digit' }).format(this.now)
+      return `${date.charAt(0).toUpperCase() + date.slice(1)} · ${time}`
     },
     greeting() {
-      const hour = new Date().getHours()
+      const hour = this.now.getHours()
       const part = hour < 5 ? 'Good evening' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
       const name = this.$store.state.user?.username
       return name ? `${this.$t(part)}, ${name}` : this.$t(part)
     },
     sidebarOpen() {
       return this.$store.state.sidebarOpen
-    },
-    searchbarShow() {
-      return this.$store.state.searchEngineSwitch
     },
   },
   created() {
@@ -76,6 +79,8 @@ export default {
     this.$store.commit('SET_ACCESS_ID', nanoid())
   },
   mounted() {
+    this.clockTimer = setInterval(() => (this.now = new Date()), 10000)
+    this.$EventBus.$on('atrio:apps-summary', this.setAppsSummary)
     window.addEventListener('resize', this.onResize)
     this.onResize()
     if (localStorage.getItem('is_update') === 'true') {
@@ -95,10 +100,22 @@ export default {
     })
   },
   beforeUnmount() {
+    clearInterval(this.clockTimer)
+    this.$EventBus.$off('atrio:apps-summary', this.setAppsSummary)
     window.removeEventListener('resize', this.onResize)
     this.$EventBus.$off('casaUI:openStorageManager')
   },
+  sockets: {
+    'casaos:system:utilization'(res) {
+      const cpu = JSON.parse(res.Properties.sys_cpu)
+      const mem = JSON.parse(res.Properties.sys_mem)
+      this.systemLoad = { busy: cpu.percent >= 90 || mem.usedPercent >= 90 }
+    },
+  },
   methods: {
+    setAppsSummary(summary) {
+      this.appsSummary = summary
+    },
 
     /**
      * @description: Get CasaOS Configs
@@ -270,8 +287,18 @@ export default {
       <div class="container">
         <!-- Greeting Start -->
         <section class="atrio-greeting">
-          <p class="atrio-greeting-date">{{ today }}</p>
-          <h1 class="atrio-greeting-title">{{ greeting }}</h1>
+          <div>
+            <p class="atrio-greeting-date">{{ today }}</p>
+            <h1 class="atrio-greeting-title">{{ greeting }}</h1>
+          </div>
+          <div class="atrio-chips">
+            <span v-if="systemLoad" :class="systemLoad.busy ? 'is-warn' : 'is-ok'" class="atrio-chip">
+              <span class="atrio-chip-dot" />{{ systemLoad.busy ? $t('High system load') : $t('System healthy') }}
+            </span>
+            <span v-if="appsSummary.total" class="atrio-chip">
+              {{ $t('{running} of {total} apps running', appsSummary) }}
+            </span>
+          </div>
         </section>
         <!-- Greeting End -->
         <div class="columns is-variable is-2">
@@ -283,13 +310,6 @@ export default {
           <div :class="{ open: sidebarOpen }" class="column is-three-quarters main-content">
             <!-- MainContent Start -->
             <div class=" contextmenu-canvas">
-              <!-- SearchBar Start -->
-              <section>
-                <transition name="fade">
-                  <SearchBar v-if="searchbarShow" />
-                </transition>
-              </section>
-              <!-- SearchBar End -->
 
               <!-- core-service Start -->
               <section>
@@ -319,6 +339,7 @@ export default {
     <!-- Content End -->
 
     <CommandPalette />
+    <AppDetailsPanel />
 
     <!-- File Panel Start -->
     <b-modal
@@ -335,6 +356,11 @@ export default {
 
 <style lang="scss" scoped>
 .atrio-greeting {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
     padding: 1.75rem 0.25rem 1.25rem;
     color: var(--atrio-text);
 
