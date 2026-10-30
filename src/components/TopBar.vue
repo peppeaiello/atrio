@@ -818,7 +818,7 @@ export default {
           {{ $t(showPowerTitle) }}
           <img
             v-if="showPowerTitle === 'Now shutting down'"
-            :src="require('@/assets/img/loading/waiting.svg')"
+            :src="$asset('@/assets/img/loading/waiting.svg')"
             alt="pending"
             class="ml-1 is-24x24"
           >
@@ -838,7 +838,7 @@ export default {
           class="ml-2 mr-5 mt-3 mb-3 pr-4 pl-4 _is-normal _has-background-blue is-flex is-align-items-center is-justify-content-center"
         >
           {{ $t("Connecting") }}
-          <img :src="require('@/assets/img/power/waiting-white.svg')" alt="loading" class="ml-1">
+          <img :src="$asset('@/assets/img/power/waiting-white.svg')" alt="loading" class="ml-1">
         </button>
       </footer>
     </b-modal>

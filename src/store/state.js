@@ -1,3 +1,4 @@
+import { asset } from '@/plugins/asset'
 const state = {
   // User
   access_token: '',
@@ -36,7 +37,7 @@ const state = {
 
   // Wallpaper
   wallpaperObject: {
-    path: require('@/assets/background/wallpaper01.jpg'),
+    path: asset('@/assets/background/wallpaper01.jpg'),
     from: 'Built-in', // Built-in, Upload, Files
   },
 

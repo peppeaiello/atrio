@@ -31,7 +31,7 @@
 								<div v-if="!isNaN(item.usage)" class="is-flex is-size-7 is-align-items-center mb-2">
 									<div class="is-flex-grow-1 is-flex is-align-items-center is-clipped">
 										<b-image :lazy="false" :src="item.icon"
-											:src-fallback="require('@/assets/img/app/default.svg')"
+											:src-fallback="$asset('@/assets/img/app/default.svg')"
 											class="is-16x16 mr-2 is-flex-shrink-0"></b-image>
 										<span class="one-line">{{ item.title }}</span>
 									</div>
@@ -45,7 +45,7 @@
 								<div v-if="!isNaN(item.usage) && renderSize(item.usage).split(' ')[0] != 0"
 									class="is-flex is-size-7 is-align-items-center mb-2">
 									<div class="is-flex-grow-1 is-flex-shrink-1 is-flex is-align-items-center is-clipped">
-										<b-image :src="item.icon" :src-fallback="require('@/assets/img/app/default.svg')"
+										<b-image :src="item.icon" :src-fallback="$asset('@/assets/img/app/default.svg')"
 											class="is-16x16 mr-2 is-flex-shrink-0"></b-image>
 										<span class="one-line">{{ item.title }}</span>
 									</div>

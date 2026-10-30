@@ -579,13 +579,13 @@ export default {
     </template>
     <template #button-prev>
       <img
-        :src="require('@/assets/img/widgets/swiper-left.svg')" alt="prev"
+        :src="$asset('@/assets/img/widgets/swiper-left.svg')" alt="prev"
         class="swiper-button-prev"
       >
     </template>
     <template #button-next>
       <img
-        :src="require('@/assets/img/widgets/swiper-right.svg')" alt="next"
+        :src="$asset('@/assets/img/widgets/swiper-right.svg')" alt="next"
         class="swiper-button-next"
       >
     </template>

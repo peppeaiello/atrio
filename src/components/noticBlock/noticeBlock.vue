@@ -6,7 +6,7 @@
 			<div class="widget-header is-flex is-flex-shrink-0">
 				<div class="image is-24x24 is-flex-shrink-0">
 					<img v-if="noticeData.prelude.icon" :src="noticeData.prelude.icon" alt=""/>
-					<img v-else :src="require('@/assets/img/logo/atrio-mark.svg')" alt=""/>
+					<img v-else :src="$asset('@/assets/img/logo/atrio-mark.svg')" alt=""/>
 				</div>
 				<div class="header-title pl-2 is-flex-grow-1">
 					{{ $t(noticeData.prelude.title) }}
@@ -25,9 +25,9 @@
 				<div class="_widget-body is-flex mr-0">
 					<div class="image is-24x24 is-flex-shrink-0">
 						<img v-if="!noticeData.content[Object.keys(noticeData.content)[0]].icon"
-							 :src="require(`@/assets/img/logo/atrio-mark.svg`)" alt=""/>
+							 :src="$asset(`@/assets/img/logo/atrio-mark.svg`)" alt=""/>
 						<img v-else
-							 :src="require(`@/assets/img${noticeData.content[Object.keys(noticeData.content)[0]].icon}`)"
+							 :src="$asset(`@/assets/img${noticeData.content[Object.keys(noticeData.content)[0]].icon}`)"
 							 alt=""/>
 					</div>
 					<div class="body-title is-flex-grow-1 _nowrap ml-2">
@@ -41,9 +41,9 @@
 				<div v-if="Object.keys(noticeData.content).length > 1" class="_widget-body is-flex mr-0">
 					<div class="image is-24x24 is-flex-shrink-0">
 						<img v-if="!noticeData.content[Object.keys(noticeData.content)[1]].icon"
-							 :src="require(`@/assets/img/logo/atrio-mark.svg`)" alt=""/>
+							 :src="$asset(`@/assets/img/logo/atrio-mark.svg`)" alt=""/>
 						<img v-else
-							 :src="require(`@/assets/img${noticeData.content[Object.keys(noticeData.content)[1]].icon}`)"
+							 :src="$asset(`@/assets/img${noticeData.content[Object.keys(noticeData.content)[1]].icon}`)"
 							 alt=""/>
 					</div>
 					<div class="body-title is-flex-grow-1 _nowrap ml-2">

@@ -6,7 +6,7 @@
 			<!-- Card Content Start -->
 			<div class="has-text-centered is-flex is-justify-content-center is-flex-direction-column pt-5 pb-3">
 				<div class="is-flex is-justify-content-center">
-					<b-image :src="require('@/assets/img/app/sk_icon.svg')" class="is-64x64"></b-image>
+					<b-image :src="$asset('@/assets/img/app/sk_icon.svg')" class="is-64x64"></b-image>
 				</div>
 				<div class="sk-line mt-3"></div>
 

@@ -13,13 +13,13 @@ import VueSocialSharing from 'vue-social-sharing'
 import VueSocketIOExt from 'vue-socket.io-extended';
 import messageBus from '@/events/index.js'
 import VueDOMPurifyHTML from 'vue-dompurify-html'
+import io from 'socket.io-client'
+import Asset from '@/plugins/asset'
 
 
 // Import Styles
 import '@/assets/scss/app.scss'
 import VAnimateCss from 'v-animate-css';
-
-const io = require("socket.io-client");
 
 const isDev = process.env.NODE_ENV === 'dev';
 const protocol = document.location.protocol
@@ -38,6 +38,7 @@ const socket = io( {
 });
 
 Vue.use(Buefy)
+Vue.use(Asset)
 Vue.use(VueFullscreen)
 Vue.use(VAnimateCss, { animateCSSPath: '/css/animate.min.css' });
 Vue.use(Vue2TouchEvents)

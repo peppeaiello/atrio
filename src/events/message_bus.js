@@ -35,7 +35,7 @@ async function intermediateProcessor(name, ownParameter) {
 	}
 }
 
-module.exports = {
+export default {
 	global_newvisit: async () => {
 		return await intermediateProcessor(`${sourceID}:global:global_newvisit`)
 	},

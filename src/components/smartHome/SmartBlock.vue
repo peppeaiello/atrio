@@ -11,7 +11,7 @@
 						}}
 					</div>
 				</div>
-				<b-image :src="require('@/assets/img/smart/smart_icon.svg')" class="is-80x80"></b-image>
+				<b-image :src="$asset('@/assets/img/smart/smart_icon.svg')" class="is-80x80"></b-image>
 			</div>
 			<div class="buttons is-flex is-flex-shrink-0 is-flex-direction-row-reverse">
 				<b-button class="mb-0" rounded size="is-small" type="is-primary" @click="goToDiscord">{{

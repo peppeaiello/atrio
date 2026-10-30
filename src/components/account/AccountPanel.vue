@@ -246,7 +246,7 @@ export default {
                 <b-icon icon="edit-outline" pack="casa" />
                 <input type="file" class="file-input" accept="image/*" @change="loadImage($event)">
               </div>
-              <b-image :src="avatarUrl" :src-fallback="require('@/assets/img/account/default-avatar.svg')" class="is-80x80" rounded />
+              <b-image :src="avatarUrl" :src-fallback="$asset('@/assets/img/account/default-avatar.svg')" class="is-80x80" rounded />
             </div>
           </div>
           <div class="mb-55">

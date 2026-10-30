@@ -26,7 +26,7 @@
           <div class="up-layer">
             <b-image
               :class="iconSize"
-              :src="require(`@/assets/img/drop/add_btn.svg`)"
+              :src="$asset(`@/assets/img/drop/add_btn.svg`)"
               class="mr-0 ml-0 no-click is-unselectable"
             ></b-image>
           </div>

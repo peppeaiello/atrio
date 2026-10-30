@@ -15,19 +15,19 @@
 		<ul class="is-flex upload-btns is-justify-content-center">
 			<li class="e-btn" @click="$emit('newFile')">
 				<span>{{ $t('New File') }}</span>
-				<b-image :src="require('@/assets/img/filebrowser/newFile.svg')"></b-image>
+				<b-image :src="$asset('@/assets/img/filebrowser/newFile.svg')"></b-image>
 			</li>
 			<li class="e-btn" @click="$emit('newFolder')">
 				<span>{{ $t('New Folder') }}</span>
-				<b-image :src="require('@/assets/img/filebrowser/newFolder.svg')"></b-image>
+				<b-image :src="$asset('@/assets/img/filebrowser/newFolder.svg')"></b-image>
 			</li>
 			<li id="eUpFileBtn" class="e-btn">
 				<span>{{ $t('Upload Files') }}</span>
-				<b-image :src="require('@/assets/img/filebrowser/upfile.svg')"></b-image>
+				<b-image :src="$asset('@/assets/img/filebrowser/upfile.svg')"></b-image>
 			</li>
 			<li id="eUpFolderBtn" class="e-btn">
 				<span>{{ $t('Upload Folder') }}</span>
-				<b-image :src="require('@/assets/img/filebrowser/upfolder.svg')"></b-image>
+				<b-image :src="$asset('@/assets/img/filebrowser/upfolder.svg')"></b-image>
 			</li>
 		</ul>
 	</div>

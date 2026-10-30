@@ -93,6 +93,7 @@
 </template>
 
 <script>
+import { asset } from '@/plugins/asset'
 import AppCard from './AppCard.vue'
 import AppCardSkeleton from './AppCardSkeleton.vue'
 import AppPanel from './AppPanel.vue'
@@ -119,7 +120,7 @@ const builtInApplications = [
 		title: {
 			en_us: 'App Store'
 		},
-		icon: require(`@/assets/img/app/appstore.svg`),
+		icon: asset(`@/assets/img/app/appstore.svg`),
 		status: 'running',
 		app_type: 'system'
 	},
@@ -129,7 +130,7 @@ const builtInApplications = [
 		title: {
 			en_us: 'Files'
 		},
-		icon: require(`@/assets/img/app/files.svg`),
+		icon: asset(`@/assets/img/app/files.svg`),
 		status: 'running',
 		app_type: 'system'
 	}
@@ -243,7 +244,7 @@ export default {
 				orgAppList.forEach(item => {
 					item.hostname = item.hostname || this.$baseIp
 					// Container app does not have icon.
-					item.icon = item.icon || require(`@/assets/img/app/default.svg`)
+					item.icon = item.icon || asset(`@/assets/img/app/default.svg`)
 					if (item.app_type === 'v1app' || item.app_type === 'container') {
 						orgOldAppList.push(item)
 					} else {
