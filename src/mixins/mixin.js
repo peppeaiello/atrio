@@ -1,3 +1,4 @@
+import { asset } from '@/plugins/asset'
 import qs from 'qs'
 import has from 'lodash/has'
 import union from 'lodash/union'
@@ -122,7 +123,7 @@ export const mixin = {
 					}
 				})
 			}
-			return require(`@/assets/img/filebrowser/${icon}.svg`)
+			return asset(`@/assets/img/filebrowser/${icon}.svg`)
 		},
 		getPanelType(item) {
 			const ext = this.getFileExt(item);

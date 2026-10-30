@@ -5,7 +5,7 @@
 				@input="$emit('selection', item.mount_point)">
 				<span class="is-flex">
 					<div class="header-icon">
-						<b-image :src="require('@/assets/img/storage/storage.png')" class="is-64x64"></b-image>
+						<b-image :src="$asset('@/assets/img/storage/storage.png')" class="is-64x64"></b-image>
 					</div>
 					<div class="ml-3 is-flex-grow-1 is-flex is-align-items-center">
 						<div>

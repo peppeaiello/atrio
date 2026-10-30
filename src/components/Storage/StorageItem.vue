@@ -2,7 +2,7 @@
 	<div class="mb-4 pb-3 background-item is-flex is-flex-direction-column">
 		<div class="is-flex mt-3 mr-3 mb-3 ml-3">
 			<div class="header-icon">
-				<b-image :src="require('@/assets/img/storage/storage.png')" class="is-64x64"></b-image>
+				<b-image :src="$asset('@/assets/img/storage/storage.png')" class="is-64x64"></b-image>
 			</div>
 			<div class="ml-3 is-flex-grow-1 is-flex is-align-items-center">
 				<div>

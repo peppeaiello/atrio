@@ -8,9 +8,9 @@
 			<div class="popper  tooltip-content">
 				{{ $t('Submit a feedback or report an issue') }}
 			</div>
-			<a slot="reference" @click="showFeedback">
+			<template #reference><a @click="showFeedback">
 				<b-icon icon="eedback" pack="casa"></b-icon>
-			</a>
+			</a></template>
 		</popper>
 
 		<popper :options="{
@@ -20,10 +20,10 @@
 			<div class="popper  tooltip-content">
 				{{ $t('Join Discord') }}
 			</div>
-			<a slot="reference" rel="noopener" href="https://discord.gg/knqAbbBbeX" target="_blank"
+			<template #reference><a rel="noopener" href="https://discord.gg/knqAbbBbeX" target="_blank"
 				@click="$messageBus('connect_discord')">
 				<b-icon icon="discord" pack="casa"></b-icon>
-			</a>
+			</a></template>
 		</popper>
 
 		<popper :options="{
@@ -33,10 +33,10 @@
 			<div class="popper  tooltip-content">
 				{{ $t('Visit our Github') }}
 			</div>
-			<a slot="reference" rel="noopener" href="https://github.com/IceWhaleTech/CasaOS" target="_blank"
+			<template #reference><a rel="noopener" href="https://github.com/IceWhaleTech/CasaOS" target="_blank"
 				@click="$messageBus('connect_github')">
 				<b-icon icon="github" pack="casa"></b-icon>
-			</a>
+			</a></template>
 		</popper>
 
 		<popper :options="{
@@ -46,9 +46,9 @@
 			<div class="popper  tooltip-content">
 				{{ $t('Share CasaOS') }}
 			</div>
-			<a slot="reference" @click="showShareModal">
+			<template #reference><a @click="showShareModal">
 				<b-icon icon="chat" pack="casa"></b-icon>
-			</a>
+			</a></template>
 		</popper>
 
 	</div>
@@ -57,7 +57,7 @@
 <script>
 import FeedbackPanel from './feedback/FeedbackPanel.vue'
 import ShareModal from '@/components/share/ShareModal.vue'
-import Popper from 'vue-popperjs';
+import Popper from '@/components/base/Popper.vue'
 
 
 export default {
@@ -70,7 +70,6 @@ export default {
 			// messageBus :: feedback
 			this.$messageBus('connect_feedback');
 			this.$buefy.modal.open({
-				parent: this,
 				component: FeedbackPanel,
 				hasModalCard: true,
 				customClass: 'feedback-modal',
@@ -85,7 +84,6 @@ export default {
 			// messageBus :: share
 			this.$messageBus('connect_sharecasaos');
 			this.$buefy.modal.open({
-				parent: this,
 				component: ShareModal,
 				hasModalCard: true,
 				customClass: 'network-storage-modal',

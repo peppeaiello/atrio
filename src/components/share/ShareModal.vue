@@ -20,7 +20,7 @@
 						}}
 					</div>
 
-					<b-image :src="require('@/assets/img//social/share_img.png')"
+					<b-image :src="$asset('@/assets/img//social/share_img.png')"
 							 class="share-img-shadow share-img"></b-image>
 				</div>
 

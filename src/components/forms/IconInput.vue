@@ -10,6 +10,8 @@ import FilePanel from '../fileList/FilePanel.vue'
 const DATA_PATH = "/"
 const DEV_PATH = "/dev"
 export default {
+	// Uses Vue 2 v-model (value prop, input event)
+	compatConfig: { COMPONENT_V_MODEL: true },
 	name: "iconInput",
 	props: {
 		vdata: String,
@@ -58,7 +60,6 @@ export default {
 		},
 		showFileModal() {
 			this.$buefy.modal.open({
-				parent: this,
 				component: FilePanel,
 				hasModalCard: true,
 				customClass: 'file-sel-modal',

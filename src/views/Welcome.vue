@@ -13,7 +13,7 @@
 
 			<div v-if="step == 1" class="has-text-centered">
 				<div v-animate-css="s1Ani" class=" is-flex is-justify-content-center">
-					<b-image :src="require('@/assets/img/logo/atrio-mark.svg')" class="is-128x128 mb-4"></b-image>
+					<b-image :src="$asset('@/assets/img/logo/atrio-mark.svg')" class="is-128x128 mb-4"></b-image>
 				</div>
 
 				<h2 v-animate-css="s2Ani" class="title is-2 mb-5 has-text-centered __attached_title">{{
@@ -32,7 +32,7 @@
 				<h2 class="title is-3  has-text-centered">{{ $t('Create Account') }}</h2>
 				<div class="is-flex is-justify-content-center ">
 					<div class="has-text-centered">
-						<b-image :src="require('@/assets/img/account/default-avatar.svg')" class="is-128x128"
+						<b-image :src="$asset('@/assets/img/account/default-avatar.svg')" class="is-128x128"
 								 rounded></b-image>
 					</div>
 				</div>
@@ -70,7 +70,7 @@
 			<div v-if="step == 3" class="has-text-centered ">
 				<h2 class="title is-3  has-text-centered">{{ $t('All things done!') }}</h2>
 				<div class="is-flex is-align-items-center is-justify-content-center">
-					<lottie-animation :animationData="require('@/assets/ani/done.json')" :autoPlay="true" :loop="false"
+					<lottie-animation :animationData="$asset('@/assets/ani/done.json')" :autoPlay="true" :loop="false"
 									  class="animation" @complete="complete"></lottie-animation>
 				</div>
 			</div>
@@ -79,15 +79,13 @@
 </template>
 
 <script>
-import {ValidationObserver, ValidationProvider} from "vee-validate";
+import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 import "@/plugins/vee-validate";
 import LottieAnimation                          from "lottie-web-vue";
-import smoothReflow                             from 'vue-smooth-reflow'
 
 export default {
 
 	name: "welcome-page",
-	mixins: [smoothReflow],
 	data() {
 		return {
 			step: 1,
@@ -132,10 +130,6 @@ export default {
 	},
 
 	mounted() {
-		this.$smoothReflow({
-			el: '.login-panel',
-			property: ['height', 'width'],
-		})
 		this.isLoading = false;
 
 	},

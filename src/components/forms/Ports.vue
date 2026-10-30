@@ -52,9 +52,11 @@
 </template>
 
 <script>
-import { ValidationObserver, ValidationProvider } from 'vee-validate';
+import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 
 export default {
+	// Uses Vue 2 v-model (value prop, input event)
+	compatConfig: { COMPONENT_V_MODEL: true },
 	name: 'ports-form',
 	components: {
 		ValidationProvider,

@@ -81,6 +81,8 @@ import ContextMenu   from "./ContextMenu.vue";
 import IconContainer from "./IconContainer.vue";
 
 export default {
+	// Uses Vue 2 v-model through ListViewMixin's model option
+	compatConfig: { COMPONENT_V_MODEL: true },
 	name: "gird-view",
 	mixins: [mixin, ListViewMixin],
 	components: {

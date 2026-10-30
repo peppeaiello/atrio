@@ -1,15 +1,16 @@
 
-import Vue      from 'vue'
-import VueI18n  from 'vue-i18n'
+import { createI18n } from 'vue-i18n'
 import messages from '@/assets/lang'
 
-Vue.use(VueI18n)
-
-const i18n = new VueI18n({
+const i18n = createI18n({
+	legacy: true,
+	allowComposition: true,
 	// Define defalut language
 	locale: localStorage.getItem('lang') || 'en_us',
 	fallbackLocale: 'en_us',
 	silentTranslationWarn: true,
+	silentFallbackWarn: true,
+	warnHtmlMessage: false,
 	messages
 })
 export default i18n

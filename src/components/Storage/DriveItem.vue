@@ -10,7 +10,7 @@
 	<div class="mb-5 mt-2">
 		<div class="is-flex mb-2">
 			<div class="header-icon">
-				<b-image :src="require('@/assets/img/storage/disk.png')" class="is-64x64"></b-image>
+				<b-image :src="$asset('@/assets/img/storage/disk.png')" class="is-64x64"></b-image>
 			</div>
 			<div class="ml-3 is-flex-grow-1 is-flex is-align-items-center">
 				<div>

@@ -4,7 +4,7 @@
 @import "~@mdi/font/css/materialdesignicons.min.css";
 
 // Import Swiper Style
-@import "~swiper/css/swiper.min.css";
+@import "~swiper/swiper-bundle.css";
 
 // Import CasaOS IconFont
 @import '~iconfonts-casaos/casaos-iconfonts.css';
@@ -17,7 +17,8 @@
 // Import Bulma and Buefy styles
 
 @import "~bulma/bulma";
-@import "~buefy/src/scss/buefy";
+// Buefy 3 components keep the markup of Buefy 0.9, whose Bulma 0.9 styles we still use
+@import "~buefy-legacy-scss/src/scss/buefy";
 
 // Import CasaOS Styles
 // Commons

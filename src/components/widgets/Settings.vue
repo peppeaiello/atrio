@@ -41,14 +41,12 @@
 <script>
 import find from 'lodash/find';
 
-const widgetsComponents = require.context(
-	'@/widgets',
-	false,
-	/.vue$/
-)
+const widgetsComponents = import.meta.glob('@/widgets/*.vue', { eager: true })
 
 
 export default {
+	// Uses Vue 2 v-model (value prop, input event)
+	compatConfig: { COMPONENT_V_MODEL: true },
 	// eslint-disable-next-line vue/multi-word-component-names
 	name: "settings",
 	data() {
@@ -83,8 +81,8 @@ export default {
 	},
 	created() {
 		this.settingsData = JSON.parse(JSON.stringify(this.widgetsSettings))
-		widgetsComponents.keys().forEach(fileName => {
-			const componentConfig = widgetsComponents(fileName)
+		Object.keys(widgetsComponents).forEach(fileName => {
+			const componentConfig = widgetsComponents[fileName]
 			this.apps.push({ app: componentConfig })
 		});
 	},
