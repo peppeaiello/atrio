@@ -111,7 +111,8 @@ export default {
 			}
 			const poll = async () => {
 				const status = await this.readStatus()
-				const fresh = status && status.token === token
+				// Updaters installed before 0.1.3 write no token: fall back to the time of the status
+				const fresh = status && ('token' in status ? status.token === token : Date.parse(status.time) >= started - 5000)
 				if (fresh && status.state === 'done') {
 					this.progress = this.$t('Updated, reloading…')
 					setTimeout(reloadFresh, 1500)
