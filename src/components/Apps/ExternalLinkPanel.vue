@@ -218,7 +218,7 @@ export default {
               <p class="control">
                 <span class="button is-static container-icon">
                   <b-image
-                    :key="icon" :src="icon" :src-fallback="require('@/assets/img/app/default.svg')"
+                    :key="icon" :src="icon" :src-fallback="$asset('@/assets/img/app/default.svg')"
                     class="is-32x32" ratio="1by1"
                   />
                 </span>

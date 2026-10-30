@@ -41,11 +41,7 @@
 <script>
 import find from 'lodash/find';
 
-const widgetsComponents = require.context(
-	'@/widgets',
-	false,
-	/.vue$/
-)
+const widgetsComponents = import.meta.glob('@/widgets/*.vue', { eager: true })
 
 
 export default {
@@ -83,8 +79,8 @@ export default {
 	},
 	created() {
 		this.settingsData = JSON.parse(JSON.stringify(this.widgetsSettings))
-		widgetsComponents.keys().forEach(fileName => {
-			const componentConfig = widgetsComponents(fileName)
+		Object.keys(widgetsComponents).forEach(fileName => {
+			const componentConfig = widgetsComponents[fileName]
 			this.apps.push({ app: componentConfig })
 		});
 	},

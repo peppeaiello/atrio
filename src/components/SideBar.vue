@@ -7,11 +7,7 @@ import vueCustomScrollbar from 'vue-custom-scrollbar'
 import Settings from '@/components/widgets/Settings.vue'
 import 'vue-custom-scrollbar/dist/vueScrollbar.css'
 
-const widgetsComponents = require.context(
-  '@/widgets',
-  false,
-  /.vue$/,
-)
+const widgetsComponents = import.meta.glob('@/widgets/*.vue', { eager: true })
 
 const widgetsConfig = 'widgets_config'
 
@@ -57,7 +53,7 @@ export default {
     },
   },
   created() {
-    widgetsComponents.keys().forEach((fileName) => {
+    Object.keys(widgetsComponents).forEach((fileName) => {
       const componentName = lowerFirst(
         camelCase(
           fileName
@@ -67,7 +63,7 @@ export default {
         ),
       )
       this.comps.push(componentName)
-      this.apps.push({ app: require(`@/widgets/${fileName.replace('./', '')}`).default })
+      this.apps.push({ app: widgetsComponents[fileName].default })
     })
   },
   mounted() {

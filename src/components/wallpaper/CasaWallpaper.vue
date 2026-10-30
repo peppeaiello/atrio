@@ -19,6 +19,7 @@
 <script>
 import ContextMenu from './ContextMenu.vue'
 import events      from '@/events/events';
+import { builtInWallpaper } from '@/plugins/asset'
 
 export default {
 	name: "casa-background",
@@ -69,7 +70,7 @@ export default {
 		},
 		parseUrl(serverUrl) {
 			// serverUrl.replace('/ui', '');
-			let newUrl = serverUrl.replace('SERVER_URL', `${this.$protocol}//${this.$baseURL}`)
+			let newUrl = builtInWallpaper(serverUrl).replace('SERVER_URL', `${this.$protocol}//${this.$baseURL}`)
 			newUrl = newUrl.replace('/ui', '').replace('/user/', '/users/');
 			return newUrl;
 		},

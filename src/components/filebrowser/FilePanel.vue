@@ -217,7 +217,7 @@
 			</section>
 			<!-- Modal-Card Body End -->
 			<b-loading v-model="isLoading" :is-full-page="false">
-				<b-image :src="require('@/assets/img/loading/waiting.svg')" alt="pending" class="is-100x100 mt-6" />
+				<b-image :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="is-100x100 mt-6" />
 			</b-loading>
 		</div>
 	</div>

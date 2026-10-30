@@ -8,7 +8,7 @@
 				<div v-for="(item,index) in storageData" :key="'mergeStorage' + index" class="ml-5 is-flex mb-3">
 					<div class="header-icon">
 						<b-icon v-show="!item.name" class="warn is-16x16" icon="danger" pack="casa"></b-icon>
-						<b-image :src="require('@/assets/img/storage/storage.png')" class="is-64x64"></b-image>
+						<b-image :src="$asset('@/assets/img/storage/storage.png')" class="is-64x64"></b-image>
 					</div>
 					<div class="ml-3 is-flex-grow-1 is-flex is-align-items-center">
 						<div>

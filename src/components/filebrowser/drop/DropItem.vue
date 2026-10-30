@@ -53,7 +53,7 @@
 						<b-image
 							:alt="device.name.displayName"
 							:class="stateClass"
-							:src="require(`@/assets/img/drop/${deviceIcon}.svg`)"
+							:src="$asset(`@/assets/img/drop/${deviceIcon}.svg`)"
 							class="is-48x48 mr-0 ml-0 no-click"
 						></b-image>
 					</div>

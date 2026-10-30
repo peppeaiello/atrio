@@ -43,7 +43,9 @@ pnpm install
 pnpm dev
 ```
 
-API calls to `/v1` and `/v2` are proxied to your CasaOS server, so you can use the dev UI with your real account.
+The dev server is [Vite](https://vite.dev) on http://localhost:8080 (`pnpm dev --port <n>` to change it). API calls to
+`/v1` and `/v2`, WebSockets included, are proxied to your CasaOS server, so you can use the dev UI with your real
+account.
 
 ### Build
 

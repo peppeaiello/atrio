@@ -854,7 +854,7 @@ export default {
           <b-field v-if="key === firstAppName" :label="$t('Icon URL')">
             <p class="control">
               <span class="button is-static container-icon">
-                <b-image :key="appIcon" :src="appIcon" :src-fallback="require('@/assets/img/app/default.svg')" class="is-32x32" ratio="1by1" />
+                <b-image :key="appIcon" :src="appIcon" :src-fallback="$asset('@/assets/img/app/default.svg')" class="is-32x32" ratio="1by1" />
               </span>
             </p>
             <b-input v-model="configData['x-casaos'].icon" :placeholder="$t('Your custom icon URL')" expanded />

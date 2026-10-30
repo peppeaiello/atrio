@@ -148,7 +148,7 @@ export default {
           <b-image
             :key="appDetailData.icon"
             :src="appDetailData.icon"
-            :src-fallback="require('@/assets/img/app/default.svg')"
+            :src-fallback="$asset('@/assets/img/app/default.svg')"
             class="is-128x128 icon-shadow"
             webp-fallback=".jpg"
           />
@@ -283,7 +283,7 @@ export default {
             <div class="gap">
               <b-image
                 :src="item"
-                :src-fallback="require('@/assets/img/app/swiper_placeholder.png')"
+                :src-fallback="$asset('@/assets/img/app/swiper_placeholder.png')"
                 class="border-8 is-clickable"
                 placeholder
                 ratio="16by9"

@@ -124,7 +124,7 @@
 		<section v-if="isCreating" class="modal-card-body ">
 			<div class="installing-warpper mt-6 mb-6">
 				<div class="is-flex is-align-items-center is-justify-content-center mb-5">
-					<lottie-animation :animationData="require('@/assets/ani/creating.json')" :autoPlay="true" :loop="true"
+					<lottie-animation :animationData="$asset('@/assets/ani/creating.json')" :autoPlay="true" :loop="true"
 						class="creating-animation"></lottie-animation>
 				</div>
 				<h3 class="title is-4 has-text-centered has-text-weight-light">{{ $t('Creation in progress') }}...</h3>

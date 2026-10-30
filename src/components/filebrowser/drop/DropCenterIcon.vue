@@ -12,7 +12,7 @@
   <div class="container">
     <div class="has-text-centered">
       <b-image
-        :src="require('@/assets/img/drop/drop_icon.svg')"
+        :src="$asset('@/assets/img/drop/drop_icon.svg')"
         class="is-80x80 ml-auto mr-auto mb-2"
       ></b-image>
       <p class="has-text-emphasis-02 has-text-grey-800 mb-2">
