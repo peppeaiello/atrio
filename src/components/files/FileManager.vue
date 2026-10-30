@@ -190,6 +190,7 @@ async function loadLocations() {
 let initialized = false
 function init(start) {
   initialized = true
+  readWallpaper()
   focusRoot()
   loadLocations()
   go(start || ROOT, { record: path.value !== (start || ROOT) && !!entries.value.length })
@@ -885,22 +886,23 @@ const status = computed(() => {
 
 /* ------------------------------------------------------------------ wallpaper */
 
-const wallpaper = computed(() => {
-  let url = ''
-  try {
-    url = localStorage.getItem('wallpaper') || ''
-  }
-  catch {}
-  url = url || vm.$store?.state?.wallpaperObject?.path || ''
-  url = url.replace('SERVER_URL', '').replace('/ui', '').replace('/user/', '/users/')
-  return url ? { '--files-wallpaper': `url("${url}")` } : {}
-})
+// Reuse the image the home page already resolved for its wallpaper (#background), so built-in,
+// uploaded and Files wallpapers all show here without repeating that logic.
+const wallpaperImage = ref('')
+function readWallpaper() {
+  const background = document.getElementById('background')
+  const image = background ? getComputedStyle(background).backgroundImage : ''
+  if (image && image !== 'none')
+    wallpaperImage.value = image
+}
+const wallpaper = computed(() => (wallpaperImage.value ? { '--files-wallpaper': wallpaperImage.value } : {}))
 
 /* ------------------------------------------------------------------ lifecycle */
 
 let socket = null
 onMounted(() => {
-  socket = vm.$socket?.client || null
+  // vue-socket.io-extended (Vue 2) wraps the client in $socket.client; the Vue 3 plugin exposes it as $socket.
+  socket = vm.$socket?.client || vm.$socket || null
   socket?.on?.('casaos:file:operate', onFileOperate)
   // The home page calls init() right after mounting; load the home folder if nothing does.
   setTimeout(() => {
