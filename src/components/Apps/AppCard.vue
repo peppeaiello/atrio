@@ -328,7 +328,6 @@ export default {
         }).then(res => res.data)
         this.$refs.dro.isActive = false
         this.$buefy.modal.open({
-          parent: this,
           component: tipEditorModal,
           hasModalCard: true,
           customClass: 'network-storage-modal',
@@ -736,8 +735,8 @@ export default {
             {{
               $t('Check then update')
             }}
-            <b-loading :active="isCheckThenUpdate || isUpdating" :is-full-page="false">
-              <img :src="require('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
+            <b-loading :model-value="isCheckThenUpdate || isUpdating" :is-full-page="false">
+              <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
             </b-loading>
           </b-button>
 
@@ -756,13 +755,13 @@ export default {
           <b-button v-if="isLinkApp" class="mb-1" expanded type="is-text" @click="uninstallApp(true)">
             {{ $t('Delete') }}
             <b-loading v-model="isUninstalling" :is-full-page="false">
-              <img :src="require('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
+              <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
             </b-loading>
           </b-button>
           <b-button v-else class="has-text-red" expanded type="is-text" @click="uninstallConfirm">
             {{ $t('Uninstall') }}
             <b-loading v-model="isUninstalling" :is-full-page="false">
-              <img :src="require('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
+              <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
             </b-loading>
           </b-button>
 
@@ -805,7 +804,7 @@ export default {
             <div class="is-relative">
               <b-image
                 :class="dotClass(item.status, isLoading)" :src="item.icon"
-                :src-fallback="require('@/assets/img/app/default.svg')" class="is-64x64"
+                :src-fallback="$asset('@/assets/img/app/default.svg')" class="is-64x64"
                 webp-fallback=".jpg" @click.native="openApp(item)"
               />
               <!-- Unstable -->
@@ -818,7 +817,7 @@ export default {
               class="has-background-gray-800 op80 is-64x64"
               style="top: auto;bottom: auto; right: auto; left: auto; border-radius: 11.5px"
             >
-              <img :src="require('@/assets/img/loading/waiting-white.svg')" alt="loading" class="is-20x20">
+              <img :src="$asset('@/assets/img/loading/waiting-white.svg')" alt="loading" class="is-20x20">
             </b-loading>
             <!-- Loading Bar End -->
           </div>

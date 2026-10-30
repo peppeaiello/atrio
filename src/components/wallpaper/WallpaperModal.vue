@@ -12,8 +12,8 @@
 		<section class="modal-card-body ">
 			<div class="preview-card">
 				<div :style="backgroundStyleObj" class="preview-image">
-					<b-image :src="require('@/assets/background/preview-widget.svg')" class="preview-widget"></b-image>
-					<b-image :src="require('@/assets/background/blank.png')"></b-image>
+					<b-image :src="$asset('@/assets/background/preview-widget.svg')" class="preview-widget"></b-image>
+					<b-image :src="$asset('@/assets/background/blank.png')"></b-image>
 				</div>
 			</div>
 
@@ -52,6 +52,7 @@
 </template>
 
 <script>
+import { asset, builtInWallpaper } from '@/plugins/asset'
 const wallpaperConfig = "wallpaper"
 import Uploader from 'simple-uploader.js'
 
@@ -67,11 +68,11 @@ export default {
 			wallpaperItems: [
 				{
 					name: "Built-in wallpaper 1",
-					path: require('@/assets/background/wallpaper01.jpg')
+					path: asset('@/assets/background/wallpaper01.jpg')
 				},
 				{
 					name: "Built-in wallpaper 2",
-					path: require('@/assets/background/wallpaper02.jpg')
+					path: asset('@/assets/background/wallpaper02.jpg')
 				}
 			],
 			backgroundStyleObj: {
@@ -173,7 +174,7 @@ export default {
 			return `${this.$protocol}//${this.$baseURL}/v1/users/current/image/${wallpaperConfig}?token=${accessToken}&type=wallpaper`
 		},
 		parseUrl(serverUrl) {
-			const newUrl = serverUrl.replace('SERVER_URL', `${this.$protocol}//${this.$baseURL}`)
+			const newUrl = builtInWallpaper(serverUrl).replace('SERVER_URL', `${this.$protocol}//${this.$baseURL}`)
 			return newUrl;
 		},
 	}

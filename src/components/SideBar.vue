@@ -3,15 +3,9 @@ import lowerFirst from 'lodash/lowerFirst'
 import camelCase from 'lodash/camelCase'
 import find from 'lodash/find'
 import isEqual from 'lodash/isEqual'
-import vueCustomScrollbar from 'vue-custom-scrollbar'
 import Settings from '@/components/widgets/Settings.vue'
-import 'vue-custom-scrollbar/dist/vueScrollbar.css'
 
-const widgetsComponents = require.context(
-  '@/widgets',
-  false,
-  /.vue$/,
-)
+const widgetsComponents = import.meta.glob('@/widgets/*.vue', { eager: true })
 
 const widgetsConfig = 'widgets_config'
 
@@ -19,18 +13,12 @@ export default {
   name: 'SideBar',
   components: {
     Settings,
-    VueCustomScrollbar: vueCustomScrollbar,
   },
   data() {
     return {
       isLoading: true,
       comps: [],
       apps: [],
-      scrollSettings: {
-        suppressScrollY: false,
-        suppressScrollX: true,
-        wheelPropagation: false,
-      },
       widgetsSettings: [],
     }
   },
@@ -57,7 +45,7 @@ export default {
     },
   },
   created() {
-    widgetsComponents.keys().forEach((fileName) => {
+    Object.keys(widgetsComponents).forEach((fileName) => {
       const componentName = lowerFirst(
         camelCase(
           fileName
@@ -67,7 +55,7 @@ export default {
         ),
       )
       this.comps.push(componentName)
-      this.apps.push({ app: require(`@/widgets/${fileName.replace('./', '')}`).default })
+      this.apps.push({ app: widgetsComponents[fileName].default })
     })
   },
   mounted() {
@@ -167,11 +155,11 @@ export default {
 
 <template>
   <div v-if="!isLoading" ref="sidebar" :class="{ open: sidebarOpen }" class="side-bar contextmenu-canvas">
-    <VueCustomScrollbar :settings="scrollSettings" class="scroll-area contextmenu-canvas">
+    <div class="scroll-area scrollbars contextmenu-canvas" style="overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;">
       <div v-for="(item, index) in activeApps" :key="`widgets_${index}`">
         <component :is="item.app" :class="{ 'last-block': index === activeApps.length - 1 }" />
       </div>
-    </VueCustomScrollbar>
+    </div>
     <Settings v-model="widgetsSettings" :class="{ 'mt-4': activeApps.length > 0 }" @change="handleChange" />
   </div>
 </template>

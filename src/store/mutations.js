@@ -1,3 +1,4 @@
+import { asset } from '@/plugins/asset'
 const mutations = {
   // User and tokens
   SET_ACCESS_TOKEN(state, token) {
@@ -40,7 +41,7 @@ const mutations = {
 
   SET_DEFAULT_WALLPAPER(state) {
     state.wallpaperObject = {
-      path: require('@/assets/background/wallpaper01.jpg'),
+      path: asset('@/assets/background/wallpaper01.jpg'),
       from: 'Built-in', // Built-in, Upload, Files
     }
   },

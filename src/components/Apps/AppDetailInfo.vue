@@ -1,6 +1,6 @@
 <script>
 import VMdEditor from '@kangc/v-md-editor'
-import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
+import { Swiper, SwiperSlide } from '@/components/base/Swiper'
 import YAML from 'yaml'
 import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
@@ -148,7 +148,7 @@ export default {
           <b-image
             :key="appDetailData.icon"
             :src="appDetailData.icon"
-            :src-fallback="require('@/assets/img/app/default.svg')"
+            :src-fallback="$asset('@/assets/img/app/default.svg')"
             class="is-128x128 icon-shadow"
             webp-fallback=".jpg"
           />
@@ -184,8 +184,8 @@ export default {
                 <div
                   class="custom-install-button-content"
                   @click.self="
-                    $emit('install', appDetailData.id, appDetailData)
-                    $messageBus('appstore_install', i18n(appDetailData.title))
+                    $emit('install', appDetailData.id, appDetailData);
+                    $messageBus('appstore_install', i18n(appDetailData.title));
                   "
                 >
                   {{ $t('Install') }}
@@ -283,7 +283,7 @@ export default {
             <div class="gap">
               <b-image
                 :src="item"
-                :src-fallback="require('@/assets/img/app/swiper_placeholder.png')"
+                :src-fallback="$asset('@/assets/img/app/swiper_placeholder.png')"
                 class="border-8 is-clickable"
                 placeholder
                 ratio="16by9"

@@ -25,7 +25,7 @@
 			<!-- Header End -->
 			<!-- Chart Start -->
 			<div class="chart-container">
-				<vue-apex-charts ref="chart" :options="chartOptions" :series="networks[networkId]" height="130"
+				<vue-apex-charts ref="chart" :options="chartOptions" :series="chartSeries" height="130"
 					type="area" />
 			</div>
 			<!-- Chart End -->
@@ -59,7 +59,7 @@ export default {
 	title: "Network Status",
 	initShow: true,
 	components: {
-		VueApexCharts: () => import("vue-apexcharts")
+		VueApexCharts: () => import("vue3-apexcharts")
 	},
 	data() {
 		return {
@@ -161,6 +161,13 @@ export default {
 
 	},
 
+	computed: {
+		// ApexCharts needs plain arrays, not reactive proxies
+		chartSeries() {
+			return (this.networks[this.networkId] || []).map(({ name, data }) => ({ name, data: [...data] }))
+		},
+	},
+
 	watch: {
 		networkId(val, oldVal) {
 			if (val !== oldVal) {
@@ -214,7 +221,7 @@ export default {
 				this.networks[index][1].cacheTime = el.time;
 			});
 			this.networkId = this.networkId > this.networks.length - 1 ? 0 : this.networkId
-			this.$refs.chart?.updateSeries(this.networks[this.networkId])
+			this.$refs.chart?.updateSeries(this.chartSeries)
 			if (this.networks) {
 				const upSpeed = this.networks[this.networkId][0].data[this.networks[this.networkId][0].data.length - 1]
 				const downSpeed = this.networks[this.networkId][1].data[this.networks[this.networkId][1].data.length - 1]

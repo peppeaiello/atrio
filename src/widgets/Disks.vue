@@ -18,7 +18,7 @@
 					<div class="column is-full pb-0">
 						<div class="is-flex is-align-items-center">
 							<div class="header-icon">
-								<b-image :src="require('@/assets/img/storage/storage.svg')" class="is-64x64"></b-image>
+								<b-image :src="$asset('@/assets/img/storage/storage.svg')" class="is-64x64"></b-image>
 							</div>
 							<div class="ml-2 is-flex-grow-1 ">
 								<h4 class="title mb-1 mt-0 has-text-left one-line is-align-items-center is-flex">
@@ -46,7 +46,7 @@
 					<div v-for="(item) in usbDisks" :key="'usb_' + item.name" class="column is-full pb-0">
 						<div class="is-flex">
 							<div class="header-icon is-flex-shrink-0">
-								<b-image :src="require('@/assets/img/storage/USB.svg')" class="is-64x64"></b-image>
+								<b-image :src="$asset('@/assets/img/storage/USB.svg')" class="is-64x64"></b-image>
 							</div>
 							<div class="ml-2 is-flex-grow-1 ">
 								<h4 class="title is-size-14px mb-1 mt-0 has-text-left has-text-white one-line ">
@@ -107,7 +107,6 @@ export default {
 		showDiskManagement() {
 			this.$messageBus('widget_storagemanager');
 			this.$buefy.modal.open({
-				parent: this,
 				component: StorageManagerPanel,
 				hasModalCard: true,
 				customClass: 'storage-modal',

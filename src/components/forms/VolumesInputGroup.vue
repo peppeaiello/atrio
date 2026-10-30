@@ -47,6 +47,8 @@
 import IconInput from './IconInput.vue'
 
 export default {
+	// Uses Vue 2 v-model (value prop, input event)
+	compatConfig: { COMPONENT_V_MODEL: true },
 	name: 'volumes-input-group',
 	components: {
 		IconInput,

@@ -19,7 +19,7 @@
 			<div>
 				<div class="buttons is-justify-content-center">
 					<b-image
-						:src="require('@/assets/img/share/share-empty.svg')"
+						:src="$asset('@/assets/img/share/share-empty.svg')"
 						class="is-160x160"
 					></b-image>
 				</div>

@@ -7,26 +7,15 @@
  * Copyright (c) 2022 by IceWhale, All Rights Reserved.
  */
 
-import Vue       from 'vue'
-import VueRouter from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import api       from '@/service/api'
 import store     from '@/store'
 import route     from './route.js'
 
-Vue.use(VueRouter)
-
-const routes = route
-
-const router = new VueRouter({
-	mode: 'hash',
-	base: process.env.BASE_URL,
-	routes
+const router = createRouter({
+	history: createWebHashHistory(process.env.BASE_URL),
+	routes: route,
 })
-
-const originalPush = VueRouter.prototype.push
-VueRouter.prototype.push = function push(location) {
-	return originalPush.call(this, location).catch((err) => err)
-}
 
 const needInit = async () => {
 	if (store.state.needInitialization) {
@@ -68,7 +57,7 @@ router.beforeEach(async (to, from, next) => {
 				switch (to.path) {
 					case "/login":
 						if (accessToken) {
-							next('/');
+							return next('/');
 						}
 						break;
 
@@ -77,13 +66,12 @@ router.beforeEach(async (to, from, next) => {
 						localStorage.removeItem("refresh_token");
 						localStorage.removeItem("wallpaper");
 						localStorage.removeItem("user");
-						next('/login');
-						break;
+						return next('/login');
 
 					default:
 						if (version == null) {
 							localStorage.removeItem("access_token");
-							next('/login');
+							return next('/login');
 						}
 						break;
 				}

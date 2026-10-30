@@ -13,7 +13,7 @@
 			<div class="node-card">
 				<div class="cover is-flex is-justify-content-center is-align-items-center">
 					<div class="folder-cover">
-						<img :src="require('@/assets/img/filebrowser/folder-default.svg')" alt="folder"
+						<img :src="$asset('@/assets/img/filebrowser/folder-default.svg')" alt="folder"
 							class="folder-icon" />
 					</div>
 				</div>

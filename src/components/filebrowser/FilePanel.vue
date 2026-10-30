@@ -12,7 +12,7 @@
 
 				<template>
 					<!-- NavBar Start -->
-					<b-sidebar ref="sidebar" :open.sync="isSideBarOpen" :overlay="isMobile" :position="sideBarPosition"
+					<b-sidebar ref="sidebar" v-model="isSideBarOpen" :overlay="isMobile" :position="sideBarPosition"
 						fullheight>
 						<div class="nav-bar is-flex is-flex-direction-column">
 							<div class="is-flex-grow-1 is-flex-shrink-1 nav-bar-top scrollbars-light">
@@ -217,7 +217,7 @@
 			</section>
 			<!-- Modal-Card Body End -->
 			<b-loading v-model="isLoading" :is-full-page="false">
-				<b-image :src="require('@/assets/img/loading/waiting.svg')" alt="pending" class="is-100x100 mt-6" />
+				<b-image :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="is-100x100 mt-6" />
 			</b-loading>
 		</div>
 	</div>
@@ -229,7 +229,7 @@ import dropRight from "lodash/dropRight";
 import isEqual from "lodash/isEqual";
 
 import { mixin } from "@/mixins/mixin";
-import VueBreakpointMixin from "vue-breakpoint-mixin";
+import VueBreakpointMixin from "@/mixins/BreakpointMixin";
 import events from "@/events/events";
 
 import TreeList from "./sidebar/TreeList.vue";
@@ -801,7 +801,6 @@ export default {
 				this.isShowDetial = true;
 			} else {
 				this.$buefy.modal.open({
-					parent: this,
 					component: DetailModal,
 					hasModalCard: true,
 					customClass: "detail-panel file-modal",
@@ -828,7 +827,6 @@ export default {
 		showNewFolderModal() {
 			this.isModalOpen = true;
 			this.$buefy.modal.open({
-				parent: this,
 				component: NewFolderModal,
 				hasModalCard: true,
 				customClass: "new-folder-panel file-modal",
@@ -857,7 +855,6 @@ export default {
 		showNewFileModal() {
 			this.isModalOpen = true;
 			this.$buefy.modal.open({
-				parent: this,
 				component: NewFileModal,
 				hasModalCard: true,
 				customClass: "new-folder-panel file-modal",
@@ -887,7 +884,6 @@ export default {
 		showRenameModal(item) {
 			this.isModalOpen = true;
 			this.$buefy.modal.open({
-				parent: this,
 				component: RenameModal,
 				hasModalCard: true,
 				customClass: "rename-panel file-modal",
@@ -1023,7 +1019,6 @@ export default {
 
 		handleSelectShare() {
 			this.$buefy.modal.open({
-				parent: this,
 				component: SelectShareModal,
 				hasModalCard: true,
 				customClass: "share-detial-panel file-modal",
@@ -1043,7 +1038,6 @@ export default {
 		},
 		getShareLink(item) {
 			this.$buefy.modal.open({
-				parent: this,
 				component: ShareDetial,
 				hasModalCard: true,
 				customClass: "share-detial-panel file-modal",
@@ -1079,7 +1073,6 @@ export default {
 				console.log(e);
 			}
 			this.$buefy.modal.open({
-				parent: this,
 				component: MergeStorages,
 				hasModalCard: true,
 				canCancel: false,

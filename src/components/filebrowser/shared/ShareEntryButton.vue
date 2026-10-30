@@ -15,9 +15,9 @@
 						</div>
 					</div>
 				</div>
-				<div slot="reference" class="cover mr-2 is-flex-shrink-0 is-flex is-align-items-center none-click" s>
+				<template #reference><div class="cover mr-2 is-flex-shrink-0 is-flex is-align-items-center none-click" s>
 					<b-icon icon="share" pack="casa"></b-icon>
-				</div>
+				</div></template>
 			</popper>
 			<div><span>{{ $t('Shared') }}</span></div>
 
@@ -30,7 +30,7 @@
 
 const sharedInitData = "shared_init_data";
 import events from '@/events/events';
-import Popper from 'vue-popperjs';
+import Popper from '@/components/base/Popper.vue'
 
 export default {
 	props: {

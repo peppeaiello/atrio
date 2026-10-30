@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import VueBreakpointMixin from "vue-breakpoint-mixin";
+import VueBreakpointMixin from "@/mixins/BreakpointMixin";
 import events             from "@/events/events";
 
 export default {

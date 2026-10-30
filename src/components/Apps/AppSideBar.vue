@@ -10,6 +10,8 @@
 
 <script>
 export default {
+	// Uses Vue 2 v-model (value prop, input event)
+	compatConfig: { COMPONENT_V_MODEL: true },
 	name: "AppSideBar",
 	model: {
 		prop: 'open',
