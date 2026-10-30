@@ -15,6 +15,7 @@
   },
   "packageManager": "pnpm@9.0.6",
   "dependencies": {
+    "@fontsource/manrope": "5.1.1",
     "@fontsource/roboto": "^5.0.5",
     "@icewhale/casaos-appmanagement-openapi": "latest",
     "@icewhale/casaos-openapi": "latest",

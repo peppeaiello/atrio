@@ -1,0 +1,62 @@
+/************************************
+*
+* Atrio: Calm glass
+* Design tokens and the overrides that move the inherited CasaOS styles to them.
+* See docs/VISION.md.
+*
+*************************************/
+
+:root {
+	--atrio-glass-bg: rgba(15, 23, 42, 0.45);
+	--atrio-glass-bg-strong: rgba(15, 23, 42, 0.72);
+	--atrio-glass-hover: rgba(255, 255, 255, 0.06);
+	--atrio-glass-border: rgba(255, 255, 255, 0.08);
+	--atrio-glass-blur: blur(24px) saturate(140%);
+	--atrio-radius-lg: 24px;
+	--atrio-radius-md: 16px;
+	--atrio-radius-sm: 12px;
+	--atrio-text: #f8fafc;
+	--atrio-text-soft: #cbd5e1;
+	--atrio-text-muted: #94a3b8;
+	--atrio-accent: #22d3ee;
+	--atrio-accent-2: #6366f1;
+	--atrio-gradient: linear-gradient(135deg, var(--atrio-accent), var(--atrio-accent-2));
+	--atrio-ok: #34d399;
+	--atrio-ok-text: #a7f3d0;
+	--atrio-warn: #fbbf24;
+	--atrio-warn-text: #fde68a;
+}
+
+// Glass panels: widgets, app cards and every block built on .blur-background
+.blur-background {
+	background-color: var(--atrio-glass-bg);
+	backdrop-filter: var(--atrio-glass-blur);
+	-webkit-backdrop-filter: var(--atrio-glass-blur);
+	border-radius: var(--atrio-radius-lg);
+	box-shadow: inset 0 0 0 1px var(--atrio-glass-border);
+}
+
+.widget {
+	border-radius: var(--atrio-radius-lg);
+
+	&:hover {
+		box-shadow: none;
+	}
+
+	.widget-content {
+		padding: 1.25rem;
+	}
+
+	.widget-header .widget-title {
+		font-size: 0.95rem;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+	}
+}
+
+// Section titles on the home page
+.title-bar .title,
+.app-section-title {
+	font-weight: 700 !important;
+	letter-spacing: -0.01em;
+}
