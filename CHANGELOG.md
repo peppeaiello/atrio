@@ -10,6 +10,10 @@ What changes in each Atrio release. The section for a version is also the text o
   what happened: apps installed, removed or updated, installs and settings that failed, a system disk
   almost full or reporting a health problem, a hot processor, and new Atrio or CasaOS versions. Each
   warning comes once while the problem lasts. Notifications are kept in this browser (the last 50).
+- **Widgets your way.** "Widgets Settings" opens a panel where widgets can be shown, hidden and put in any
+  order (drag them or use the arrows). The order is saved on the server.
+- **Web page widget.** Add any page of your network to the widget column, for example an app's status page
+  or a small dashboard, with a title and a height. You can add several, edit or remove them.
 
 ## 0.1.7 — 2026-10-31
 
