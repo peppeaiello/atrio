@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: A problem with CasaOS itself
+    url: https://github.com/IceWhaleTech/CasaOS/issues
+    about: Apps that do not start, disks, users… If the original CasaOS UI does the same, it belongs to CasaOS.

@@ -53,6 +53,6 @@ Docker management is what people use most, so it gets the next redesign.
 ## Before the public announcement
 
 - No screens left in the old CasaOS style among the ones above.
-- README with screenshots or a short video.
-- Own CONTRIBUTING and CODE_OF_CONDUCT (the current ones come from CasaOS-UI).
+- [x] README with screenshots, and the website updated.
+- [x] Own CONTRIBUTING and CODE_OF_CONDUCT, and issue templates for bugs and ideas.
 - A few weeks of private testing with friends running CasaOS, issues tracked on GitHub.
