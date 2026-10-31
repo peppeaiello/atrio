@@ -487,6 +487,11 @@ export default {
 	backdrop-filter: blur(32px) saturate(150%);
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 64px rgba(0, 0, 0, 0.4);
 	color: var(--atrio-text);
+
+	// Focus moves to the sheet itself when it opens; the ring belongs to the controls inside
+	&:focus {
+		outline: none;
+	}
 }
 
 .atrio-sheet-head {

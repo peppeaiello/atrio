@@ -201,6 +201,16 @@ button.atrio-metric-note {
 		border-radius: 2px;
 		background: var(--atrio-warn);
 	}
+
+	&.is-button {
+		border: 0;
+		font-family: inherit;
+		cursor: pointer;
+
+		&:hover {
+			background: var(--atrio-glass-bg-strong);
+		}
+	}
 }
 
 // Section titles on the home page
