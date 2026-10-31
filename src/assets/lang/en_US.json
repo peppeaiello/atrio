@@ -588,5 +588,8 @@
   "Change Avatar": "Change Avatar",
   "Enter a name": "Enter a name",
   "Password changed": "Password changed",
-  "Preview": "Preview"
+  "Preview": "Preview",
+  "Server": "Server",
+  "{count} lines": "{count} lines",
+  "Sign in with an account of the server (SSH) to open its shell.": "Sign in with an account of the server (SSH) to open its shell."
 }
