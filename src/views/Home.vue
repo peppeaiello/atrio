@@ -7,6 +7,7 @@ import CoreService from '@/components/CoreService.vue'
 import AppSection from '@/components/Apps/AppSection.vue'
 import CommandPalette from '@/components/home/CommandPalette.vue'
 import AppDetailsPanel from '@/components/home/AppDetailsPanel.vue'
+import HardwarePanel from '@/components/home/HardwarePanel.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
@@ -24,6 +25,7 @@ export default {
     FilePanel,
     CommandPalette,
     AppDetailsPanel,
+    HardwarePanel,
   },
   mixins: [mixin],
   provide() {
@@ -108,7 +110,8 @@ export default {
     'casaos:system:utilization'(res) {
       const cpu = JSON.parse(res.Properties.sys_cpu)
       const mem = JSON.parse(res.Properties.sys_mem)
-      this.systemLoad = { busy: cpu.percent >= 90 || mem.usedPercent >= 90 }
+      // The processor's temperature as CasaOS reads it; the Hardware panel shows every sensor
+      this.systemLoad = { busy: cpu.percent >= 90 || mem.usedPercent >= 90, hot: cpu.temperature >= 85 }
     },
   },
   methods: {
@@ -306,9 +309,12 @@ export default {
             <h1 class="atrio-greeting-title">{{ greeting }}</h1>
           </div>
           <div class="atrio-chips">
-            <span v-if="systemLoad" :class="systemLoad.busy ? 'is-warn' : 'is-ok'" class="atrio-chip">
-              <span class="atrio-chip-dot" />{{ systemLoad.busy ? $t('High system load') : $t('System healthy') }}
-            </span>
+            <button
+              v-if="systemLoad" :class="systemLoad.busy || systemLoad.hot ? 'is-warn' : 'is-ok'" :title="$t('Hardware details')"
+              class="atrio-chip is-button" type="button" @click="$EventBus.$emit('atrio:open-hardware')"
+            >
+              <span class="atrio-chip-dot" />{{ systemLoad.hot ? $t('High temperature') : systemLoad.busy ? $t('High system load') : $t('System healthy') }}
+            </button>
             <span v-if="appsSummary.total" class="atrio-chip">
               {{ $t('{running} of {total} apps running', appsSummary) }}
             </span>
@@ -354,6 +360,7 @@ export default {
 
     <CommandPalette />
     <AppDetailsPanel />
+    <HardwarePanel />
 
     <!-- File Panel Start -->
     <b-modal

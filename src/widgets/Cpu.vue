@@ -8,6 +8,9 @@
 					{{ $t("System Status") }}
 				</div>
 				<span class="atrio-widget-hint mr-2">{{ $t('live') }}</span>
+				<button :aria-label="$t('Hardware details')" :title="$t('Hardware details')" class="widget-icon-button atrio-widget-button is-flex-shrink-0 mr-1" type="button" @click="$EventBus.$emit('atrio:open-hardware')">
+					<b-icon custom-size="mdi-18px" icon="chip" pack="mdi"></b-icon>
+				</button>
 				<div class="widget-icon-button is-flex-shrink-0" @click="showMoreInfo">
 					<b-icon :class="{ open: showMore }" class="arrow-btn" icon="right-outline" pack="casa"></b-icon>
 				</div>
@@ -294,6 +297,20 @@ export default {
 <style lang="scss">
 .widget {
 	&.cpu {
+		.atrio-widget-button {
+			display: grid;
+			place-items: center;
+			padding: 0;
+			border: 0;
+			border-radius: 0.375rem;
+			background: transparent;
+			color: inherit;
+
+			&:hover {
+				background: rgba(255, 255, 255, 0.1);
+			}
+		}
+
 		.tabs {
 			ul {
 				border-bottom: 1px solid transparent;
