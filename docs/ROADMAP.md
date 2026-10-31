@@ -50,6 +50,13 @@ Docker management is what people use most, so it gets the next redesign.
 - [x] Notifications centre (app updates, disk warnings, finished installs).
 - [x] Mobile pass: layout, touch targets, PWA install.
 
+## 0.6 — Alerts that reach you
+
+- Push alerts even when the UI is closed: a small service on each server (installed with Atrio, like the
+  updater) watches disk space and health, temperature, installs and new versions, and sends the warnings
+  to an [ntfy](https://ntfy.sh) topic chosen in the settings, self-hosted or public. Gotify and email as
+  other targets. Nothing goes through a central Atrio server. Asked for on r/CasaOS.
+
 ## Before the public announcement
 
 - [x] No screens left in the old CasaOS style among the ones above.
