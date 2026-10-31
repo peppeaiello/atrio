@@ -15,6 +15,9 @@ What changes in each Atrio release. The section for a version is also the text o
   category; Esc clears it), categories and authors as chips, a Featured row with arrows, and app cards
   that say clearly whether an app is installed (with Open), being installed, or not available for this
   machine. The app details opened from the store use the same style.
+- **Install progress on the home screen.** An app being installed appears in the app grid right away, with
+  a progress ring and the percentage, and becomes a normal app card when it is ready. If the install
+  fails, the card says so (the reason is in its tooltip) until you dismiss it.
 
 ## 0.1.5 — 2026-10-31
 
