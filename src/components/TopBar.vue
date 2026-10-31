@@ -28,8 +28,9 @@ export default {
   data() {
     return {
       timer: 0,
-      // Atrio settings panel
+      // Atrio settings and account panels
       settingsOpen: false,
+      accountOpen: false,
       // User
       userInfo: this.$store.state.user,
       // System
@@ -192,6 +193,7 @@ export default {
       if (this.settingsOpen) return
       this.$messageBus('dashboardsetting')
       this.settingsReturnFocus = document.activeElement
+      this.accountOpen = false
       this.settingsOpen = true
       this.$store.commit('SET_SIDEBAR_CLOSE')
       this.checkVersion()
@@ -207,9 +209,29 @@ export default {
     },
     onSettingsKey(event) {
       // A modal opened from the panel (port, wallpaper, update) handles its own keys
-      if (!this.settingsOpen || document.querySelector('.modal.is-active')) return
-      if (event.key === 'Escape') this.closeSettings()
-      else trapTab(event, this.$refs.settingsSheet)
+      if (document.querySelector('.modal.is-active')) return
+      if (this.settingsOpen) {
+        if (event.key === 'Escape') this.closeSettings()
+        else trapTab(event, this.$refs.settingsSheet)
+      }
+      else if (this.accountOpen) {
+        if (event.key === 'Escape') this.closeAccount()
+        else trapTab(event, this.$refs.accountSheet)
+      }
+    },
+    openAccount() {
+      if (this.accountOpen) return
+      this.$messageBus('account_setting')
+      this.closeSettings(false)
+      this.accountReturnFocus = document.activeElement
+      this.accountOpen = true
+      this.getUserInfo()
+      this.$nextTick(() => this.$refs.accountSheet?.focus())
+    },
+    closeAccount() {
+      if (!this.accountOpen) return
+      this.accountOpen = false
+      this.$nextTick(() => restoreFocus(this.accountReturnFocus))
     },
     openHardware() {
       this.closeSettings(false)
@@ -522,33 +544,24 @@ export default {
       </div>
       <!-- SideBar Button Start -->
 
-      <!-- Account Dropmenu Start -->
-      <b-dropdown
-        animation="fade1"
-        aria-role="list"
-        class="navbar-item"
-        :close-on-click="true"
-        @active-change="getUserInfo"
-      >
-        <template #trigger>
-          <b-tooltip
-            :active="!$store.state.isMobile"
-            :label="$t('Account')"
-            position="is-right"
-            type="is-dark"
-            @click.native="$messageBus('account_setting')"
-          >
-            <p role="button">
-              <b-icon class="picon" icon="account-outline" pack="casa" size="is-20" />
-            </p>
-          </b-tooltip>
-        </template>
-
-        <b-dropdown-item :focusable="false" aria-role="menu-item" class="p-0" custom>
-          <AccountPanel />
-        </b-dropdown-item>
-      </b-dropdown>
-      <!-- Account Dropmenu End -->
+      <!-- Account Start: the icon opens the account panel -->
+      <div class="is-flex is-align-items-center navbar-item">
+        <b-tooltip :active="!$store.state.isMobile" :label="$t('Account')" position="is-right" type="is-dark">
+          <button :aria-label="$t('Account')" class="atrio-header-icon" type="button" @click="openAccount">
+            <b-icon class="picon" icon="account-outline" pack="casa" size="is-20" />
+          </button>
+        </b-tooltip>
+      </div>
+      <Teleport to="body">
+        <transition name="atrio-sheet">
+          <div v-if="accountOpen" class="atrio-sheet-backdrop" @click.self="closeAccount">
+            <aside ref="accountSheet" :aria-label="$t('Account')" aria-modal="true" class="atrio-sheet atrio-settings" role="dialog" tabindex="-1">
+              <AccountPanel @close="closeAccount" />
+            </aside>
+          </div>
+        </transition>
+      </Teleport>
+      <!-- Account End -->
 
       <!-- Settings Start: the icon opens the settings panel -->
       <div class="is-flex is-align-items-center navbar-item">

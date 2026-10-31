@@ -9,6 +9,8 @@ What changes in each Atrio release. The section for a version is also the text o
 - **Settings panel.** The settings icon opens a side panel in sections (Appearance, Web search, Dashboard,
   Network, Storage, Updates, System) instead of a long dropdown. It also opens from the command palette,
   and System has a shortcut to the Hardware panel next to Restart and Shut down.
+- **Account panel.** The account icon opens a side panel with your picture (click it to change and crop
+  it), name, password and Log out, in the same style. Changing the password now confirms it worked.
 
 **Fixed**
 

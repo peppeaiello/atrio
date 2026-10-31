@@ -31,6 +31,7 @@ const avatarUrlPrefix = 'v1/users/avatar?token='
 
 export default {
   name: 'AccountPanel',
+  emits: ['close'],
   components: {
     ValidationObserver,
     ValidationProvider,
@@ -119,6 +120,7 @@ export default {
         this.oriPassword = ''
         this.password = ''
         this.confirmation = ''
+        this.notificationShow = false
         this.username = this.userInfo.username
       }
     },
@@ -192,6 +194,8 @@ export default {
         this.password = ''
         this.confirmation = ''
         this.isLoading = false
+        this.notificationShow = false
+        this.$buefy.toast.open({ message: this.$t('Password changed'), type: 'is-success' })
         this.goto(1)
       }
       catch (error) {
@@ -234,168 +238,121 @@ export default {
 </script>
 
 <template>
-  <div class="modal-card w-424">
-    <ValidationObserver v-slot="{ handleSubmit }">
-      <!-- Modal-Card Header Start -->
-      <header class="modal-card-head">
-        <div class="is-flex-grow-1">
-          <h3 class="title is-header">
-            {{ title }}
-          </h3>
+  <!-- Atrio: account in the side panel opened from the header -->
+  <div class="atrio-account">
+    <ValidationObserver v-slot="{ handleSubmit }" slim>
+      <header class="atrio-sheet-head">
+        <button v-if="state !== 1" :aria-label="$t('Back')" class="atrio-icon-button" type="button" @click.stop="goto(1)">
+          <b-icon icon="left-outline" pack="casa" />
+        </button>
+        <div class="atrio-sheet-title">
+          <h2>{{ title }}</h2>
         </div>
-        <div>
-          <b-button :label="$t('Logout')" rounded type="is-danger is-light" @click="logout" />
-        </div>
+        <button :aria-label="$t('Close')" class="atrio-icon-button" type="button" @click="$emit('close')">
+          <b-icon icon="close-outline" pack="casa" />
+        </button>
       </header>
-      <!-- Modal-Card Header End -->
-      <!-- Modal-Card Body Start -->
-      <section class="modal-card-body " :class="bodyPadding">
-        <template v-if="state === 1">
-          <div class="is-flex is-justify-content-center mb-5">
-            <div class=" is-relative ">
-              <div class="edit-avatar is-absolute">
-                <b-icon icon="edit-outline" pack="casa" />
-                <input type="file" class="file-input" accept="image/*" @change="loadImage($event)">
-              </div>
-              <b-image :src="avatarUrl" :src-fallback="$asset('@/assets/img/account/default-avatar.svg')" class="is-80x80" rounded />
-            </div>
-          </div>
-          <div class="mb-55">
-            <div class="has-text-emphasis-04 has-text-gray-font mb-2">
+
+      <template v-if="state === 1">
+        <div class="atrio-account-profile">
+          <label :title="$t('Change Avatar')" class="atrio-account-avatar">
+            <img :src="avatarUrl" alt="" @error="$event.target.src = $asset('@/assets/img/account/default-avatar.svg')">
+            <span class="atrio-account-avatar-edit">
+              <b-icon icon="edit-outline" pack="casa" />
+            </span>
+            <input :aria-label="$t('Change Avatar')" accept="image/*" class="atrio-account-file" type="file" @change="loadImage($event)">
+          </label>
+          <p class="atrio-account-name">{{ userInfo.username }}</p>
+        </div>
+
+        <section class="atrio-settings-section">
+          <div class="atrio-setting-row">
+            <b-icon icon="account-outline" pack="casa" size="is-20" />
+            <span class="atrio-setting-label">
               {{ $t('Name') }}
-            </div>
-            <div class="is-flex is-align-items-center account-item">
-              <div class="has-text-emphasis-02 is-flex-grow-1">
-                {{ userInfo.username }}
-              </div>
-              <div class="edit-button" @click.stop="goto(2);">
-                <b-icon class="close-button ml-2 has-text-gray-font" icon="edit-outline" pack="casa" />
-              </div>
-            </div>
+              <small class="atrio-setting-note">{{ userInfo.username }}</small>
+            </span>
+            <button class="atrio-button is-small" type="button" @click.stop="goto(2)">{{ $t('Change') }}</button>
           </div>
-          <div>
-            <div class="has-text-emphasis-04 has-text-gray-font mb-2">
+          <div class="atrio-setting-row">
+            <b-icon icon="lock-outline" pack="mdi" size="is-20" />
+            <span class="atrio-setting-label">
               {{ $t('Password') }}
-            </div>
-            <div class="is-flex is-align-items-center account-item">
-              <div class="has-text-emphasis-02 is-flex-grow-1 has-text-gray-font">
-                ••••••
-              </div>
-              <div class="edit-button" @click.stop="goto(3);">
-                <b-icon class="close-button ml-2 has-text-gray-font" icon="edit-outline" pack="casa" />
-              </div>
-            </div>
+              <small class="atrio-setting-note">••••••</small>
+            </span>
+            <button class="atrio-button is-small" type="button" @click.stop="goto(3)">{{ $t('Change') }}</button>
           </div>
-        </template>
+        </section>
 
-        <template v-else-if="state === 2">
-          <ValidationProvider v-slot="{ errors, valid }" name="User" rules="required">
-            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0 has-text-light">
-              <b-input v-model="user.username" type="text" @keyup.enter.native="handleSubmit(saveUser)" />
-            </b-field>
-          </ValidationProvider>
-        </template>
+        <button class="atrio-button is-danger atrio-account-logout" type="button" @click="logout">
+          <b-icon icon="logout" pack="mdi" size="is-16" />
+          {{ $t('Logout') }}
+        </button>
+      </template>
 
-        <template v-else-if="state === 3">
-          <b-notification v-model="notificationShow" aria-close-label="Close notification" auto-close role="alert" type="is-danger">
-            {{ message }}
-          </b-notification>
-          <ValidationProvider v-slot="{ errors, valid }" name="oriPassword" rules="required|min:5" vid="oriPassword">
-            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-5 has-text-light">
-              <b-input v-model="oriPassword" :placeholder="$t('Original password')" password-reveal type="password" />
-            </b-field>
-          </ValidationProvider>
-          <ValidationProvider v-slot="{ errors, valid }" name="Password" rules="required|min:5" vid="password">
-            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-5 has-text-light">
-              <b-input v-model="password" :placeholder="$t('New password')" password-reveal type="password" />
-            </b-field>
-          </ValidationProvider>
-          <ValidationProvider v-slot="{ errors, valid }" name="Password Confirmation" rules="required|confirmed:password">
-            <b-field :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-0">
-              <b-input v-model="confirmation" :placeholder="$t('Confirm the new password again')" password-reveal type="password" @keyup.enter.native="handleSubmit(savePassword)" />
-            </b-field>
-          </ValidationProvider>
-        </template>
+      <form v-else-if="state === 2" class="atrio-account-form" @submit.prevent="handleSubmit(saveUser)">
+        <ValidationProvider v-slot="{ errors, valid }" name="User" rules="required">
+          <b-field :label="$t('Name')" :message="(errors[0] ? $t('Enter a name') : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
+            <b-input v-model="user.username" autocomplete="username" type="text" />
+          </b-field>
+        </ValidationProvider>
+        <div class="atrio-account-actions">
+          <button class="atrio-button" type="button" @click.stop="goto(1)">{{ $t('Back') }}</button>
+          <button class="atrio-button is-primary" type="submit">{{ $t('Save') }}</button>
+        </div>
+      </form>
 
-        <template v-else-if="state === 4">
-          <div class="is-flex">
-            <div class="cropper-wrapper is-flex-grow-0 is-flex-shrink-0">
-              <Cropper :src="image.src" :debounce="false" :stencil-props="stencilProps" check-orientation :min-height="80" :min-width="80" :canvas="canvasProps" :default-size="defaultSize" @change="onChange" />
-            </div>
-            <div class=" is-flex is-justify-content-right is-align-items-center is-flex-grow-1">
-              <div class=" has-text-centered">
-                <Preview :width="80" :height="80" :image="result.image" :coordinates="result.coordinates" class="preview" />
-                <p class="has-text-emphasis-04 has-text-gray-font mt-2">
-                  Preview
-                </p>
-              </div>
-            </div>
+      <form v-else-if="state === 3" class="atrio-account-form" @submit.prevent="handleSubmit(savePassword)">
+        <p v-if="notificationShow" class="atrio-account-error" role="alert">{{ message || $t('the action failed') }}</p>
+        <ValidationProvider v-slot="{ errors, valid }" name="oriPassword" rules="required|min:5" vid="oriPassword">
+          <b-field :label="$t('Original password')" :message="(errors[0] ? $t(errors[0], { length: 5 }) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
+            <b-input v-model="oriPassword" autocomplete="current-password" password-reveal type="password" />
+          </b-field>
+        </ValidationProvider>
+        <ValidationProvider v-slot="{ errors, valid }" name="Password" rules="required|min:5" vid="password">
+          <b-field :label="$t('New password')" :message="(errors[0] ? $t(errors[0], { length: 5 }) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
+            <b-input v-model="password" autocomplete="new-password" password-reveal type="password" />
+          </b-field>
+        </ValidationProvider>
+        <ValidationProvider v-slot="{ errors, valid }" name="Password Confirmation" rules="required|confirmed:password">
+          <b-field :label="$t('Confirm the new password again')" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
+            <b-input v-model="confirmation" autocomplete="new-password" password-reveal type="password" />
+          </b-field>
+        </ValidationProvider>
+        <div class="atrio-account-actions">
+          <button class="atrio-button" type="button" @click.stop="goto(1)">{{ $t('Back') }}</button>
+          <button class="atrio-button is-primary" type="submit">{{ $t('Save') }}</button>
+        </div>
+      </form>
+
+      <div v-else-if="state === 4" class="atrio-account-form">
+        <div class="atrio-account-crop">
+          <div class="cropper-wrapper">
+            <Cropper :canvas="canvasProps" :debounce="false" :default-size="defaultSize" :min-height="80" :min-width="80" :src="image.src" :stencil-props="stencilProps" check-orientation @change="onChange" />
           </div>
-        </template>
-      </section>
-      <!-- Modal-Card Body End -->
-      <!-- Modal-Card Footer Start -->
-
-      <footer v-if="state !== 1" class="modal-card-foot is-flex is-align-items-center" :class="buttonAlign">
-        <b-button :label="$t('Back')" rounded @click.stop="goto(1)" />
-        <b-button v-if="state === 2" :label="$t('Submit')" expaned rounded type="is-dark" @click="handleSubmit(saveUser)" />
-        <b-button v-else-if="state === 3" :label="$t('Submit')" expaned rounded type="is-dark" @click="handleSubmit(savePassword)" />
-        <b-button v-else-if="state === 4" :label="$t('Submit')" expaned rounded type="is-dark" @click="handleSubmit(saveAvatar)" />
-      </footer>
-      <!-- Modal-Card Footer End -->
+          <div class="atrio-account-preview">
+            <Preview :coordinates="result.coordinates" :height="80" :image="result.image" :width="80" class="preview" />
+            <p>{{ $t('Preview') }}</p>
+          </div>
+        </div>
+        <div class="atrio-account-actions">
+          <button class="atrio-button" type="button" @click.stop="goto(1)">{{ $t('Back') }}</button>
+          <button class="atrio-button is-primary" type="button" @click="handleSubmit(saveAvatar)">{{ $t('Save') }}</button>
+        </div>
+      </div>
     </ValidationObserver>
     <b-loading v-model="isLoading" :is-full-page="false" />
   </div>
 </template>
 
 <style lang="scss" scoped>
-.modal-card {
-  @include mobile {
-    margin: 0 !important;
-
-    &.w-424 {
-      width: auto !important;
-    }
-  }
-}
-
-.edit-avatar {
-  cursor: pointer;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.5);
-  transition: all 0.3s;
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-
-  .file-input {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    border-radius: 50%;
-    cursor: pointer;
-  }
-
-  .icon {
-    pointer-events: none;
-    color: #fff !important;
-  }
-
-  &:hover {
-    opacity: 1;
-  }
-}
-
 .cropper-wrapper {
   width: 220px;
   height: 220px;
   overflow: hidden;
   position: relative;
-  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 1rem;
+  background-color: rgba(0, 0, 0, 0.3);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -418,5 +375,150 @@ export default {
 ::v-deep .vue-simple-handler-wrapper {
   width: 18px !important;
   height: 18px !important;
+}
+</style>
+
+<style lang="scss">
+.atrio-account {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.atrio-account-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.atrio-account-avatar {
+  position: relative;
+  width: 6rem;
+  height: 6rem;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &:hover .atrio-account-avatar-edit,
+  &:focus-within .atrio-account-avatar-edit {
+    opacity: 1;
+  }
+}
+
+.atrio-account-avatar-edit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.atrio-account-file {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.atrio-account-name {
+  color: var(--atrio-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.atrio-account-logout {
+  justify-content: center;
+
+  &.is-danger {
+    border-color: rgba(248, 113, 113, 0.35);
+    color: #fca5a5;
+
+    &:hover {
+      background: rgba(248, 113, 113, 0.12);
+    }
+  }
+}
+
+.atrio-account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .label {
+    color: var(--atrio-text-soft);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .input {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+    color: var(--atrio-text);
+
+    &:focus {
+      border-color: var(--atrio-accent);
+      box-shadow: 0 0 0 1px var(--atrio-accent);
+    }
+
+    &.is-danger {
+      border-color: #f87171;
+    }
+  }
+
+  .control .icon {
+    color: var(--atrio-text-soft) !important;
+  }
+
+  .help.is-danger {
+    color: #fca5a5;
+  }
+}
+
+.atrio-account-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.atrio-account-error {
+  margin-bottom: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem;
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+  font-size: 0.875rem;
+}
+
+.atrio-account-crop {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.atrio-account-preview {
+  text-align: center;
+
+  p {
+    margin-top: 0.5rem;
+    color: var(--atrio-text-muted);
+    font-size: 0.8125rem;
+  }
 }
 </style>
