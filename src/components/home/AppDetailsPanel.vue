@@ -12,6 +12,9 @@ import AppTerminalPanel from '@/components/Apps/AppTerminalPanel.vue'
 const POLL_MS = 3000
 const HISTORY = 40
 const LOG_LINES = 200
+// The Logs tab shows more history than the overview
+const LOG_LINES_FULL = 1000
+const TABS = ['overview', 'logs', 'config']
 // Terminal colour codes in container logs
 const ANSI = /\x1B\[[0-9;]*[A-Za-z]/g
 
@@ -47,6 +50,10 @@ export default {
 			memHistory: [],
 			busy: '',
 			historySize: HISTORY,
+			tab: 'overview',
+			compose: null,
+			logFilter: '',
+			follow: true,
 		}
 	},
 	computed: {
@@ -77,6 +84,38 @@ export default {
 		cpu() {
 			return this.cpuHistory[this.cpuHistory.length - 1] ?? 0
 		},
+		tabs() {
+			return [
+				{ id: 'overview', label: this.$t('Overview') },
+				{ id: 'logs', label: this.$t('Logs') },
+				{ id: 'config', label: this.$t('Configuration') },
+			]
+		},
+		shownLogs() {
+			const filter = this.logFilter.trim().toLowerCase()
+			if (!filter) return this.logs
+			return this.logs.split('\n').filter((line) => line.toLowerCase().includes(filter)).join('\n')
+		},
+		// Read-only view of each service's compose settings
+		services() {
+			const services = this.compose?.services || {}
+			return Object.entries(services).map(([name, service]) => ({
+				name,
+				image: service.image || '',
+				ports: (service.ports || []).map((port) =>
+					typeof port === 'string' ? { label: port } : { label: `${port.published || '—'} → ${port.target}`, protocol: port.protocol || 'tcp', published: port.published },
+				),
+				volumes: (service.volumes || []).map((volume) =>
+					typeof volume === 'string' ? { source: volume.split(':')[0], target: volume.split(':')[1] || '' } : { source: volume.source || volume.type, target: volume.target },
+				),
+				network: service.network_mode || Object.keys(service.networks || {}).join(', ') || 'bridge',
+				restart: service.restart || 'no',
+				// Names only: values often hold passwords and tokens
+				env: Array.isArray(service.environment)
+					? service.environment.map((item) => String(item).split('=')[0])
+					: Object.keys(service.environment || {}),
+			}))
+		},
 		memory() {
 			return this.memHistory[this.memHistory.length - 1] ?? 0
 		},
@@ -100,6 +139,10 @@ export default {
 		show(app) {
 			if (!this.open) this.returnFocus = document.activeElement
 			this.app = app
+			this.tab = 'overview'
+			this.compose = null
+			this.logFilter = ''
+			this.follow = true
 			this.$nextTick(() => this.$refs.sheet?.focus())
 			this.status = app.status || ''
 			this.containers = []
@@ -143,6 +186,7 @@ export default {
 				])
 				if (name !== this.app?.name) return
 				this.status = details.data.data.status || ''
+				this.compose = details.data.data.compose || null
 				this.mainService = containers.data.data.main || ''
 				this.containers = Object.values(containers.data.data.containers || {})
 			} catch (e) {
@@ -152,12 +196,13 @@ export default {
 		async loadLogs() {
 			const name = this.app?.name
 			try {
-				const res = await this.$openAPI.appManagement.compose.composeAppLogs(name, LOG_LINES)
+				const res = await this.$openAPI.appManagement.compose.composeAppLogs(name, this.tab === 'logs' ? LOG_LINES_FULL : LOG_LINES)
 				if (name !== this.app?.name) return
 				const box = this.$refs.logs
 				const atBottom = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 24
 				this.logs = String(res.data.data || '').replace(ANSI, '')
-				if (atBottom) this.$nextTick(() => box && (box.scrollTop = box.scrollHeight))
+				const stick = this.tab === 'logs' ? this.follow : atBottom
+				if (stick) this.scrollLogsToEnd()
 			} catch (e) {
 				console.error(e)
 			}
@@ -175,6 +220,34 @@ export default {
 			} catch (e) {
 				console.error(e)
 			}
+		},
+		scrollLogsToEnd() {
+			this.$nextTick(() => {
+				const box = this.$refs.logs
+				if (box) box.scrollTop = box.scrollHeight
+			})
+		},
+		selectTab(id) {
+			this.tab = id
+			if (id !== 'config') this.loadLogs()
+			this.scrollLogsToEnd()
+		},
+		// Left/right arrows move between tabs, as in any tab list
+		onTabKey(event) {
+			const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
+			if (!step) return
+			event.preventDefault()
+			const next = TABS[(TABS.indexOf(this.tab) + step + TABS.length) % TABS.length]
+			this.selectTab(next)
+			this.$nextTick(() => this.$refs.tablist?.querySelector(`[data-tab="${next}"]`)?.focus())
+		},
+		downloadLogs() {
+			const blob = new Blob([this.shownLogs], { type: 'text/plain' })
+			const link = document.createElement('a')
+			link.href = URL.createObjectURL(blob)
+			link.download = `${this.app.name}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.log`
+			link.click()
+			setTimeout(() => URL.revokeObjectURL(link.href), 1000)
 		},
 		push(list, value) {
 			list.push(Math.round(value * 10) / 10)
@@ -274,6 +347,13 @@ export default {
 						</button>
 					</div>
 
+					<div ref="tablist" :aria-label="$t('Sections')" class="atrio-sheet-tabs" role="tablist" @keydown="onTabKey">
+						<button v-for="item in tabs" :id="`atrio-tab-${item.id}`" :key="item.id" :aria-controls="`atrio-tabpanel-${item.id}`" :aria-selected="tab === item.id" :class="{ 'is-active': tab === item.id }" :data-tab="item.id" :tabindex="tab === item.id ? 0 : -1" role="tab" type="button" @click="selectTab(item.id)">
+							{{ item.label }}
+						</button>
+					</div>
+
+					<template v-if="tab === 'overview'">
 					<div class="atrio-sheet-stats">
 						<div class="atrio-sheet-stat">
 							<span class="atrio-metric-label">CPU</span>
@@ -306,6 +386,63 @@ export default {
 							<span class="atrio-live"><span class="atrio-live-dot" />{{ $t('listening') }}</span>
 						</div>
 						<pre ref="logs">{{ logs || $t('No logs yet') }}</pre>
+					</section>
+					</template>
+
+					<section v-else-if="tab === 'logs'" id="atrio-tabpanel-logs" aria-labelledby="atrio-tab-logs" class="atrio-sheet-logs is-full" role="tabpanel">
+						<div class="atrio-log-tools">
+							<input v-model="logFilter" :aria-label="$t('Filter logs')" :placeholder="$t('Filter logs')" class="atrio-log-filter" type="search">
+							<label class="atrio-log-follow">
+								<input v-model="follow" type="checkbox" @change="follow && scrollLogsToEnd()">
+								{{ $t('Follow') }}
+							</label>
+							<button :disabled="!shownLogs" class="atrio-button is-small" type="button" @click="downloadLogs">
+								<b-icon icon="download" pack="mdi" size="is-16" />
+								{{ $t('Download') }}
+							</button>
+						</div>
+						<pre ref="logs">{{ shownLogs || (logFilter ? $t('No lines match the filter') : $t('No logs yet')) }}</pre>
+					</section>
+
+					<section v-else id="atrio-tabpanel-config" aria-labelledby="atrio-tab-config" class="atrio-sheet-config" role="tabpanel">
+						<p v-if="!services.length" class="atrio-config-empty">{{ $t('Loading…') }}</p>
+						<article v-for="service in services" :key="service.name" class="atrio-config-service">
+							<h3 v-if="services.length > 1">{{ service.name }}</h3>
+							<dl class="atrio-sheet-info">
+								<dt>{{ $t('Image') }}</dt>
+								<dd class="is-mono">{{ service.image }}</dd>
+								<dt>{{ $t('Network') }}</dt>
+								<dd>{{ service.network }}</dd>
+								<dt>{{ $t('Restart policy') }}</dt>
+								<dd>{{ service.restart }}</dd>
+							</dl>
+
+							<h4>{{ $t('Published ports') }}</h4>
+							<ul v-if="service.ports.length" class="atrio-config-list">
+								<li v-for="(port, index) in service.ports" :key="index">
+									<span class="is-mono">{{ port.label }}</span>
+									<span v-if="port.protocol" class="atrio-config-tag">{{ port.protocol }}</span>
+								</li>
+							</ul>
+							<p v-else class="atrio-config-empty">{{ $t('No ports published') }}</p>
+
+							<h4>{{ $t('Mapped folders') }}</h4>
+							<ul v-if="service.volumes.length" class="atrio-config-list">
+								<li v-for="(volume, index) in service.volumes" :key="index">
+									<span class="is-mono">{{ volume.source }}</span>
+									<span class="atrio-config-arrow">→</span>
+									<span class="is-mono">{{ volume.target }}</span>
+								</li>
+							</ul>
+							<p v-else class="atrio-config-empty">{{ $t('No folders mapped') }}</p>
+
+							<h4>{{ $t('Environment variables') }}</h4>
+							<p v-if="service.env.length" class="atrio-config-env">
+								<span v-for="name in service.env" :key="name" class="atrio-config-tag is-mono">{{ name }}</span>
+							</p>
+							<p v-else class="atrio-config-empty">{{ $t('None') }}</p>
+						</article>
+						<p v-if="services.length" class="atrio-config-hint">{{ $t('Values are hidden here. Open the settings to see or change them.') }}</p>
 					</section>
 
 					<footer class="atrio-sheet-footer">
@@ -503,6 +640,166 @@ export default {
 		white-space: pre-wrap;
 		word-break: break-word;
 	}
+}
+
+.atrio-sheet-logs.is-full {
+	min-height: 0;
+}
+
+.atrio-sheet-tabs {
+	display: flex;
+	gap: 0.25rem;
+	padding: 0.25rem;
+	border-radius: 0.875rem;
+	background: rgba(255, 255, 255, 0.05);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+	button {
+		flex: 1;
+		height: 2.25rem;
+		border: 0;
+		border-radius: 0.625rem;
+		background: none;
+		color: var(--atrio-text-muted);
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+
+		&:hover {
+			color: var(--atrio-text);
+		}
+
+		&.is-active {
+			background: rgba(255, 255, 255, 0.12);
+			color: var(--atrio-text);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--atrio-accent);
+			outline-offset: -2px;
+		}
+	}
+}
+
+.atrio-log-tools {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+}
+
+.atrio-log-filter {
+	flex: 1;
+	min-width: 0;
+	height: 2.25rem;
+	padding: 0 0.875rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 0.75rem;
+	background: rgba(2, 6, 23, 0.4);
+	color: var(--atrio-text);
+	font: inherit;
+	font-size: 0.875rem;
+
+	&::placeholder {
+		color: var(--atrio-text-muted);
+	}
+
+	&:focus {
+		border-color: var(--atrio-accent);
+		outline: 0;
+	}
+}
+
+.atrio-log-follow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	color: var(--atrio-text-soft);
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	cursor: pointer;
+
+	input {
+		accent-color: var(--atrio-accent);
+	}
+}
+
+.atrio-button.is-small {
+	height: 2.25rem;
+	padding: 0 0.75rem;
+	font-size: 0.8125rem;
+}
+
+.atrio-sheet-config {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+
+	h3 {
+		margin-bottom: 0.625rem;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+
+	h4 {
+		margin: 1rem 0 0.5rem;
+		color: var(--atrio-text-muted);
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+}
+
+.atrio-config-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.75rem;
+		background: rgba(255, 255, 255, 0.05);
+		font-size: 0.8125rem;
+
+		.is-mono {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+}
+
+.atrio-config-arrow {
+	color: var(--atrio-text-muted);
+}
+
+.atrio-config-env {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+}
+
+.atrio-config-tag {
+	padding: 0.125rem 0.5rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--atrio-text-soft);
+	font-size: 0.75rem;
+}
+
+.atrio-sheet-config .is-mono {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.atrio-config-empty,
+.atrio-config-hint {
+	color: var(--atrio-text-muted);
+	font-size: 0.8125rem;
 }
 
 .atrio-sheet-logs-head {
