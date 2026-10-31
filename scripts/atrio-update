@@ -1,7 +1,8 @@
 #!/bin/bash
 # Installs the latest Atrio release from GitHub into the CasaOS web UI folder.
 # Run by atrio-update.service when Atrio asks for an update (it writes the request file
-# through the CasaOS file API), or by hand: sudo atrio-update [--force]
+# through the CasaOS file API), by atrio-restore.service when a CasaOS update puts its own UI
+# back (--restore), or by hand: sudo atrio-update [--force]
 set -euo pipefail
 
 REPO="peppeaiello/atrio"
@@ -9,9 +10,22 @@ WWW="/var/lib/casaos/www"
 STATE="/var/lib/casaos/atrio"
 STATUS="$STATE/update-status.json"
 REQUEST="$STATE/update-request"
+BACKUP="$STATE/casaos-ui-original"
+# The last installed release, used to restore Atrio when GitHub cannot be reached
+LOCAL="$STATE/release"
 DOWNLOAD="https://github.com/$REPO/releases/latest/download"
+MODE="${1:-}"
 
 mkdir -p "$STATE"
+
+if [ "$MODE" = "--restore" ]; then
+	# A CasaOS update writes its UI file by file: let it finish before looking
+	sleep "${ATRIO_RESTORE_DELAY:-30}"
+	if [ ! -f "$WWW/index.html" ] || grep -q "Atrio" "$WWW/index.html"; then
+		exit 0
+	fi
+	echo "The CasaOS UI came back (CasaOS update?): putting Atrio back"
+fi
 
 # One run at a time (the path unit and a manual run could overlap)
 exec 9>"$STATE/lock"
@@ -48,10 +62,30 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP" "$WWW.new"' EXIT
 trap 'write_status error "The update failed, Atrio was not changed"' ERR
 
+if [ "$MODE" = "--restore" ]; then
+	# The UI that CasaOS just put back is its newest one: keep it for uninstall.sh
+	rm -rf "$BACKUP.tmp"
+	cp -a "$WWW" "$BACKUP.tmp"
+	rm -f "$BACKUP.tmp/atrio-version.json"
+	rm -rf "$BACKUP"
+	mv "$BACKUP.tmp" "$BACKUP"
+fi
+
+download() {
+	local CURL=(curl -fsSL --connect-timeout 20 --max-time 300 --retry 2)
+	"${CURL[@]}" -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz" &&
+		"${CURL[@]}" -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256"
+}
+
 write_status running "Downloading the latest release"
-CURL=(curl -fsSL --connect-timeout 20 --max-time 300 --retry 2)
-"${CURL[@]}" -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz"
-"${CURL[@]}" -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256"
+if ! download; then
+	if [ "$MODE" = "--restore" ] && [ -f "$LOCAL/atrio.tar.gz" ]; then
+		echo "GitHub cannot be reached: restoring the last installed release"
+		cp "$LOCAL/atrio.tar.gz" "$LOCAL/atrio.tar.gz.sha256" "$TMP/"
+	else
+		fail "Could not download the release from GitHub, Atrio was not changed"
+	fi
+fi
 (cd "$TMP" && sha256sum -c atrio.tar.gz.sha256 >/dev/null)
 
 mkdir "$TMP/www"
@@ -64,7 +98,8 @@ if [ ! -f "$TMP/www/index.html" ] || [ ! -f "$TMP/www/atrio-version.json" ]; the
 fi
 
 latest=$(installed_version "$TMP/www")
-if [ "$latest" = "$(installed_version "$WWW")" ] && [ "${1:-}" != "--force" ]; then
+# A CasaOS update can leave our atrio-version.json behind, so --restore always installs
+if [ "$latest" = "$(installed_version "$WWW")" ] && [ -z "$MODE" ]; then
 	write_status done "Atrio $latest is already installed"
 	exit 0
 fi
@@ -96,6 +131,9 @@ if ! mv "$WWW.new" "$WWW"; then
 	fail "Could not replace the web UI folder, Atrio was not changed"
 fi
 rm -rf "$WWW.old"
+
+mkdir -p "$LOCAL"
+cp "$TMP/atrio.tar.gz" "$TMP/atrio.tar.gz.sha256" "$LOCAL/"
 
 write_status done "Atrio $latest installed"
 echo "Atrio $latest installed"

@@ -67,8 +67,31 @@ PathExists=/var/lib/casaos/atrio/update-request
 WantedBy=multi-user.target
 UNIT
 
+	# CasaOS updates put their own UI back: this puts Atrio back after them
+	cat > /etc/systemd/system/atrio-restore.service <<'UNIT'
+[Unit]
+Description=Put Atrio back after a CasaOS update replaces the web UI
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-update --restore
+TimeoutStartSec=10min
+UNIT
+
+	cat > /etc/systemd/system/atrio-restore.path <<'UNIT'
+[Unit]
+Description=Watch the CasaOS web UI for updates that replace Atrio
+
+[Path]
+PathChanged=/var/lib/casaos/www/index.html
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
 	systemctl daemon-reload
 	systemctl enable --now atrio-update.path >/dev/null
+	systemctl enable --now atrio-restore.path >/dev/null
 
 	/usr/local/bin/atrio-update --force
 

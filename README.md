@@ -39,7 +39,8 @@ Then reload CasaOS in your browser with `Ctrl+F5`. The script:
 - saves a copy of the original CasaOS UI in `/var/lib/casaos/atrio/casaos-ui-original`;
 - installs the latest [release](https://github.com/peppeaiello/atrio/releases) in `/var/lib/casaos/www`, the folder
   CasaOS serves its UI from;
-- installs a small updater (`/usr/local/bin/atrio-update` and the `atrio-update.path` systemd unit).
+- installs a small updater (`/usr/local/bin/atrio-update` and the `atrio-update.path` systemd unit);
+- watches the UI folder (`atrio-restore.path`) so Atrio comes back on its own after a CasaOS update.
 
 Nothing else changes: CasaOS, your apps and their data are left as they are.
 
@@ -51,6 +52,10 @@ checksum and installs it, then reloads the page.
 
 From a terminal you can do the same with `sudo atrio-update`.
 
+Updating CasaOS puts its own UI back. About half a minute later the updater notices it, saves that newer CasaOS UI
+as the copy used by the uninstaller, and installs Atrio again (from the last release it kept, if GitHub cannot be
+reached). Installs made before Atrio 0.1.4 lack this: run the install command once more to add it.
+
 ## Uninstall
 
 ```shell
@@ -58,9 +63,6 @@ curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/unin
 ```
 
 It puts the original CasaOS UI back and removes the updater. Reload the page with `Ctrl+F5`.
-
-> Updating CasaOS itself may replace Atrio with the CasaOS UI again. Run the install command once more to get Atrio
-> back.
 
 ## Development
 

@@ -190,7 +190,7 @@ export default {
 								class="atrio-palette-item" type="button" @click="run(item)" @mousemove="active = item.index"
 							>
 								<span class="atrio-palette-icon">
-									<img v-if="item.image" :src="item.image" alt="">
+									<img v-if="item.image" :src="item.image" alt="" @error="$event.target.src = $asset('@/assets/img/app/default.svg')">
 									<b-icon v-else :icon="item.icon" pack="casa" size="is-20" />
 								</span>
 								<span class="atrio-palette-text">
