@@ -40,9 +40,13 @@ jobs:
           tar -czf atrio.tar.gz -C build/sysroot/var/lib/casaos/www .
           sha256sum atrio.tar.gz > atrio.tar.gz.sha256
 
+      # The release text is this version's section of CHANGELOG.md
+      - name: Release notes
+        run: scripts/release-notes.sh "$GITHUB_REF_NAME" > release-notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: release-notes.md
           # v0.2.0-rc.1 and the like are not offered to installed copies
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
