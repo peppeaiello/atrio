@@ -135,5 +135,12 @@ rm -rf "$WWW.old"
 mkdir -p "$LOCAL"
 cp "$TMP/atrio.tar.gz" "$TMP/atrio.tar.gz.sha256" "$LOCAL/"
 
+# The gateway dates every file with its own start time, so browsers that revalidate their cached
+# index.html get 304 forever. A restart gives a new date and every browser loads the new version.
+# Done before reporting "done", so the web UI only reloads once the gateway is back.
+write_status running "Restarting the CasaOS gateway"
+systemctl try-restart casaos-gateway.service 2>/dev/null || true
+sleep 3
+
 write_status done "Atrio $latest installed"
 echo "Atrio $latest installed"
