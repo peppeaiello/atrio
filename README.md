@@ -38,7 +38,8 @@ its respective owners.
   settings forms in sections, with errors that say what to type.
 - **Many apps at once**: select apps and start, stop, restart or update them together.
 - **Hardware details**: machine, BIOS, processor, memory and every sensor the machine reports.
-- **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor.
+- **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor, also as push
+  alerts to your phone through ntfy or Gotify, even when Atrio is closed.
 - **A new file manager**: places in a sidebar, list and grid views, previews, upload by drag and drop.
 - **One console** for the logs and terminals of the server and every app.
 - **Widgets your way**: show, hide and reorder them, and add any web page of your network.
@@ -85,6 +86,8 @@ Then reload CasaOS in your browser with `Ctrl+F5`. The script:
   CasaOS serves its UI from;
 - installs a small updater (`/usr/local/bin/atrio-update` and the `atrio-update.path` systemd unit);
 - watches the UI folder (`atrio-restore.path`) so Atrio comes back on its own after a CasaOS update.
+- installs the push alert service (`/usr/local/bin/atrio-alerts`, run every 5 minutes by `atrio-alerts.timer`),
+  which stays off until you set it up in Settings → Push notifications.
 
 Nothing else changes: CasaOS, your apps and their data are left as they are.
 
