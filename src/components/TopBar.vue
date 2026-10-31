@@ -485,7 +485,7 @@ export default {
           position="is-right"
           type="is-dark"
         >
-          <button :aria-label="sidebarIconLabel" class="atrio-icon-button" type="button" @click="showSideBar">
+          <button :aria-label="sidebarIconLabel" class="atrio-header-icon" type="button" @click="showSideBar">
             <b-icon :icon="sidebarIcon" class="picon" pack="casa" size="is-20" />
           </button>
         </b-tooltip>
@@ -815,15 +815,14 @@ export default {
       <!-- Settings Dropmenu End -->
 
       <!-- Terminal  Start -->
-      <div class="is-flex is-align-items-center ml-3 _fixed-height">
+      <div class="is-flex is-align-items-center navbar-item">
         <b-tooltip
           :active="!$store.state.isMobile"
           :label="$t('Terminal & Logs')"
           position="is-right"
-          style="height: 1.25rem"
           type="is-dark"
         >
-          <button :aria-label="$t('Terminal & Logs')" class="atrio-icon-button" type="button" @click="showTerminalPanel">
+          <button :aria-label="$t('Terminal & Logs')" class="atrio-header-icon" type="button" @click="showTerminalPanel">
             <b-icon class="picon" icon="terminal-outline" pack="casa" size="is-20" />
           </button>
         </b-tooltip>
@@ -1236,7 +1235,7 @@ export default {
 	}
 }
 
-.atrio-icon-button {
+.atrio-header-icon {
 	display: inline-flex;
 	align-items: center;
 	padding: 0;
