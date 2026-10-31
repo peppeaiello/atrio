@@ -2,6 +2,23 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.10 — unreleased
+
+**New**
+
+- **App tiles you can use everywhere.** The whole tile opens the app (a real link, so middle click and copy
+  link work), the menu button is always reachable on phones and from the keyboard, and Tab now moves
+  through the apps.
+- A stopped app no longer starts when clicked: the tile offers Start and open, Start or Details.
+- The app menu is in the glass style, with every action labelled: Open and Details first, Uninstall last.
+- Quieter status: running apps get a small dot on their icon, and only exceptions get a label: Stopped, or
+  Update available when a newer version is out. Labels stay readable on any wallpaper.
+- Compact tiles (about twice as many apps on screen) and a search field for the app grid.
+
+**Fixed**
+
+- A built-in wallpaper saved by an older build could disappear after an update; it is now found again.
+
 ## 0.1.9 — 2026-10-31
 
 **New**

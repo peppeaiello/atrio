@@ -633,5 +633,13 @@
   "Web address": "Web address",
   "Compact": "Compact",
   "Normal": "Normal",
-  "Tall": "Tall"
+  "Tall": "Tall",
+  "Open {name}": "Open {name}",
+  "{name}, stopped": "{name}, stopped",
+  "Actions for {name}": "Actions for {name}",
+  "Update available": "Update available",
+  "Update now": "Update now",
+  "Find an app": "Find an app",
+  "Compact tiles": "Compact tiles",
+  "Larger tiles": "Larger tiles"
 }

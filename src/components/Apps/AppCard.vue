@@ -21,10 +21,18 @@ export default {
     item: {
       type: Object,
     },
+    // Atrio: a newer image is available (from the compose app list)
+    updateAvailable: {
+      type: Boolean,
+      default: false,
+    },
   },
+  emits: ['configApp', 'importApp', 'updateState'],
   data() {
     return {
       dropState: false,
+      // Atrio: a stopped app asks what to do instead of starting on a click
+      confirmStart: false,
       isUninstalling: false,
       isCloning: false,
       isCheckThenUpdate: false,
@@ -41,6 +49,44 @@ export default {
   },
 
   computed: {
+    title() {
+      return this.i18n(this.item.title) || this.item.name
+    },
+    isStopped() {
+      return Boolean(this.item.status) && this.item.status !== 'running' && (this.isV2App || this.isV1App)
+    },
+    // Atrio: the address the tile opens, so it can be a real link (middle click, copy link).
+    // Empty when a click must do something else: system apps, stopped apps, first launch checks.
+    tileHref() {
+      const item = this.item
+      if (this.isLinkApp) return item.hostname || ''
+      if (!(this.isV2App || this.isV1App) || item.status !== 'running' || this.hasNewTag(item.name)) return ''
+      if (!item.hostname && !item.port && !item.index) return ''
+      const port = item.port ? `:${item.port}` : ''
+      return `${item.scheme || 'http'}://${item.hostname || this.$baseIp}${port}${item.index || ''}`
+    },
+    tileLabel() {
+      if (this.item.app_type === 'system' || !this.item.status) return this.$t('Open {name}', { name: this.title })
+      if (this.isStopped) return this.$t('{name}, stopped', { name: this.title })
+      return this.$t('Open {name}', { name: this.title })
+    },
+    // Quiet status: running is the normal case, only exceptions get a visible label
+    statusPill() {
+      if (this.item.app_type === 'system' || !this.item.status) return ''
+      if (this.isStopped) return this.$t('Stopped')
+      if (this.updateAvailable) return this.$t('Update available')
+      return ''
+    },
+    statusClass() {
+      if (this.item.app_type === 'system' || !this.item.status) return 'is-invisible'
+      if (this.isStopped) return 'is-stopped is-pill'
+      if (this.updateAvailable) return 'is-update is-pill'
+      return 'is-running is-quiet'
+    },
+    // Long press on touch screens is for dragging: the menu opens on tap only
+    menuTriggers() {
+      return window.matchMedia?.('(hover: none)').matches ? ['click'] : ['contextmenu', 'click']
+    },
     tooltipLabel() {
       if (this.isContainerApp) {
         return this.$t('Import to CasaOS')
@@ -125,6 +171,9 @@ export default {
     },
   },
 
+  beforeUnmount() {
+    document.removeEventListener('pointerdown', this.onOutsideConfirm, true)
+  },
   methods: {
     handleDorpdownPosition(event) {
       this.$nextTick(() => {
@@ -134,6 +183,36 @@ export default {
         const verticalPos = bottomOffset > 0 ? 'bottom' : 'top'
         this.dropdownPosition = `is-${verticalPos}-${horizontalPos}`
       })
+    },
+    // Atrio: the tile link opens the app in a new tab by itself; keep CasaOS's bookkeeping
+    onTileLink() {
+      this.$messageBus('apps_open', this.item.name)
+      if (this.isLinkApp) this.removeIdFromSessionStorage(this.item.name)
+    },
+    onTileClick() {
+      if (this.isStopped) {
+        this.confirmStart = true
+        this.$nextTick(() => this.$refs.startButton?.focus())
+        document.addEventListener('pointerdown', this.onOutsideConfirm, true)
+        return
+      }
+      this.openApp(this.item)
+    },
+    onOutsideConfirm(event) {
+      if (!this.$el.contains(event.target)) this.closeConfirm()
+    },
+    closeConfirm() {
+      this.confirmStart = false
+      document.removeEventListener('pointerdown', this.onOutsideConfirm, true)
+    },
+    startFromTile(open) {
+      this.closeConfirm()
+      if (open) this.openApp(this.item)
+      else this.toggle(this.item)
+    },
+    detailsFromTile() {
+      this.closeConfirm()
+      this.openDetails()
     },
     /**
      * @description: Open app in new windows
@@ -694,67 +773,90 @@ export default {
 
 <template>
   <div
+    :class="{ 'has-update': updateAvailable, 'is-confirming': confirmStart }"
     class="common-card is-flex is-align-items-center is-justify-content-center  app-card"
   >
+    <!-- Atrio: the whole tile opens the app. A real link where there is an address, so middle click,
+         Ctrl click and copy link work; a button otherwise (system apps, stopped apps, first launch) -->
+    <a
+      v-if="tileHref" :aria-label="tileLabel" :href="tileHref" class="atrio-tile-hit" draggable="false"
+      rel="noopener noreferrer" target="_blank" @click="onTileLink"
+    />
+    <button v-else :aria-label="tileLabel" class="atrio-tile-hit" type="button" @click="onTileClick" />
+
+    <!-- Atrio: a stopped app asks before starting -->
+    <div v-if="confirmStart" :aria-label="tileLabel" class="atrio-tile-confirm" role="group" @keydown.esc.stop="closeConfirm">
+      <button ref="startButton" class="atrio-tile-confirm-main" type="button" @click="startFromTile(true)">
+        {{ $t('Start and open') }}
+      </button>
+      <button type="button" @click="startFromTile(false)">
+        {{ $t('Start') }}
+      </button>
+      <button v-if="isV2App" type="button" @click="detailsFromTile">
+        {{ $t('Details') }}
+      </button>
+      <button :aria-label="$t('Close')" class="atrio-tile-confirm-close" type="button" @click="closeConfirm">
+        <b-icon icon="close-outline" pack="casa" size="is-16" />
+      </button>
+    </div>
+
     <!-- Action Button Start -->
     <div v-if="item.app_type !== 'system' && !isContainerApp && !isUninstalling" class="action-btn">
       <b-dropdown
-        ref="dro" :mobile-modal="false" :triggers="['contextmenu', 'click']" animation="fade1"
+        ref="dro" :mobile-modal="false" :triggers="menuTriggers" animation="fade1"
         append-to-body aria-role="list" class="app-card-drop" :position="dropdownPosition"
         @active-change="setDropState"
       >
         <template #trigger>
-          <p role="button" @click="handleDorpdownPosition">
-            <b-icon class="is-clickable" icon="dots-vertical-outline" pack="casa" />
-          </p>
+          <button :aria-label="$t('Actions for {name}', { name: title })" class="atrio-card-menu" type="button" @click="handleDorpdownPosition">
+            <b-icon icon="dots-vertical-outline" pack="casa" />
+          </button>
         </template>
 
-        <b-dropdown-item :focusable="false" aria-role="menu-item" custom>
+        <b-dropdown-item :focusable="false" aria-role="menu-item" class="atrio-app-menu" custom>
+          <!-- Atrio: open and details first, then state, maintenance, and removal last -->
+          <b-button v-if="!isLinkApp" expanded tag="a" type="is-text" @click="openApp(item)">
+            {{ item.status === 'running' ? $t('Open') : $t('Start and open') }}
+          </b-button>
+          <b-button v-else expanded tag="a" type="is-text" @click="openApp(item)">
+            {{ $t('Open') }}
+          </b-button>
           <b-button v-if="isV2App" expanded type="is-text" @click="openDetails()">
             {{ $t('Details') }}
           </b-button>
-          <b-button v-if="item.status === 'running'" expanded tag="a" type="is-text" @click="openApp(item)">
-            {{
-              $t('Open') }}
-          </b-button>
-          <b-button v-else expanded tag="a" type="is-text" @click="openApp(item)">
-            {{
-              $t('launch-and-open') }}
-          </b-button>
-          <b-button
-            v-if="isV2App" expanded icon-pack="casa" icon-right="question-outline" size="is-16"
-            type="is-text" @click="openTips(item.name)"
-          >
-            {{ $t('Tips') }}
-          </b-button>
-          <b-button v-if="isV2App || isLinkApp" expanded type="is-text" @click="configApp()">
-            {{
-              $t('Setting')
-            }}
-          </b-button>
+
+          <template v-if="!isLinkApp">
+            <hr class="atrio-menu-sep">
+            <b-button :loading="isStarting" expanded type="is-text" @click="toggle(item)">
+              {{ item.status === 'running' ? $t('Stop') : $t('Start') }}
+            </b-button>
+            <b-button :disabled="item.status !== 'running'" :loading="isRestarting" expanded type="is-text" @click="restartApp">
+              {{ $t('Restart') }}
+            </b-button>
+          </template>
 
           <b-button v-if="isV2App && !item.is_uncontrolled" expanded type="is-text" @click="checkAppVersion(item.name)">
-            {{
-              $t('Check then update')
-            }}
+            {{ updateAvailable ? $t('Update now') : $t('Check then update') }}
             <b-loading :model-value="isCheckThenUpdate || isUpdating" :is-full-page="false">
               <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
             </b-loading>
           </b-button>
+          <b-button v-if="isV2App || isLinkApp" expanded type="is-text" @click="configApp()">
+            {{ $t('Setting') }}
+          </b-button>
+          <b-button v-if="isV2App" expanded type="is-text" @click="openTips(item.name)">
+            {{ $t('Tips') }}
+          </b-button>
 
           <b-button v-if="isV1App" expanded type="is-text" @click="exportYAML(item)">
-            {{
-              $t('Export as Compose')
-            }}
+            {{ $t('Export as Compose') }}
           </b-button>
-
           <b-button v-if="isV1App" :loading="isRebuilding" expanded type="is-text" @click="rebuild(item)">
-            {{
-              $t('Rebuild')
-            }}
+            {{ $t('Rebuild') }}
           </b-button>
 
-          <b-button v-if="isLinkApp" class="mb-1" expanded type="is-text" @click="uninstallApp(true)">
+          <hr class="atrio-menu-sep">
+          <b-button v-if="isLinkApp" class="has-text-red" expanded type="is-text" @click="uninstallApp(true)">
             {{ $t('Delete') }}
             <b-loading v-model="isUninstalling" :is-full-page="false">
               <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
@@ -766,30 +868,6 @@ export default {
               <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
             </b-loading>
           </b-button>
-
-          <div v-if="!isLinkApp" class="gap">
-            <div class="columns is-gapless _b-bor is-flex">
-              <div class="column is-flex is-justify-content-center is-align-items-center">
-                <b-button
-                  :loading="isRestarting" expanded type="is-text" :disabled="item.status !== 'running'"
-                  @click="restartApp"
-                >
-                  <b-icon custom-size="is-size-20px" icon="restart-outline" pack="casa" />
-                </b-button>
-              </div>
-              <div class="column is-flex is-justify-content-center is-align-items-center">
-                <b-button
-                  :class="item.status" :loading="isStarting" class="has-text-red" expanded
-                  type="is-text" @click="toggle(item)"
-                >
-                  <b-icon
-                    custom-size="is-size-20px" icon="shutdown-outline" pack="casa"
-                    :custom-class="shutDownClass"
-                  />
-                </b-button>
-              </div>
-            </div>
-          </div>
         </b-dropdown-item>
       </b-dropdown>
     </div>
@@ -799,7 +877,7 @@ export default {
       <!-- Card Content Start -->
       <b-tooltip
         :always="isActiveTooltip" :animated="true" :label="tooltipLabel" :triggers="tooltipTriger"
-        animation="fade1" class="in-card" type="is-white"
+        animation="fade1" class="in-card" type="is-dark"
       >
         <div class="has-text-centered is-flex is-justify-content-center is-flex-direction-column pt-5 pb-3px img-c">
           <div class="is-flex is-justify-content-center">
@@ -807,8 +885,10 @@ export default {
               <b-image
                 :class="dotClass(item.status, isLoading)" :src="item.icon"
                 :src-fallback="$asset('@/assets/img/app/default.svg')" class="is-64x64"
-                webp-fallback=".jpg" @click.native="openApp(item)"
+                webp-fallback=".jpg"
               />
+              <!-- Atrio: running is shown by a small round dot on the icon; the label is for screen readers -->
+              <span v-if="statusClass.includes('is-running')" aria-hidden="true" class="atrio-icon-dot" />
               <!-- Unstable -->
               <CTooltip v-if="newAppIds.includes(item.name)" class="__position" content="NEW" />
             </div>
@@ -825,17 +905,16 @@ export default {
           </div>
 
           <p class="mt-3 one-line">
-            <a class="one-line" style="cursor:default">
+            <span class="one-line atrio-app-name">
               {{ i18n(item.title) }}
-            </a>
+            </span>
           </p>
-          <!-- Atrio: status as a dot shape plus a label, never colour alone -->
-          <p
-            :class="[item.status === 'running' ? 'is-running' : 'is-stopped', { 'is-invisible': item.app_type === 'system' || !item.status }]"
-            class="atrio-app-status"
-          >
-            <span class="atrio-app-dot" />
-            {{ item.status === 'running' ? $t('Running') : $t('Stopped') }}
+          <!-- Atrio: quiet status. Only exceptions (stopped, update available) get a visible label -->
+          <p :class="statusClass" class="atrio-app-status">
+            <template v-if="statusPill">
+              <span class="atrio-app-dot" />{{ statusPill }}
+            </template>
+            <span v-else class="is-sr-only">{{ $t('Running') }}</span>
           </p>
         </div>
       </b-tooltip>
@@ -855,128 +934,91 @@ export default {
   color: #fff;
 }
 
-.app-card-drop {
-  .dropdown-menu {
-    min-width: 10rem;
+// Atrio: the app menu in the glass style, labels left aligned. The menu is moved to the end of the
+// page (append-to-body) without the tile's classes, so it is found by its own content.
+.dropdown-menu:has(.atrio-app-menu) {
+  min-width: 12rem;
+}
 
-    .dropdown-content {
-      padding: 4px !important;
-      background: none;
-      background: hsla(0, 0%, 100%, 1);
-      border-radius: 10px;
+.dropdown-content:has(.atrio-app-menu) {
+  padding: 0.375rem !important;
+  border-radius: 0.875rem;
+  background: linear-gradient(var(--atrio-glass-bg-strong), var(--atrio-glass-bg-strong)), #0b1222;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
 
-      .dropdown-item {
-        padding: 0;
+.dropdown-item.atrio-app-menu {
+  padding: 0;
+  background: transparent;
 
-        &>* {
-          margin: 1px 0;
-        }
-      }
+  .button.is-text {
+    justify-content: flex-start;
+    width: 100%;
+    height: 2.25rem;
+    padding: 0 0.875rem;
+    border: 0 !important;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--atrio-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
 
-      .button {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        border-radius: 5px;
-
-        span {
-          line-height: 1.25rem !important;
-          height: 1.25rem !important;
-        }
-
-        span+span i {
-          color: hsla(208, 16%, 42%, 1);
-        }
-
-        &.is-text {
-          text-decoration: none;
-          justify-content: flex-start;
-          outline: none;
-          transition: all 0.2s;
-          border: none !important;
-          height: 2rem;
-          font-size: 0.875rem;
-          color: hsla(208, 20%, 20%, 1);
-
-          &.running {
-            color: #779e2a !important;
-          }
-
-          &.exited {
-            color: #ff1616 !important;
-          }
-        }
-
-        &.has-text-red {
-          &:hover {
-            background: hsla(18, 98%, 94%, 1);
-          }
-
-          &:active {
-            background: hsla(18, 100%, 80%, 1);
-          }
-        }
-
-        &:focus {
-          background: none;
-          box-shadow: none;
-          outline: none;
-        }
-
-        &:hover {
-          background-color: hsla(208, 16%, 96%, 1);
-        }
-
-        &:active {
-          /* Gary/200 */
-          background-color: hsla(208, 16%, 94%, 1);
-        }
-      }
-
-      .gap {
-        margin-left: -4px;
-        margin-right: -4px;
-      }
-
-      ._b-bor {
-        border-top: hsla(208, 16%, 94%, 1) 1px solid;
-
-        .is-text {
-          text-decoration: none;
-          justify-content: center !important;
-        }
-
-        .column {
-          margin-bottom: -4px;
-
-          .button {
-            margin: 4px;
-            height: 2rem;
-          }
-        }
-
-        .column:first-child {
-          border-right: hsla(208, 16%, 94%, 1) 1px solid;
-        }
-      }
-
-      /*common*/
-      .loading-overlay {
-        &.is-active {
-          background: hsla(208, 16%, 96%, 1) !important;
-          justify-content: flex-start;
-        }
-
-        .loading-background {
-          background: none;
-        }
-      }
-
-      .is-24x24 {
-        width: 1.5rem;
-        height: 1.5rem;
-      }
-
+    > span {
+      line-height: 1.25rem;
+      text-align: left;
     }
+
+    &:hover:not([disabled]) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:focus {
+      box-shadow: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--atrio-accent);
+      outline-offset: -2px;
+    }
+
+    &[disabled] {
+      opacity: 0.4;
+    }
+
+    &.has-text-red {
+      color: #fca5a5 !important;
+
+      &:hover {
+        background: rgba(248, 113, 113, 0.14);
+      }
+    }
+
+    &.is-loading::after {
+      border-color: transparent transparent var(--atrio-text) var(--atrio-text) !important;
+    }
+  }
+
+  .atrio-menu-sep {
+    height: 1px;
+    margin: 0.25rem 0.375rem;
+    border: 0;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .loading-overlay.is-active {
+    justify-content: flex-start;
+    border-radius: 0.5rem;
+    background: rgba(11, 18, 34, 0.9) !important;
+
+    .loading-background {
+      background: none;
+    }
+  }
+
+  .is-24x24 {
+    width: 1.5rem;
+    height: 1.5rem;
   }
 }
 
@@ -994,8 +1036,6 @@ export default {
     font-style: normal;
     line-height: 1.25rem;
     font-feature-settings: 'pnum' on, 'lnum' on;
-
-    color: hsla(208, 20%, 20%, 1);
 
   }
 
@@ -1063,6 +1103,144 @@ export default {
   }
 }
 
+// Atrio: the whole tile answers the click; the menu and the confirm sit above it
+.app-card {
+	.atrio-tile-hit {
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		padding: 0;
+		border: 0;
+		border-radius: inherit;
+		background: transparent;
+		cursor: pointer;
+
+		&:focus-visible {
+			outline: 2px solid var(--atrio-accent);
+			outline-offset: 2px;
+		}
+	}
+
+	// The menu button: faint until the tile is hovered or focused, always there on touch screens
+	.action-btn {
+		top: 0.5rem;
+		right: 0.5rem;
+		z-index: 20;
+		visibility: visible;
+		opacity: 0;
+	}
+
+	&:hover .action-btn,
+	&:focus-within .action-btn {
+		opacity: 1;
+	}
+
+	@media (hover: none) {
+		.action-btn {
+			opacity: 0.85;
+		}
+	}
+
+	.atrio-app-name {
+		color: var(--atrio-text);
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+	}
+}
+
+.atrio-card-menu {
+	display: grid;
+	place-items: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
+	border: 0;
+	border-radius: 0.75rem;
+	background: transparent;
+	color: var(--atrio-text);
+	cursor: pointer;
+
+	&:hover,
+	&:focus-visible {
+		background: rgba(255, 255, 255, 0.12);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--atrio-accent);
+		outline-offset: 1px;
+	}
+}
+
+// Running: a small round dot on the icon instead of a label on every tile
+.atrio-icon-dot {
+	position: absolute;
+	right: -0.25rem;
+	bottom: -0.25rem;
+	width: 0.75rem;
+	height: 0.75rem;
+	border-radius: 50%;
+	background: var(--atrio-ok);
+	box-shadow: 0 0 0 2px rgba(11, 18, 34, 0.9);
+}
+
+.atrio-tile-confirm {
+	position: absolute;
+	inset: 0;
+	z-index: 25;
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	align-items: stretch;
+	justify-content: center;
+	padding: 0.875rem;
+	border-radius: inherit;
+	background: rgba(11, 18, 34, 0.92);
+	backdrop-filter: blur(8px);
+
+	button {
+		height: 2.25rem;
+		padding: 0 0.75rem;
+		border: 0;
+		border-radius: 0.625rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--atrio-text);
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		cursor: pointer;
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.16);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--atrio-accent);
+			outline-offset: 1px;
+		}
+	}
+
+	.atrio-tile-confirm-main {
+		background: var(--atrio-text);
+		color: #0b1120;
+		font-weight: 700;
+
+		&:hover {
+			background: #e2e8f0;
+		}
+	}
+
+	.atrio-tile-confirm-close {
+		position: absolute;
+		top: 0.375rem;
+		right: 0.375rem;
+		display: grid;
+		place-items: center;
+		width: 1.75rem;
+		height: 1.75rem !important;
+		padding: 0 !important;
+		background: transparent !important;
+	}
+}
+
 .atrio-app-status {
 	display: inline-flex;
 	align-items: center;
@@ -1093,6 +1271,31 @@ export default {
 			border-radius: 2px;
 			background: var(--atrio-warn);
 		}
+	}
+
+	&.is-update {
+		color: #a5f3fc;
+
+		.atrio-app-dot {
+			width: 0;
+			height: 0;
+			border-right: 0.3rem solid transparent;
+			border-bottom: 0.45rem solid var(--atrio-accent);
+			border-left: 0.3rem solid transparent;
+			background: none;
+		}
+	}
+
+	// Exceptions on their own dark pill: readable on any wallpaper
+	&.is-pill {
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+		background: rgba(2, 6, 23, 0.6);
+	}
+
+	// Keeps the row height so names line up
+	&.is-quiet {
+		min-height: 1.25rem;
 	}
 }
 </style>

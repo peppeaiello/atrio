@@ -633,5 +633,13 @@
   "Web address": "Indirizzo",
   "Compact": "Compatta",
   "Normal": "Normale",
-  "Tall": "Alta"
+  "Tall": "Alta",
+  "Open {name}": "Apri {name}",
+  "{name}, stopped": "{name}, ferma",
+  "Actions for {name}": "Azioni per {name}",
+  "Update available": "Aggiornamento disponibile",
+  "Update now": "Aggiorna ora",
+  "Find an app": "Cerca un'app",
+  "Compact tiles": "Schede compatte",
+  "Larger tiles": "Schede grandi"
 }
