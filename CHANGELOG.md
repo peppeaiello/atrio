@@ -2,6 +2,19 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.7 — unreleased
+
+**Fixed**
+
+- Actions on several apps only reach the selected apps the current filter shows, and the count says so.
+- Esc in the App Store search clears it; pressed again on an empty search it closes the store.
+- If the update check fails (GitHub down or rate limited), Atrio tries again after 5 minutes instead of 6 hours.
+- The Terminal tab goes back to Overview when the app stops, and reconnects to the new container after an
+  update.
+- A failed install no longer leaves a card in the app grid once the app shows up in the list.
+- On phones the App Store toolbar wraps instead of scrolling sideways when adding a source.
+- Quick clicks on the App Store categories always show the apps of the last category chosen.
+
 ## 0.1.6 — 2026-10-31
 
 **New**

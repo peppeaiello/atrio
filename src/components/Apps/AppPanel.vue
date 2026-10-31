@@ -486,6 +486,8 @@ export default {
      */
     async getStoreList() {
       this.isLoading = true
+      // Quick clicks on the category chips: only the answer to the latest request is shown
+      const request = this.storeListRequest = (this.storeListRequest || 0) + 1
 
       try {
         const category = this.currentCate.name
@@ -529,13 +531,16 @@ export default {
             // index: main_app_info.apps[id].index,
           }
         })
+        if (request !== this.storeListRequest)
+          return
         this.pageList = listRes
         this.installedList = res.installed
       }
       catch (e) {
         console.log('load store list error', e)
       }
-      this.isLoading = false
+      if (request === this.storeListRequest)
+        this.isLoading = false
     },
 
     /**
@@ -1124,6 +1129,19 @@ export default {
       this.searchInput = ''
       this.searchKey = ''
     },
+    // Esc clears the search first; with an empty field it reaches the modal and closes the store
+    onSearchEscDown(event) {
+      if (!this.searchInput) return
+      event.stopPropagation()
+      event.preventDefault()
+      this.clearSearch()
+      this.searchEscHandled = true
+    },
+    onSearchEscUp(event) {
+      if (!this.searchEscHandled) return
+      event.stopPropagation()
+      this.searchEscHandled = false
+    },
     authorLabel(name) {
       return { All: this.$t('All'), official: this.$t('Official'), by_casaos: this.$t('By CasaOS'), community: this.$t('Community') }[name] || name
     },
@@ -1312,8 +1330,8 @@ export default {
                 :value="searchInput"
                 type="search"
                 @input="onSearchInput($event.target.value)"
-                @keydown.esc.stop.prevent="clearSearch"
-                @keyup.esc.stop
+                @keydown.esc="onSearchEscDown"
+                @keyup.esc="onSearchEscUp"
               >
               <button v-if="searchInput" :aria-label="$t('Clear')" class="atrio-store-clear" type="button" @click="clearSearch">
                 <b-icon icon="close-outline" pack="casa" size="is-16" />
@@ -2398,6 +2416,19 @@ export default {
     display: flex;
     gap: 0.75rem;
     align-items: center;
+
+    // On phones the source manager (with its Add Source field) goes below the search
+    @include mobile {
+        flex-wrap: wrap;
+
+        .atrio-store-search {
+            flex-basis: 100%;
+        }
+
+        .atrio-store-sources {
+            max-width: 100%;
+        }
+    }
 }
 
 .atrio-store-search {

@@ -12,6 +12,7 @@ const POLL_MS = 2000
 const TIMEOUT_MS = 5 * 60 * 1000
 // The settings icon stays up to date on a page left open for days
 const RECHECK_MS = 6 * 60 * 60 * 1000
+const RETRY_MS = 5 * 60 * 1000
 
 /* global __ATRIO_VERSION__ */
 export const CURRENT = __ATRIO_VERSION__
@@ -68,6 +69,7 @@ async function readStatus() {
 
 let lastCheck = 0
 let checking = null
+let retryTimer
 
 /** Asks GitHub for the latest release; repeated calls within RECHECK_MS reuse the last answer. */
 export function checkLatest({ force = false } = {}) {
@@ -87,7 +89,10 @@ export function checkLatest({ force = false } = {}) {
 			release.checkFailed = true
 		}
 		release.updaterInstalled = (await readStatus()) !== null
-		lastCheck = Date.now()
+		// A failed check (GitHub down or rate limited) is tried again soon, not in 6 hours
+		lastCheck = release.checkFailed ? 0 : Date.now()
+		clearTimeout(retryTimer)
+		if (release.checkFailed) retryTimer = setTimeout(checkLatest, RETRY_MS)
 		release.checking = false
 		checking = null
 	})()

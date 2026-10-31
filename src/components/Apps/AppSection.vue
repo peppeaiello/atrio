@@ -109,17 +109,17 @@
 		<!-- Atrio: actions for the selected apps -->
 		<transition name="atrio-bulk">
 			<div v-if="selecting" :aria-label="$t('Actions for the selected apps')" class="atrio-bulk-bar" role="toolbar">
-				<span class="atrio-bulk-count">{{ $t('{count} selected', { count: selected.length }) }}</span>
-				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('start')">
+				<span class="atrio-bulk-count">{{ $t('{count} selected', { count: visibleSelected.length }) }}</span>
+				<button :disabled="!!bulkBusy || !visibleSelected.length" type="button" @click="runBulk('start')">
 					<b-icon icon="play" pack="casa" size="is-16" />{{ $t('Start') }}
 				</button>
-				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('stop')">
+				<button :disabled="!!bulkBusy || !visibleSelected.length" type="button" @click="runBulk('stop')">
 					<b-icon icon="shutdown-outline" pack="casa" size="is-16" />{{ $t('Stop') }}
 				</button>
-				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('restart')">
+				<button :disabled="!!bulkBusy || !visibleSelected.length" type="button" @click="runBulk('restart')">
 					<b-icon icon="restart-outline" pack="casa" size="is-16" />{{ $t('Restart') }}
 				</button>
-				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('update')">
+				<button :disabled="!!bulkBusy || !visibleSelected.length" type="button" @click="runBulk('update')">
 					<b-icon icon="update-outline" pack="casa" size="is-16" />{{ $t('Update') }}
 				</button>
 				<span class="atrio-bulk-sep" />
@@ -293,6 +293,9 @@ export default {
 		selectableApps () {
 			return this.appList.filter(item => this.isSelectable(item) && this.matchesFilter(item))
 		},
+		visibleSelected () {
+			return this.selected.filter(name => this.selectableApps.some(item => item.name === name))
+		},
 		allSelected () {
 			return this.selectableApps.length > 0 && this.selectableApps.every(item => this.selected.includes(item.name))
 		},
@@ -395,7 +398,8 @@ export default {
 			this.selected = this.allSelected ? [] : this.selectableApps.map(item => item.name)
 		},
 		async runBulk (action) {
-			const names = [...this.selected]
+			// Only the selected apps the current filter shows
+			const names = this.visibleSelected
 			if (!names.length) return
 			this.bulkBusy = action
 			const compose = this.$openAPI.appManagement.compose
@@ -517,6 +521,10 @@ export default {
 
 				const sortedList = sortedAppList.map(obj => obj.name)
 				this.appList = sortedAppList
+				// Atrio: an app in the list is no longer being installed, whatever events were missed
+				for (const name of Object.keys(this.installing)) {
+					if (sortedAppList.some(item => item.name === name)) delete this.installing[name]
+				}
 				if (!isEqual(lateSortList, sortedList)) {
 					this.saveSortData()
 				}

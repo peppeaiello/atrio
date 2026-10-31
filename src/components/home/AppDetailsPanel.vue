@@ -132,6 +132,12 @@ export default {
 			return this.$t('Stopped')
 		},
 	},
+	watch: {
+		// The terminal tab closes when the app stops
+		running(running) {
+			if (!running && this.tab === 'terminal') this.tab = 'overview'
+		},
+	},
 	mounted() {
 		this.$EventBus.$on('atrio:open-app', this.show)
 		window.addEventListener('keydown', this.onKey)
@@ -399,7 +405,8 @@ export default {
 					</section>
 
 					<section v-else-if="tab === 'terminal'" id="atrio-tabpanel-terminal" aria-labelledby="atrio-tab-terminal" class="atrio-sheet-terminal" role="tabpanel">
-						<TerminalCard v-if="terminalUrl" :init-ws-url="terminalUrl" />
+						<!-- A new container (after an update) gets a new terminal -->
+						<TerminalCard v-if="terminalUrl" :key="terminalUrl" :init-ws-url="terminalUrl" />
 					</section>
 
 					<section v-else id="atrio-tabpanel-config" aria-labelledby="atrio-tab-config" class="atrio-sheet-config" role="tabpanel">
@@ -536,8 +543,7 @@ export default {
 	}
 }
 
-.atrio-sheet-actions,
-.atrio-sheet-footer {
+.atrio-sheet-actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
