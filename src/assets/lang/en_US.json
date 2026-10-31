@@ -576,5 +576,8 @@
   "{count} apps are stopping": "{count} apps are stopping",
   "{count} apps are restarting": "{count} apps are restarting",
   "Checking {count} apps for updates: those with a new version update in the background": "Checking {count} apps for updates: those with a new version update in the background",
-  "These apps did not accept the action: {names}": "These apps did not accept the action: {names}"
+  "These apps did not accept the action: {names}": "These apps did not accept the action: {names}",
+  "Edit settings": "Edit settings",
+  "Start the app to open its terminal": "Start the app to open its terminal",
+  "What this app runs with. Values of environment variables stay hidden.": "What this app runs with. Values of environment variables stay hidden."
 }

@@ -25,6 +25,9 @@ What changes in each Atrio release. The section for a version is also the text o
   of a container name, a port already in use. Port fields now show their message too.
 - **Actions on several apps.** "Select" next to the app filters lets you tick apps and start, stop,
   restart or update them together. Apps that do not accept the action stay selected, so you can retry.
+- **Terminal and Settings in the app panel.** The panel now has Overview, Logs, Terminal and Settings tabs:
+  the terminal opens right there (Esc and Tab go to the shell), and Settings shows what the app runs with
+  and an Edit settings button.
 
 ## 0.1.5 — 2026-10-31
 

@@ -18,14 +18,14 @@ Make what exists reliable before redesigning more.
 
 Docker management is what people use most, so it gets the next redesign.
 
-- App details panel becomes the single place for an app: overview, logs, terminal and settings as tabs.
-  First step done: Overview, Logs (filter, follow, download) and a read-only Configuration tab.
-- New install and settings screens in the Calm glass style: fewer fields at once, clear sections
+- [x] App details panel becomes the single place for an app: Overview, Logs (filter, follow, download),
+  Terminal and Settings tabs. Editing the settings still opens the full settings window from the tab.
+- [x] New install and settings screens in the Calm glass style: fewer fields at once, clear sections
   (image, network and ports, storage, environment, advanced), helpful defaults and validation messages.
   Done: sections with a quick index, Advanced folded, glass style for install, settings and progress, the tag
   defaults to "latest" and "name:tag" is split, and each field says what to type when it is wrong.
-- App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
-  First step done: search first, category and author chips, featured row, clear installed / installing /
+- [x] App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
+  Done: search first, category and author chips, featured row, clear installed / installing /
   not available states, details in the same style, and install progress as a card in the home grid.
 - [x] Bulk actions from the app list: select apps, then start, stop, restart or update them together.
 - [x] Atrio updates: red dot on the settings icon when a version is available, full-page progress screen
