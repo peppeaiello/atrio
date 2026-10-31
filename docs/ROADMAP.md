@@ -39,7 +39,8 @@ Docker management is what people use most, so it gets the next redesign.
 
 - [x] Settings move from the dropdown to a full panel with sections (appearance, search, network, storage, updates,
   system), including the Atrio updater.
-- Account panel: profile picture, password, sessions, in the new style.
+- [x] Account panel: profile picture, name, password and log out, in the new style. Active sessions need an API
+  CasaOS does not have.
 - Terminal and logs: a single console with tabs for the host and each app, follow mode, search in logs, download.
 
 ## 0.5 — Home, round two
