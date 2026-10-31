@@ -1,5 +1,5 @@
 <template>
-	<div class="modal-card">
+	<div class="modal-card atrio-glass-panel">
 		<header class="is-flex is-align-items-center pt-4 pb-3 pl-4 pr-4 _b-line">
 			<div class="is-flex-grow-1 ml-2 mt-1">
 				<h3 class="_header-title">{{ $t('Build data station') }}</h3>

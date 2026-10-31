@@ -4,6 +4,12 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.9 — unreleased
 
+**New**
+
+- The remaining CasaOS dialogs use the glass look too: WebUI port, wallpaper, CasaOS update and its release
+  notes, external links, the storage manager and disk merge, notes before an install, import, and the
+  update-complete message.
+
 **Fixed**
 
 - Older notifications showed their date in the browser's language instead of Atrio's.
