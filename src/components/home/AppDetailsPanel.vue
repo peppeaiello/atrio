@@ -53,6 +53,9 @@ export default {
 		open() {
 			return this.app !== null
 		},
+		fallbackIcon() {
+			return this.$asset('@/assets/img/app/default.svg')
+		},
 		title() {
 			return this.app ? ice_i18n(this.app.title) || this.app.name : ''
 		},
@@ -107,10 +110,10 @@ export default {
 			this.stopPolling()
 			this.timer = setInterval(this.poll, POLL_MS)
 		},
-		close() {
+		close(giveFocusBack = true) {
 			this.app = null
 			this.stopPolling()
-			this.$nextTick(() => restoreFocus(this.returnFocus))
+			if (giveFocusBack !== false) this.$nextTick(() => restoreFocus(this.returnFocus))
 		},
 		stopPolling() {
 			clearInterval(this.timer)
@@ -126,8 +129,9 @@ export default {
 			await Promise.all([this.loadContainers(), this.loadLogs()])
 			this.loadUsage()
 		},
-		poll() {
-			this.loadLogs()
+		async poll() {
+			// CasaOS applies start/stop/restart in the background, so the state is read again on every tick
+			await Promise.all([this.loadContainers(), this.loadLogs()])
 			this.loadUsage()
 		},
 		async loadContainers() {
@@ -205,6 +209,9 @@ export default {
 		},
 		openTerminal() {
 			if (!this.mainContainer) return
+			const props = { appid: this.mainContainer.ID, appName: this.app.name, serviceName: this.mainContainer.Service }
+			// Modals sit below the panel, so the panel steps aside like it does for the settings
+			this.close(false)
 			this.$buefy.modal.open({
 				component: AppTerminalPanel,
 				hasModalCard: true,
@@ -213,12 +220,12 @@ export default {
 				canCancel: [],
 				scroll: 'keep',
 				animation: 'zoom-in',
-				props: { appid: this.mainContainer.ID, appName: this.app.name, serviceName: this.mainContainer.Service },
+				props,
 			})
 		},
 		openSettings() {
 			const app = this.app
-			this.close()
+			this.close(false)
 			this.$EventBus.$emit('atrio:config-app', app)
 		},
 	},
@@ -231,7 +238,7 @@ export default {
 			<div v-if="open" class="atrio-sheet-backdrop" @click.self="close">
 				<aside ref="sheet" :aria-label="title" aria-modal="true" class="atrio-sheet" role="dialog" tabindex="-1">
 					<header class="atrio-sheet-head">
-						<img :src="app.icon" alt="" class="atrio-sheet-icon">
+						<img :src="app.icon || fallbackIcon" alt="" class="atrio-sheet-icon" @error="$event.target.src = fallbackIcon">
 						<div class="atrio-sheet-title">
 							<h2>{{ title }}</h2>
 							<p :class="running ? 'is-running' : 'is-stopped'" class="atrio-app-status">

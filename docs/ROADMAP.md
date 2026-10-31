@@ -7,12 +7,12 @@ and stays as it is; the work below covers everything around it. See [VISION.md](
 
 Make what exists reliable before redesigning more.
 
-- Fix the bugs found by the code audit of October 2026 (dashboard, app install and settings, settings menu,
+- [x] Fix the bugs found by the code audit of October 2026 (dashboard, app install and settings, settings menu,
   terminal and logs, updater).
-- Try every app action live on a test app: install from the App Store, custom install, edit settings, restart,
+- [x] Try every app action live on a test app: install from the App Store, custom install, edit settings, restart,
   stop, start, update, uninstall.
-- Check the first-run flow (welcome, account creation) and login on a fresh CasaOS.
-- Check that a CasaOS update does not leave a broken UI, and have the installer bring Atrio back.
+- [ ] Check the first-run flow (welcome, account creation) and login on a fresh CasaOS.
+- [x] Check that a CasaOS update does not leave a broken UI, and have the installer bring Atrio back.
 
 ## 0.3 — Apps, the Atrio way
 
