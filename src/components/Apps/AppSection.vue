@@ -10,6 +10,21 @@
 			>
 			</app-section-title-tip>
 
+			<!-- Atrio: find an app in the grid -->
+			<label class="atrio-grid-search mr-3">
+				<b-icon icon="search-outline" pack="casa" size="is-16" />
+				<input v-model="search" :aria-label="$t('Find an app')" :placeholder="$t('Find an app')" type="search" @keydown.esc="search = ''">
+			</label>
+
+			<!-- Atrio: comfortable or compact tiles, remembered in this browser -->
+			<button
+				:aria-label="density === 'compact' ? $t('Larger tiles') : $t('Compact tiles')" :aria-pressed="density === 'compact'"
+				:title="density === 'compact' ? $t('Larger tiles') : $t('Compact tiles')" class="atrio-select-toggle atrio-density-toggle mr-3" type="button"
+				@click="setDensity(density === 'compact' ? 'comfortable' : 'compact')"
+			>
+				<b-icon :icon="density === 'compact' ? 'view-grid-outline' : 'view-comfy-outline'" custom-size="mdi-18px" pack="mdi" />
+			</button>
+
 			<!-- Atrio: select several apps for one action -->
 			<button
 				:aria-pressed="selecting" :class="{ 'is-active': selecting }" class="atrio-select-toggle mr-3" type="button"
@@ -53,8 +68,9 @@
 			v-if="!isLoading"
 			v-model="appList"
 			:draggable="draggable"
-			:disabled="filter !== 'all' || selecting"
+			:disabled="filter !== 'all' || selecting || Boolean(search.trim())"
 			:item-key="(item) => 'app-' + item.name"
+			:class="{ 'is-compact': density === 'compact' }"
 			class="app-list contextmenu-canvas"
 			tag="div"
 			v-bind="dragOptions"
@@ -70,6 +86,7 @@
 				>
 					<app-card
 						:item="item"
+						:update-available="Boolean(updates[item.name])"
 						@configApp="showConfigPanel"
 						@importApp="showContainerPanel"
 						@updateState="getList"
@@ -89,15 +106,16 @@
 			<template #footer>
 				<InstallingAppCard
 					v-for="install in pendingInstalls"
-					v-show="filter === 'all'"
+					v-show="filter === 'all' && !search.trim()"
 					:key="'installing-' + install.name"
 					:install="install"
 					@dismiss="dismissInstall(install.name)"
 				/>
 			</template>
 		</draggable>
-		<p v-if="!isLoading && filter !== 'all' && !appList.some(matchesFilter)" class="atrio-empty-filter">
-			{{ filter === 'running' ? $t('No running apps') : $t('No stopped apps') }}
+		<p v-if="!isLoading && (filter !== 'all' || search.trim()) && !appList.some(matchesFilter)" class="atrio-empty-filter">
+			<template v-if="search.trim()">{{ $t('No apps match "{search}".', { search: search.trim() }) }}</template>
+			<template v-else>{{ filter === 'running' ? $t('No running apps') : $t('No stopped apps') }}</template>
 		</p>
 		<div v-else-if="isLoading" class="app-list contextmenu-canvas">
 			<div v-for="index in skCount" :id="'app-' + index" :key="'app-' + index" class="handle">
@@ -213,6 +231,17 @@ const builtInApplications = [
 const orderConfig = 'app_order'
 
 const FILTER_KEY = 'atrio:app-filter'
+const DENSITY_KEY = 'atrio:app-density'
+// The compose app list says which apps have a newer image; it is checked less often than the grid
+const UPDATES_MS = 60000
+
+function readDensity () {
+	try {
+		return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'
+	} catch {
+		return 'comfortable'
+	}
+}
 
 function readFilter () {
 	try {
@@ -229,6 +258,10 @@ export default {
 		return {
 			// Atrio status filter, remembered in this browser
 			filter: readFilter(),
+			density: readDensity(),
+			search: '',
+			// Atrio: app name -> a newer image is available
+			updates: {},
 			user_id: localStorage.getItem('user_id'),
 			appList: [],
 			oldAppList: [],
@@ -314,6 +347,8 @@ export default {
 		this.ListRefreshTimer = setInterval(() => {
 			if (!this.listLoading && !this.drag) this.getList()
 		}, 5000)
+		this.loadUpdates()
+		this.updatesTimer = setInterval(this.loadUpdates, UPDATES_MS)
 	},
 	beforeDestroy () {
 		this.$EventBus.$off(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, this.openSyncthingStore)
@@ -324,6 +359,7 @@ export default {
 		window.removeEventListener('keydown', this.onSelectKey)
 
 		clearInterval(this.ListRefreshTimer)
+		clearInterval(this.updatesTimer)
 	},
 	mounted () {
 		window.addEventListener('resize', this.getSkCount)
@@ -447,9 +483,31 @@ export default {
 			}
 		},
 		matchesFilter (item) {
+			const term = this.search.trim().toLowerCase()
+			if (term) {
+				const title = typeof item.title === 'object' ? ice_i18n(item.title) : item.title
+				if (!`${title || ''} ${item.name}`.toLowerCase().includes(term)) return false
+			}
 			if (this.filter === 'running') return item.status === 'running'
 			if (this.filter === 'stopped') return Boolean(item.status) && item.status !== 'running'
 			return true
+		},
+		setDensity (value) {
+			this.density = value
+			try {
+				localStorage.setItem(DENSITY_KEY, value)
+			} catch {
+				// Private window: the choice lasts until the page closes
+			}
+		},
+		async loadUpdates () {
+			try {
+				const res = await this.$openAPI.appManagement.compose.myComposeAppList()
+				const apps = res.data.data || {}
+				this.updates = Object.fromEntries(Object.entries(apps).map(([name, app]) => [name, Boolean(app.update_available)]))
+			} catch (e) {
+				// Kept as it was: checked again in a minute
+			}
 		},
 		isMobile () {
 			const userAgent = navigator.userAgent
@@ -853,15 +911,144 @@ export default {
 	@include fullhd {
 		grid-template-columns: repeat(5, minmax(0, 1fr));
 	}
+
+	// Atrio: compact tiles, about twice as many apps on screen
+	&.is-compact {
+		gap: 0.75rem;
+
+		@include touch {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		@include desktop {
+			grid-template-columns: repeat(6, minmax(0, 1fr));
+		}
+
+		@include fullhd {
+			grid-template-columns: repeat(7, minmax(0, 1fr));
+		}
+	}
 }
 </style>
 
 <style lang="scss">
+// Atrio: search in the grid
+.atrio-grid-search {
+	display: inline-flex;
+	gap: 0.375rem;
+	align-items: center;
+	width: 11rem;
+	height: 2.5rem;
+	padding: 0 0.75rem;
+	border-radius: 0.875rem;
+	background: var(--atrio-glass-bg);
+	backdrop-filter: var(--atrio-glass-blur);
+	box-shadow: inset 0 0 0 1px var(--atrio-glass-border);
+	color: var(--atrio-text-soft);
+	cursor: text;
+
+	&:focus-within {
+		box-shadow: inset 0 0 0 2px var(--atrio-accent);
+	}
+
+	input {
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		outline: 0;
+		background: transparent;
+		color: var(--atrio-text);
+		font: inherit;
+		font-size: 0.8125rem;
+
+		&::placeholder {
+			color: var(--atrio-text-muted);
+		}
+
+		&::-webkit-search-cancel-button {
+			display: none;
+		}
+	}
+}
+
+.atrio-density-toggle {
+	justify-content: center;
+	width: 2.5rem;
+	padding: 0 !important;
+}
+
+// Compact tiles: shorter than wide, smaller icon and text, content centred
+.app-list.is-compact .app-card {
+	aspect-ratio: auto;
+	min-height: 7rem;
+	padding: 0.625rem 0.375rem;
+
+	.cards-content,
+	.b-tooltip,
+	.img-c {
+		width: 100%;
+	}
+
+	.img-c {
+		padding-top: 0 !important;
+		padding-bottom: 0 !important;
+	}
+
+	.atrio-app-status.is-pill {
+		padding: 0.0625rem 0.375rem;
+	}
+
+	.atrio-app-status.is-quiet {
+		min-height: 0;
+	}
+
+	.image.is-64x64,
+	.loading-overlay.is-64x64 {
+		width: 2.5rem;
+		height: 2.5rem;
+	}
+
+	.atrio-app-name,
+	.one-line {
+		font-size: 0.75rem;
+	}
+
+	.mt-3 {
+		margin-top: 0.375rem !important;
+	}
+
+	.atrio-app-status {
+		font-size: 0.6875rem;
+	}
+
+	.atrio-icon-dot {
+		width: 0.625rem;
+		height: 0.625rem;
+	}
+
+	.action-btn {
+		top: 0.25rem;
+		right: 0.25rem;
+	}
+}
+
+// Selection mode: the tile cover takes the clicks, the app menu steps aside
+.handle.atrio-selecting .action-btn {
+	display: none;
+}
+
 // Atrio: on phones the filters go to their own row under the title
 @media screen and (max-width: 480px) {
 	.atrio-apps-bar {
 		flex-wrap: wrap;
 		row-gap: 0.75rem;
+
+		.atrio-grid-search {
+			order: 6;
+			flex-basis: 100%;
+			width: auto;
+			margin-right: 0 !important;
+		}
 
 		.atrio-segmented {
 			order: 5;

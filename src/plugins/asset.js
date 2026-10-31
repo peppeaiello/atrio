@@ -17,12 +17,14 @@ export function asset(path) {
 	return found
 }
 
-// Wallpaper settings saved by CasaOS-UI point at webpack build files such as
-// "/img/wallpaper02.92a6b52e.jpg", which no longer exist: map them to the bundled wallpapers.
+// A built-in wallpaper is saved with the file name of the build that offered it: webpack names
+// from CasaOS-UI ("/img/wallpaper02.92a6b52e.jpg"), Vite names from an older Atrio build
+// ("/assets/wallpaper01-DQqdEKCq.jpg"), or the source path of the dev server. Any of them is
+// mapped to the wallpaper of this build, so a new build never leaves the background empty.
 export function builtInWallpaper(path) {
 	if (typeof path !== 'string') return path
-	const legacy = path.match(/\/img\/(wallpaper0\d)\.[0-9a-f]+\.jpg$/)
-	return legacy ? asset(`@/assets/background/${legacy[1]}.jpg`) : path
+	const builtIn = path.match(/\/(?:img|assets|src\/assets\/background)\/(wallpaper0\d)(?:[.-][\w-]+)?\.jpg(?:[?#].*)?$/)
+	return builtIn ? asset(`@/assets/background/${builtIn[1]}.jpg`) ?? path : path
 }
 
 export default {
