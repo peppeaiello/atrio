@@ -1250,6 +1250,14 @@ export default {
 			width: 2.5rem;
 			height: 2.75rem;
 		}
+
+		// The tooltip wrappers are 24 px tall: the taller button would hang below the logo
+		.navbar-brand.atrio-actions .b-tooltip,
+		.navbar-brand.atrio-actions .tooltip-trigger {
+			display: flex;
+			align-items: center;
+			height: 100%;
+		}
 	}
 
 	.atrio-brand span {
