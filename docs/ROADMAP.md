@@ -11,7 +11,7 @@ Make what exists reliable before redesigning more.
   terminal and logs, updater).
 - [x] Try every app action live on a test app: install from the App Store, custom install, edit settings, restart,
   stop, start, update, uninstall.
-- [ ] Check the first-run flow (welcome, account creation) and login on a fresh CasaOS.
+- [x] Check the first-run flow (welcome, account creation) and login on a fresh CasaOS.
 - [x] Check that a CasaOS update does not leave a broken UI, and have the installer bring Atrio back.
 
 ## 0.3 — Apps, the Atrio way
