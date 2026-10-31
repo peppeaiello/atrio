@@ -2,7 +2,8 @@
 // (App Store, install and settings forms, and the dialogs of the settings and the dashboard)
 
 // The App Store, install, settings and progress share the Calm glass window
-.atrio-glass-panel {
+// .modal-card as well: wins over the CasaOS component styles loaded after this file
+.modal-card.atrio-glass-panel {
     background: var(--atrio-glass-bg-strong);
     backdrop-filter: blur(32px) saturate(150%);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 64px rgba(0, 0, 0, 0.4);
@@ -72,7 +73,8 @@
 }
 
 // Install and settings forms on the glass: CasaOS form controls in dark
-.atrio-glass-panel {
+// .modal-card as well: wins over the CasaOS component styles loaded after this file
+.modal-card.atrio-glass-panel {
     .label {
         color: var(--atrio-text-soft);
         font-size: 0.8125rem;
@@ -278,7 +280,8 @@
 }
 
 // Text and headings of the CasaOS dialogs
-.atrio-glass-panel {
+// .modal-card as well: wins over the CasaOS component styles loaded after this file
+.modal-card.atrio-glass-panel {
     .modal-card-head .title,
     .modal-card-title,
     .modal-card-body .title {
