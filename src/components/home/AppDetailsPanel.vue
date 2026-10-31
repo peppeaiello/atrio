@@ -7,14 +7,14 @@ import business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import { mixin } from '@/mixins/mixin'
 import Sparkline from '@/components/widgets/Sparkline.vue'
-import AppTerminalPanel from '@/components/Apps/AppTerminalPanel.vue'
+import TerminalCard from '@/components/logsAndTerminal/TerminalCard.vue'
 
 const POLL_MS = 3000
 const HISTORY = 40
 const LOG_LINES = 200
 // The Logs tab shows more history than the overview
 const LOG_LINES_FULL = 1000
-const TABS = ['overview', 'logs', 'config']
+const TABS = ['overview', 'logs', 'terminal', 'config']
 // Terminal colour codes in container logs
 const ANSI = /\x1B\[[0-9;]*[A-Za-z]/g
 
@@ -37,7 +37,7 @@ function memoryBytes(item) {
 export default {
 	name: 'AppDetailsPanel',
 	compatConfig: { MODE: 3 },
-	components: { Sparkline },
+	components: { Sparkline, TerminalCard },
 	mixins: [mixin, business_ShowNewAppTag, business_OpenThirdApp],
 	data() {
 		return {
@@ -88,8 +88,14 @@ export default {
 			return [
 				{ id: 'overview', label: this.$t('Overview') },
 				{ id: 'logs', label: this.$t('Logs') },
-				{ id: 'config', label: this.$t('Configuration') },
+				// The shell needs a running container
+				{ id: 'terminal', label: this.$t('Terminal'), disabled: !this.running || !this.mainContainer },
+				{ id: 'config', label: this.$t('Settings') },
 			]
+		},
+		terminalUrl() {
+			if (!this.mainContainer) return ''
+			return `${this.$wsProtocol}//${this.$baseURL}/v1/container/${this.mainContainer.ID}/terminal?token=${this.$store.state.access_token}`
 		},
 		shownLogs() {
 			const filter = this.logFilter.trim().toLowerCase()
@@ -164,6 +170,8 @@ export default {
 		onKey(event) {
 			// A modal opened from the panel (settings, uninstall) handles its own keys
 			if (!this.open || document.querySelector('.modal.is-active')) return
+			// Esc and Tab belong to the shell while typing in the terminal
+			if (event.target?.closest?.('.xterm')) return
 			if (event.key === 'Escape') this.close()
 			else trapTab(event, this.$refs.sheet)
 		},
@@ -228,8 +236,9 @@ export default {
 			})
 		},
 		selectTab(id) {
+			if (this.tabs.find(item => item.id === id)?.disabled) return
 			this.tab = id
-			if (id !== 'config') this.loadLogs()
+			if (id === 'overview' || id === 'logs') this.loadLogs()
 			this.scrollLogsToEnd()
 		},
 		// Left/right arrows move between tabs, as in any tab list
@@ -237,7 +246,8 @@ export default {
 			const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
 			if (!step) return
 			event.preventDefault()
-			const next = TABS[(TABS.indexOf(this.tab) + step + TABS.length) % TABS.length]
+			const ids = this.tabs.filter(item => !item.disabled).map(item => item.id)
+			const next = ids[(ids.indexOf(this.tab) + step + ids.length) % ids.length]
 			this.selectTab(next)
 			this.$nextTick(() => this.$refs.tablist?.querySelector(`[data-tab="${next}"]`)?.focus())
 		},
@@ -279,22 +289,6 @@ export default {
 			} finally {
 				this.busy = ''
 			}
-		},
-		openTerminal() {
-			if (!this.mainContainer) return
-			const props = { appid: this.mainContainer.ID, appName: this.app.name, serviceName: this.mainContainer.Service }
-			// Modals sit below the panel, so the panel steps aside like it does for the settings
-			this.close(false)
-			this.$buefy.modal.open({
-				component: AppTerminalPanel,
-				hasModalCard: true,
-				customClass: 'terminal-modal',
-				trapFocus: true,
-				canCancel: [],
-				scroll: 'keep',
-				animation: 'zoom-in',
-				props,
-			})
 		},
 		openSettings() {
 			const app = this.app
@@ -348,7 +342,7 @@ export default {
 					</div>
 
 					<div ref="tablist" :aria-label="$t('Sections')" class="atrio-sheet-tabs" role="tablist" @keydown="onTabKey">
-						<button v-for="item in tabs" :id="`atrio-tab-${item.id}`" :key="item.id" :aria-controls="`atrio-tabpanel-${item.id}`" :aria-selected="tab === item.id" :class="{ 'is-active': tab === item.id }" :data-tab="item.id" :tabindex="tab === item.id ? 0 : -1" role="tab" type="button" @click="selectTab(item.id)">
+						<button v-for="item in tabs" :id="`atrio-tab-${item.id}`" :key="item.id" :aria-controls="`atrio-tabpanel-${item.id}`" :aria-selected="tab === item.id" :class="{ 'is-active': tab === item.id }" :data-tab="item.id" :disabled="item.disabled" :tabindex="tab === item.id ? 0 : -1" :title="item.disabled ? $t('Start the app to open its terminal') : ''" role="tab" type="button" @click="selectTab(item.id)">
 							{{ item.label }}
 						</button>
 					</div>
@@ -404,7 +398,18 @@ export default {
 						<pre ref="logs">{{ shownLogs || (logFilter ? $t('No lines match the filter') : $t('No logs yet')) }}</pre>
 					</section>
 
+					<section v-else-if="tab === 'terminal'" id="atrio-tabpanel-terminal" aria-labelledby="atrio-tab-terminal" class="atrio-sheet-terminal" role="tabpanel">
+						<TerminalCard v-if="terminalUrl" :init-ws-url="terminalUrl" />
+					</section>
+
 					<section v-else id="atrio-tabpanel-config" aria-labelledby="atrio-tab-config" class="atrio-sheet-config" role="tabpanel">
+						<div class="atrio-config-head">
+							<p>{{ $t('What this app runs with. Values of environment variables stay hidden.') }}</p>
+							<button class="atrio-button is-small" type="button" @click="openSettings">
+								<b-icon icon="settings-outline" pack="casa" size="is-16" />
+								{{ $t('Edit settings') }}
+							</button>
+						</div>
 						<p v-if="!services.length" class="atrio-config-empty">{{ $t('Loading…') }}</p>
 						<article v-for="service in services" :key="service.name" class="atrio-config-service">
 							<h3 v-if="services.length > 1">{{ service.name }}</h3>
@@ -442,19 +447,8 @@ export default {
 							</p>
 							<p v-else class="atrio-config-empty">{{ $t('None') }}</p>
 						</article>
-						<p v-if="services.length" class="atrio-config-hint">{{ $t('Values are hidden here. Open the settings to see or change them.') }}</p>
 					</section>
 
-					<footer class="atrio-sheet-footer">
-						<button :disabled="!running || !mainContainer" class="atrio-button" type="button" @click="openTerminal">
-							<b-icon icon="terminal-outline" pack="casa" size="is-16" />
-							{{ $t('Terminal') }}
-						</button>
-						<button class="atrio-button" type="button" @click="openSettings">
-							<b-icon icon="settings-outline" pack="casa" size="is-16" />
-							{{ $t('Setting') }}
-						</button>
-					</footer>
 				</aside>
 			</div>
 		</transition>
@@ -733,6 +727,51 @@ export default {
 	height: 2.25rem;
 	padding: 0 0.75rem;
 	font-size: 0.8125rem;
+}
+
+.atrio-sheet-terminal {
+	position: relative;
+	flex: 1;
+	min-height: 22rem;
+	overflow: hidden;
+	border-radius: var(--atrio-radius-md, 20px);
+	background: #0b0f17;
+
+	.fullScreen {
+		position: relative;
+		height: 100%;
+		margin-top: 0 !important;
+		padding: 0.75rem !important;
+	}
+
+	// Full screen toggle inside the terminal, not in the page corner
+	.fullscreen-button {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		z-index: 2;
+		color: var(--atrio-text-soft);
+	}
+
+	.xterm.sheight {
+		height: max(22rem, calc(100vh - 20rem));
+	}
+}
+
+.atrio-config-head {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	justify-content: space-between;
+
+	p {
+		color: var(--atrio-text-muted);
+		font-size: 0.8125rem;
+	}
+
+	.atrio-button {
+		flex-shrink: 0;
+	}
 }
 
 .atrio-sheet-config {
