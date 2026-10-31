@@ -2,6 +2,12 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.9 — unreleased
+
+**Fixed**
+
+- Older notifications showed their date in the browser's language instead of Atrio's.
+
 ## 0.1.8 — 2026-10-31
 
 **New**

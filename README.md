@@ -16,11 +16,51 @@ Atrio is a fork of [CasaOS-UI](https://github.com/IceWhaleTech/CasaOS-UI) by [Ic
 It talks to the standard CasaOS backend, so it replaces only the web interface: your apps, settings and data stay
 the same.
 
-> **Status:** early days. The home page is redesigned (glass look, live widgets, command palette, app details
-> panel); the other screens still look like CasaOS.
+<p align="center">
+  <img alt="The Atrio dashboard: greeting, live widgets and the app grid over a mountain wallpaper" src="docs/screenshots/dashboard.jpg">
+</p>
+
+More on the website: **[atrio.peppeaiello.cloud](https://atrio.peppeaiello.cloud)**.
+
+> **Status:** young but usable every day. The dashboard, App Store, app panel, install and settings forms, files,
+> settings, account, console and notifications are redesigned; a few rarely used dialogs still look like CasaOS.
 
 Atrio is an independent project, not affiliated with or endorsed by IceWhale Technology. CasaOS is a trademark of
 its respective owners.
+
+## Features
+
+- **Calm glass dashboard** with a greeting, live CPU, memory, storage and network widgets, and status you can read
+  without relying on colour.
+- **App Store** with search first, categories and authors as chips, a clear installed state, and install progress
+  right in the app grid.
+- **A panel for every app**: open, restart, stop, update; overview, logs, terminal and settings as tabs. Install and
+  settings forms in sections, with errors that say what to type.
+- **Many apps at once**: select apps and start, stop, restart or update them together.
+- **Hardware details**: machine, BIOS, processor, memory and every sensor the machine reports.
+- **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor.
+- **One console** for the logs and terminals of the server and every app.
+- **Widgets your way**: show, hide and reorder them, and add any web page of your network.
+- **Command palette** (`Ctrl K`) to reach apps, actions and settings from the keyboard.
+- **Updates in one click**, a progress screen, and Atrio back on its own after a CasaOS update.
+- **Works on phones**, and can be added to the home screen as an app (over HTTPS).
+
+<table>
+  <tr>
+    <td><img alt="The App Store" src="docs/screenshots/app-store.jpg"></td>
+    <td><img alt="The panel of an app" src="docs/screenshots/app-panel.jpg"></td>
+  </tr>
+  <tr>
+    <td><img alt="The hardware panel" src="docs/screenshots/hardware.jpg"></td>
+    <td><img alt="The notification centre" src="docs/screenshots/notifications.jpg"></td>
+  </tr>
+  <tr>
+    <td><img alt="The console with logs and terminals" src="docs/screenshots/console.jpg"></td>
+    <td align="center"><img alt="Atrio on a phone" src="docs/screenshots/phone.jpg" height="320"></td>
+  </tr>
+</table>
+
+Screenshots use demo data.
 
 ## Compatibility
 
@@ -46,9 +86,9 @@ Nothing else changes: CasaOS, your apps and their data are left as they are.
 
 ## Update
 
-Open the settings menu (the sliders icon at the top): the **Atrio** row shows your version and, when a new release is
-out, an **Update** button. Atrio asks the updater on the server to download the release from GitHub, checks its
-checksum and installs it, then reloads the page.
+A red dot on the settings icon (the sliders at the top) tells you a new release is out. Open the settings: under
+**Updates**, the **Atrio** row shows your version and an **Update** button. Atrio asks the updater on the server to
+download the release from GitHub, checks its checksum and installs it, showing each step, then reloads the page.
 
 From a terminal you can do the same with `sudo atrio-update`.
 

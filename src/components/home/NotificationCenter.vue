@@ -169,7 +169,10 @@ export default {
 			if (minutes < 60) return this.$t('{n} min ago', { n: minutes })
 			const hours = Math.round(minutes / 60)
 			if (hours < 24) return this.$t('{n} h ago', { n: hours })
-			return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)
+			// In Atrio's language ("it_it" -> "it-IT"), not the browser's
+			const [lang, region] = (this.$i18n.locale || 'en_us').split('_')
+			const locale = region ? `${lang}-${region.toUpperCase()}` : lang
+			return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time)
 		},
 	},
 }
