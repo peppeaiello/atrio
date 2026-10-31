@@ -19,8 +19,10 @@ Make what exists reliable before redesigning more.
 Docker management is what people use most, so it gets the next redesign.
 
 - App details panel becomes the single place for an app: overview, logs, terminal and settings as tabs.
+  First step done: Overview, Logs (filter, follow, download) and a read-only Configuration tab.
 - New install and settings screens in the Calm glass style: fewer fields at once, clear sections
   (image, network and ports, storage, environment, advanced), helpful defaults and validation messages.
+  First step done: the tag defaults to "latest" and "name:tag" typed in the image field is split.
 - App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
 - Bulk actions from the app list (restart or update several apps).
 

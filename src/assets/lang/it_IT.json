@@ -477,5 +477,20 @@
   "based on CasaOS-UI by IceWhale": "basato su CasaOS-UI di IceWhale",
   "Starting": "Avvio in corso",
   "Cloning": "Clonazione in corso",
-  "Restarting": "Riavvio in corso"
+  "Restarting": "Riavvio in corso",
+  "Overview": "Panoramica",
+  "Configuration": "Configurazione",
+  "Sections": "Sezioni",
+  "Filter logs": "Filtra i log",
+  "Follow": "Segui",
+  "No lines match the filter": "Nessuna riga corrisponde al filtro",
+  "Loading…": "Caricamento…",
+  "Restart policy": "Riavvio automatico",
+  "No ports published": "Nessuna porta pubblicata",
+  "No folders mapped": "Nessuna cartella collegata",
+  "Environment variables": "Variabili d'ambiente",
+  "None": "Nessuna",
+  "Values are hidden here. Open the settings to see or change them.": "Qui i valori sono nascosti. Apri le impostazioni per vederli o cambiarli.",
+  "Published ports": "Porte pubblicate",
+  "Mapped folders": "Cartelle collegate"
 }

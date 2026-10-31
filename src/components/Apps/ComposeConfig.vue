@@ -770,12 +770,30 @@ export default {
       }
     },
 
+    // "registry:5000/app:1.2" -> ["registry:5000/app", "1.2"]: the tag is after the last colon
+    // only when that colon comes after the last slash
+    splitImage(image = '') {
+      const slash = image.lastIndexOf('/')
+      const colon = image.lastIndexOf(':')
+      return colon > slash ? [image.slice(0, colon), image.slice(colon + 1)] : [image, '']
+    },
+
     getFirstField(image) {
-      return image?.split(':')[0]
+      return this.splitImage(image)[0]
     },
 
     getLateField(image) {
-      return image?.split(':')[1]
+      return this.splitImage(image)[1]
+    },
+
+    // A tag typed with the name wins, then the tag already set, then "latest"
+    setImageName(service, typed) {
+      const [name, tag] = this.splitImage(String(typed || '').trim())
+      service.image = name ? `${name}:${tag || this.getLateField(service.image) || 'latest'}` : ''
+    },
+
+    setImageTag(service, tag) {
+      service.image = `${this.getFirstField(service.image)}:${String(tag || '').trim()}`
     },
   },
 }
@@ -790,13 +808,7 @@ export default {
             <ValidationProvider v-slot="{ errors, valid }" class="is-flex-grow-1 mr-3" name="Image0" rules="required">
               <b-field :label="`${$t('Docker Image')} *`" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-3">
                 <b-input
-                  :key="service.image" :readonly="state === 'update' || serviceStableVersion !== ''" :model-value="getFirstField(service.image)" :placeholder="$t('e.g.,hello-world:latest')" @update:model-value="(V) => changeIcon(V)" @blur="
-                    (E) => {
-                      return (service.image = service.image.split(':')[1]
-                        ? `${E.target.value}:${service.image.split(':')[1]}`
-                        : E.target.value);
-                    }
-                  "
+                  :key="service.image" :readonly="state === 'update' || serviceStableVersion !== ''" :model-value="getFirstField(service.image)" :placeholder="$t('e.g.,hello-world:latest')" @update:model-value="(V) => changeIcon(V)" @blur="(E) => setImageName(service, E.target.value)"
                 />
               </b-field>
             </ValidationProvider>
@@ -814,11 +826,7 @@ export default {
                       icon-right="down-outline"
                       class="is-flex-grow-1"
                       :model-value="getLateField(service.image)"
-                      @update:model-value="
-                        (V) => {
-                          service.image = `${service.image.split(':')[0]}:${V}`;
-                        }
-                      "
+                      @update:model-value="(V) => setImageTag(service, V)"
                     />
                   </b-field>
                 </ValidationProvider>
@@ -826,9 +834,7 @@ export default {
               <b-dropdown-item
                 key="latest"
                 @click="
-                  () => {
-                    service.image = `${service.image.split(':')[0]}:latest`;
-                  }
+                  () => setImageTag(service, 'latest')
                 "
               >
                 latest
@@ -837,9 +843,7 @@ export default {
                 v-show="serviceStableVersion !== '' && firstAppName === key"
                 key="stable"
                 @click="
-                  () => {
-                    service.image = `${service.image.split(':')[0]}:${serviceStableVersion}`;
-                  }
+                  () => setImageTag(service, serviceStableVersion)
                 "
               >
                 stable({{ serviceStableVersion }})

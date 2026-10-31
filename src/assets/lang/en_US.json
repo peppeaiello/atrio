@@ -477,5 +477,20 @@
   "based on CasaOS-UI by IceWhale": "based on CasaOS-UI by IceWhale",
   "Starting": "Starting",
   "Cloning": "Cloning",
-  "Restarting": "Restarting"
+  "Restarting": "Restarting",
+  "Overview": "Overview",
+  "Configuration": "Configuration",
+  "Sections": "Sections",
+  "Filter logs": "Filter logs",
+  "Follow": "Follow",
+  "No lines match the filter": "No lines match the filter",
+  "Loading…": "Loading…",
+  "Restart policy": "Restart policy",
+  "No ports published": "No ports published",
+  "No folders mapped": "No folders mapped",
+  "Environment variables": "Environment variables",
+  "None": "None",
+  "Values are hidden here. Open the settings to see or change them.": "Values are hidden here. Open the settings to see or change them.",
+  "Published ports": "Published ports",
+  "Mapped folders": "Mapped folders"
 }
