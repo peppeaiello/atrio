@@ -4,6 +4,12 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.7 — unreleased
 
+**New**
+
+- **Settings panel.** The settings icon opens a side panel in sections (Appearance, Web search, Dashboard,
+  Network, Storage, Updates, System) instead of a long dropdown. It also opens from the command palette,
+  and System has a shortcut to the Hardware panel next to Restart and Shut down.
+
 **Fixed**
 
 - Actions on several apps only reach the selected apps the current filter shows, and the count says so.

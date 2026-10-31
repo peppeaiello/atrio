@@ -19,6 +19,7 @@ export default {
 			const system = [
 				{ id: 'files', label: this.$t('Files'), hint: this.$t('Open the file manager'), icon: 'folder-outline', run: () => this.homeShowFiles() },
 				{ id: 'store', label: 'App Store', hint: this.$t('Install new apps'), icon: 'app-store-outline', run: () => this.homeShowAppStore() },
+				{ id: 'settings', label: this.$t('Settings'), hint: this.$t('Language, wallpaper, search, updates and more'), icon: 'control-outline', run: () => this.$EventBus.$emit('atrio:open-settings') },
 				{ id: 'wallpaper', label: this.$t('Wallpaper'), hint: this.$t('Change the wallpaper'), icon: 'wallpaper-outline', run: () => this.$EventBus.$emit(events.SHOW_CHANGE_WALLPAPER_MODAL) },
 			].map((item) => ({ ...item, group: this.$t('System') }))
 			const apps = this.apps.flatMap((app) => {

@@ -579,5 +579,10 @@
   "These apps did not accept the action: {names}": "Queste app non hanno accettato l'azione: {names}",
   "Edit settings": "Modifica impostazioni",
   "Start the app to open its terminal": "Avvia l'app per aprire il terminale",
-  "What this app runs with. Values of environment variables stay hidden.": "Con cosa gira questa app. I valori delle variabili d'ambiente restano nascosti."
+  "What this app runs with. Values of environment variables stay hidden.": "Con cosa gira questa app. I valori delle variabili d'ambiente restano nascosti.",
+  "Appearance": "Aspetto",
+  "Dashboard": "Dashboard",
+  "Updates": "Aggiornamenti",
+  "Web search": "Ricerca web",
+  "Language, wallpaper, search, updates and more": "Lingua, sfondo, ricerca, aggiornamenti e altro"
 }
