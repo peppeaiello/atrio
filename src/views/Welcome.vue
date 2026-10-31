@@ -134,6 +134,9 @@ export default {
 
 	},
 
+	beforeUnmount() {
+		clearTimeout(this.doneTimer)
+	},
 	methods: {
 		/**
 		 * @description: register
@@ -201,8 +204,13 @@ export default {
 		},
 		goToStep(step) {
 			this.step = step
+			// The animation's end moves on; this covers an animation that never ends (hidden tab, failed load)
+			if (step === 3) this.doneTimer = setTimeout(this.complete, 5000)
 		},
 		complete() {
+			if (this.completed) return
+			this.completed = true
+			clearTimeout(this.doneTimer)
 			if (this.isLogin) {
 				this.$router.push("/");
 			} else {
