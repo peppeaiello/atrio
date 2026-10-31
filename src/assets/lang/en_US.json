@@ -560,5 +560,21 @@
   "Folders of this server the app can use, and devices it can reach.": "Folders of this server the app can use, and devices it can reach.",
   "Settings passed to the app, such as time zone, user IDs or passwords.": "Settings passed to the app, such as time zone, user IDs or passwords.",
   "Command, privileges, resources, restart policy and capabilities": "Command, privileges, resources, restart policy and capabilities",
-  "{name} settings": "{name} settings"
+  "{name} settings": "{name} settings",
+  "Enter the image to run, for example nginx or lscr.io/linuxserver/jellyfin.": "Enter the image to run, for example nginx or lscr.io/linuxserver/jellyfin.",
+  "Choose a version, for example latest.": "Choose a version, for example latest.",
+  "Give the app a name: it is shown on the dashboard.": "Give the app a name: it is shown on the dashboard.",
+  "Use only letters, numbers, - and _ (up to 32 characters).": "Use only letters, numbers, - and _ (up to 32 characters).",
+  "Enter a port such as 8080, a range such as 8000-8010, or IP:port.": "Enter a port such as 8080, a range such as 8000-8010, or IP:port.",
+  "This port is already used by another app or service.": "This port is already used by another app or service.",
+  "Done": "Done",
+  "Actions for the selected apps": "Actions for the selected apps",
+  "{count} selected": "{count} selected",
+  "Select all": "Select all",
+  "Select none": "Select none",
+  "{count} apps are starting": "{count} apps are starting",
+  "{count} apps are stopping": "{count} apps are stopping",
+  "{count} apps are restarting": "{count} apps are restarting",
+  "Checking {count} apps for updates: those with a new version update in the background": "Checking {count} apps for updates: those with a new version update in the background",
+  "These apps did not accept the action: {names}": "These apps did not accept the action: {names}"
 }

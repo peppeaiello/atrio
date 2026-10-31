@@ -47,7 +47,7 @@ extend("min", {
 
 extend('ContainerName', {
 	validate: (value) => isValidContainerName(value),
-	message: 'Name must be a string of numbers, letters, underscores, or hyphens(0~9,a~zA~Z,_,-).',
+	message: 'Use only letters, numbers, - and _ (up to 32 characters).',
 });
 
 extend('uuid', {
@@ -75,7 +75,7 @@ extend('yaml_port', {
 		let regExp = new RegExp(`^(${ip}(:${portRange})?)|(^${portRange})$`);
 		return regExp.test(value)
 	},
-	message: 'The field mast be a valid docker-compose port',
+	message: 'Enter a port such as 8080, a range such as 8000-8010, or IP:port.',
 })
 
 extend('not_in_ports', {
@@ -85,5 +85,5 @@ extend('not_in_ports', {
 		// return true
 		return isInPortsResult?.[0] === 'false'
 	},
-	message: 'The port is used by other services',
+	message: 'This port is already used by another app or service.',
 })

@@ -560,5 +560,21 @@
   "Folders of this server the app can use, and devices it can reach.": "Cartelle del server che l'app può usare e dispositivi a cui può accedere.",
   "Settings passed to the app, such as time zone, user IDs or passwords.": "Impostazioni passate all'app, come fuso orario, ID utente o password.",
   "Command, privileges, resources, restart policy and capabilities": "Comando, privilegi, risorse, riavvio automatico e capability",
-  "{name} settings": "Impostazioni di {name}"
+  "{name} settings": "Impostazioni di {name}",
+  "Enter the image to run, for example nginx or lscr.io/linuxserver/jellyfin.": "Indica l'immagine da avviare, per esempio nginx o lscr.io/linuxserver/jellyfin.",
+  "Choose a version, for example latest.": "Scegli una versione, per esempio latest.",
+  "Give the app a name: it is shown on the dashboard.": "Dai un nome all'app: è quello che vedi nella dashboard.",
+  "Use only letters, numbers, - and _ (up to 32 characters).": "Usa solo lettere, numeri, - e _ (al massimo 32 caratteri).",
+  "Enter a port such as 8080, a range such as 8000-8010, or IP:port.": "Indica una porta come 8080, un intervallo come 8000-8010 oppure IP:porta.",
+  "This port is already used by another app or service.": "Questa porta è già usata da un'altra app o servizio.",
+  "Done": "Fine",
+  "Actions for the selected apps": "Azioni per le app selezionate",
+  "{count} selected": "{count} selezionate",
+  "Select all": "Seleziona tutte",
+  "Select none": "Deseleziona tutte",
+  "{count} apps are starting": "{count} app in avvio",
+  "{count} apps are stopping": "{count} app in arresto",
+  "{count} apps are restarting": "{count} app in riavvio",
+  "Checking {count} apps for updates: those with a new version update in the background": "Controllo aggiornamenti per {count} app: quelle con una versione nuova si aggiornano in background",
+  "These apps did not accept the action: {names}": "Queste app non hanno accettato l'azione: {names}"
 }

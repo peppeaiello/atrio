@@ -832,7 +832,7 @@ export default {
             <h3>{{ $t('App') }}</h3>
             <b-field grouped>
               <ValidationProvider v-slot="{ errors, valid }" class="is-flex-grow-1 mr-3" name="Image0" rules="required">
-                <b-field :label="`${$t('Docker Image')} *`" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-3">
+                <b-field :label="`${$t('Docker Image')} *`" :message="(errors[0] ? $t('Enter the image to run, for example nginx or lscr.io/linuxserver/jellyfin.') : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-3">
                   <b-input
                     :key="service.image" :readonly="state === 'update' || serviceStableVersion !== ''" :model-value="getFirstField(service.image)" :placeholder="$t('e.g.,hello-world:latest')" @update:model-value="(V) => changeIcon(V)" @blur="(E) => setImageName(service, E.target.value)"
                   />
@@ -844,7 +844,7 @@ export default {
                   <ValidationProvider v-slot="{ errors, valid }" name="Image1" rules="required">
                     <b-field
                       :label="$t('Tag')"
-                      :message="(errors[0] ? $t(errors[0]) : '')"
+                      :message="(errors[0] ? $t('Choose a version, for example latest.') : '')"
                       :type="{ 'is-danger': errors[0], 'is-success': valid }"
                     >
                       <b-input
@@ -877,7 +877,7 @@ export default {
               </b-dropdown>
             </b-field>
             <ValidationProvider v-slot="{ errors, valid }" name="composeAppName" rules="required">
-              <b-field :label="`${$t('App Name')} *`" :message="(errors[0] ? $t(errors[0]) : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
+              <b-field :label="`${$t('App Name')} *`" :message="(errors[0] ? $t('Give the app a name: it is shown on the dashboard.') : '')" :type="{ 'is-danger': errors[0], 'is-success': valid }">
                 <b-input :placeholder="$t('e.g.,Your App Name')" :model-value="ice_i18n(configData['x-casaos'].title)" @blur="(E) => (configData['x-casaos'].title.custom = E.target.value)" />
               </b-field>
             </ValidationProvider>

@@ -10,6 +10,15 @@
 			>
 			</app-section-title-tip>
 
+			<!-- Atrio: select several apps for one action -->
+			<button
+				:aria-pressed="selecting" :class="{ 'is-active': selecting }" class="atrio-select-toggle mr-3" type="button"
+				@click="selecting ? stopSelecting() : startSelecting()"
+			>
+				<b-icon custom-size="mdi-18px" icon="checkbox-multiple-marked-outline" pack="mdi" />
+				{{ selecting ? $t('Done') : $t('Select') }}
+			</button>
+
 			<!-- Atrio: filter by status -->
 			<div :aria-label="$t('Filter apps')" class="atrio-segmented mr-3" role="group">
 				<button
@@ -44,7 +53,7 @@
 			v-if="!isLoading"
 			v-model="appList"
 			:draggable="draggable"
-			:disabled="filter !== 'all'"
+			:disabled="filter !== 'all' || selecting"
 			:item-key="(item) => 'app-' + item.name"
 			class="app-list contextmenu-canvas"
 			tag="div"
@@ -54,13 +63,25 @@
 		>
 			<!-- App Icon Card Start -->
 			<template #item="{ element: item }">
-				<div v-show="matchesFilter(item)" :id="'app-' + item.name" class="handle">
+				<div
+					v-show="matchesFilter(item)" :id="'app-' + item.name"
+					:class="{ 'atrio-selecting': selecting, 'is-selectable': isSelectable(item), 'is-selected': selected.includes(item.name) }"
+					class="handle"
+				>
 					<app-card
 						:item="item"
 						@configApp="showConfigPanel"
 						@importApp="showContainerPanel"
 						@updateState="getList"
 					></app-card>
+					<button
+						v-if="selecting && isSelectable(item)" :aria-label="appTitle(item)" :aria-pressed="selected.includes(item.name)"
+						class="atrio-select-cover" type="button" @click="toggleSelected(item.name)"
+					>
+						<span class="atrio-select-check">
+							<b-icon v-if="selected.includes(item.name)" custom-size="mdi-16px" icon="check" pack="mdi" />
+						</span>
+					</button>
 				</div>
 			</template>
 			<!-- App Icon Card End -->
@@ -84,6 +105,33 @@
 			</div>
 		</div>
 		<!-- App List End -->
+
+		<!-- Atrio: actions for the selected apps -->
+		<transition name="atrio-bulk">
+			<div v-if="selecting" :aria-label="$t('Actions for the selected apps')" class="atrio-bulk-bar" role="toolbar">
+				<span class="atrio-bulk-count">{{ $t('{count} selected', { count: selected.length }) }}</span>
+				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('start')">
+					<b-icon icon="play" pack="casa" size="is-16" />{{ $t('Start') }}
+				</button>
+				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('stop')">
+					<b-icon icon="shutdown-outline" pack="casa" size="is-16" />{{ $t('Stop') }}
+				</button>
+				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('restart')">
+					<b-icon icon="restart-outline" pack="casa" size="is-16" />{{ $t('Restart') }}
+				</button>
+				<button :disabled="!!bulkBusy || !selected.length" type="button" @click="runBulk('update')">
+					<b-icon icon="update-outline" pack="casa" size="is-16" />{{ $t('Update') }}
+				</button>
+				<span class="atrio-bulk-sep" />
+				<button :disabled="!!bulkBusy" type="button" @click="selectAll">
+					{{ allSelected ? $t('Select none') : $t('Select all') }}
+				</button>
+				<button :disabled="!!bulkBusy" class="is-plain" type="button" @click="stopSelecting">
+					{{ $t('Close') }}
+				</button>
+				<span v-if="bulkBusy" class="atrio-bulk-spinner" />
+			</div>
+		</transition>
 
 		<template v-if="oldAppList.length > 0">
 			<!-- Title Bar Start -->
@@ -197,7 +245,11 @@ export default {
 			ListRefreshTimer: null,
 			listLoading: false,
 			// Atrio: installs in progress by app name, from the message bus
-			installing: {}
+			installing: {},
+			// Atrio: selection mode for actions on several apps
+			selecting: false,
+			selected: [],
+			bulkBusy: ''
 		}
 	},
 	components: {
@@ -238,6 +290,12 @@ export default {
 		exsitingAppsShow () {
 			return this.$store.state.existingAppsSwitch
 		},
+		selectableApps () {
+			return this.appList.filter(item => this.isSelectable(item) && this.matchesFilter(item))
+		},
+		allSelected () {
+			return this.selectableApps.length > 0 && this.selectableApps.every(item => this.selected.includes(item.name))
+		},
 		// Installs whose app is not in the list yet
 		pendingInstalls () {
 			return Object.values(this.installing).filter(install => !this.appList.some(item => item.name === install.name))
@@ -260,6 +318,7 @@ export default {
 		this.$EventBus.$off('atrio:refresh-apps', this.getList)
 		this.$EventBus.$off('atrio:config-app', this.openConfigFromPanel)
 		window.removeEventListener('resize', this.getSkCount)
+		window.removeEventListener('keydown', this.onSelectKey)
 
 		clearInterval(this.ListRefreshTimer)
 	},
@@ -306,6 +365,68 @@ export default {
 		},
 		dismissInstall (name) {
 			delete this.installing[name]
+		},
+		// Atrio: actions on several apps. Only compose apps take start, stop, restart and update
+		appTitle (item) {
+			return typeof item.title === 'object' ? ice_i18n(item.title) : item.title || item.name
+		},
+		isSelectable (item) {
+			return item.app_type === 'v2app'
+		},
+		startSelecting () {
+			this.selected = []
+			this.selecting = true
+			window.addEventListener('keydown', this.onSelectKey)
+		},
+		stopSelecting () {
+			this.selecting = false
+			this.selected = []
+			window.removeEventListener('keydown', this.onSelectKey)
+		},
+		onSelectKey (event) {
+			if (event.key === 'Escape' && !document.querySelector('.modal.is-active') && !this.bulkBusy) this.stopSelecting()
+		},
+		toggleSelected (name) {
+			const at = this.selected.indexOf(name)
+			if (at === -1) this.selected.push(name)
+			else this.selected.splice(at, 1)
+		},
+		selectAll () {
+			this.selected = this.allSelected ? [] : this.selectableApps.map(item => item.name)
+		},
+		async runBulk (action) {
+			const names = [...this.selected]
+			if (!names.length) return
+			this.bulkBusy = action
+			const compose = this.$openAPI.appManagement.compose
+			const results = await Promise.allSettled(names.map(name => action === 'update'
+				? compose.updateComposeApp(name)
+				: compose.setComposeAppStatus(name, action)))
+			const failed = names.filter((name, index) => results[index].status === 'rejected')
+			this.bulkBusy = ''
+			const done = names.length - failed.length
+			const messages = {
+				start: '{count} apps are starting',
+				stop: '{count} apps are stopping',
+				restart: '{count} apps are restarting',
+				update: 'Checking {count} apps for updates: those with a new version update in the background',
+			}
+			if (done) this.$buefy.toast.open({ message: this.$t(messages[action], { count: done }), type: 'is-success', duration: 5000 })
+			if (failed.length) {
+				this.$buefy.toast.open({
+					message: this.$t('These apps did not accept the action: {names}', {
+						names: failed.map(name => this.appTitle(this.appList.find(item => item.name === name) || { name })).join(', '),
+					}),
+					type: 'is-danger',
+					duration: 8000,
+				})
+				// Keep the apps that failed selected, to try again
+				this.selected = failed
+			}
+			else {
+				this.stopSelecting()
+			}
+			this.getList()
 		},
 		openSyncthingStore () {
 			this.showInstall(SYNCTHING_STORE_ID)
@@ -724,5 +845,178 @@ export default {
 	@include fullhd {
 		grid-template-columns: repeat(5, minmax(0, 1fr));
 	}
+}
+</style>
+
+<style lang="scss">
+// Atrio: selection mode for actions on several apps
+.atrio-select-toggle {
+	display: inline-flex;
+	gap: 0.375rem;
+	align-items: center;
+	height: 2.5rem;
+	padding: 0 0.875rem;
+	border: 0;
+	border-radius: 0.875rem;
+	background: var(--atrio-glass-bg);
+	backdrop-filter: var(--atrio-glass-blur);
+	box-shadow: inset 0 0 0 1px var(--atrio-glass-border);
+	color: var(--atrio-text-soft);
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	cursor: pointer;
+
+	&:hover,
+	&.is-active {
+		color: var(--atrio-text);
+	}
+
+	&.is-active {
+		background: rgba(255, 255, 255, 0.16);
+	}
+}
+
+.handle.atrio-selecting {
+	position: relative;
+
+	&:not(.is-selectable) {
+		opacity: 0.35;
+		pointer-events: none;
+	}
+
+	&.is-selected .app-card {
+		box-shadow: inset 0 0 0 2px var(--atrio-accent);
+	}
+}
+
+.atrio-select-cover {
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	padding: 0;
+	border: 0;
+	border-radius: var(--atrio-radius-md, 20px);
+	background: transparent;
+	cursor: pointer;
+
+	&:focus-visible {
+		outline: 2px solid var(--atrio-accent);
+		outline-offset: 2px;
+	}
+}
+
+.atrio-select-check {
+	position: absolute;
+	top: 0.75rem;
+	left: 0.75rem;
+	display: grid;
+	place-items: center;
+	width: 1.375rem;
+	height: 1.375rem;
+	border-radius: 0.4375rem;
+	background: rgba(0, 0, 0, 0.3);
+	box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+	color: #0b1120;
+
+	.is-selected & {
+		background: var(--atrio-accent);
+		box-shadow: none;
+	}
+}
+
+.atrio-bulk-bar {
+	position: fixed;
+	bottom: 1.5rem;
+	left: 50%;
+	z-index: 40;
+	display: flex;
+	gap: 0.375rem;
+	align-items: center;
+	max-width: calc(100vw - 2rem);
+	padding: 0.5rem 0.5rem 0.5rem 1rem;
+	overflow-x: auto;
+	border-radius: 1.25rem;
+	background: linear-gradient(var(--atrio-glass-bg-strong), var(--atrio-glass-bg-strong)), #0b1222;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 16px 48px rgba(0, 0, 0, 0.5);
+	color: var(--atrio-text);
+	transform: translateX(-50%);
+
+	button {
+		display: inline-flex;
+		flex-shrink: 0;
+		gap: 0.375rem;
+		align-items: center;
+		height: 2.375rem;
+		padding: 0 0.875rem;
+		border: 0;
+		border-radius: 0.75rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--atrio-text);
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		white-space: nowrap;
+		cursor: pointer;
+
+		&:hover:not(:disabled) {
+			background: rgba(255, 255, 255, 0.16);
+		}
+
+		&:disabled {
+			opacity: 0.4;
+			cursor: default;
+		}
+
+		&.is-plain {
+			background: transparent;
+			color: var(--atrio-text-soft);
+		}
+	}
+}
+
+.atrio-bulk-count {
+	flex-shrink: 0;
+	margin-right: 0.5rem;
+	font-size: 0.875rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.atrio-bulk-sep {
+	flex-shrink: 0;
+	width: 1px;
+	height: 1.5rem;
+	margin: 0 0.25rem;
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.atrio-bulk-spinner {
+	flex-shrink: 0;
+	width: 1.125rem;
+	height: 1.125rem;
+	margin: 0 0.5rem;
+	border: 2px solid rgba(255, 255, 255, 0.2);
+	border-top-color: var(--atrio-accent);
+	border-radius: 50%;
+	animation: atrio-bulk-spin 0.8s linear infinite;
+}
+
+@keyframes atrio-bulk-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.atrio-bulk-enter-active,
+.atrio-bulk-leave-active {
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.atrio-bulk-enter-from,
+.atrio-bulk-leave-to {
+	opacity: 0;
+	transform: translate(-50%, 1rem);
 }
 </style>

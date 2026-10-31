@@ -19,7 +19,7 @@
 						<validation-provider v-if="showHostPost" v-slot="{ errors, valid }"
 							:rules="'yaml_port|not_in_ports:' + invalidPortsInUse(item.published, item.protocol)" slim>
 							<!-- Only show title when the first item. -->
-							<b-field :label="index < 1 ? $t('Host') : ''"
+							<b-field :label="index < 1 ? $t('Host') : ''" :message="errors[0] ? $t(errors[0]) : ''"
 								:type="{ 'is-danger': errors[0], 'is-success': valid }" expanded>
 								<b-input :placeholder="$t('Host')"
 									:model-value="item.host_ip ? `${item.host_ip}:${item.published}` : item.published" expanded
@@ -29,7 +29,7 @@
 
 						<validation-provider v-slot="{ errors, valid }" rules="yaml_port" slim>
 							<!-- Only show title when the first item. -->
-							<b-field :label="index < 1 ? $t('Container') : ''"
+							<b-field :label="index < 1 ? $t('Container') : ''" :message="errors[0] ? $t(errors[0]) : ''"
 								:type="{ 'is-danger': errors[0], 'is-success': valid }" expanded>
 								<b-input v-model.number="item.target" :placeholder="$t('Container')" expanded></b-input>
 							</b-field>
