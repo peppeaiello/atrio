@@ -2,6 +2,15 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.8 — unreleased
+
+**New**
+
+- **Notification centre.** A bell in the top bar, with the number of new notifications, opens a list of
+  what happened: apps installed, removed or updated, installs and settings that failed, a system disk
+  almost full or reporting a health problem, a hot processor, and new Atrio or CasaOS versions. Each
+  warning comes once while the problem lasts. Notifications are kept in this browser (the last 50).
+
 ## 0.1.7 — 2026-10-31
 
 **New**

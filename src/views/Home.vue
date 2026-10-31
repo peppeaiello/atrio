@@ -9,6 +9,7 @@ import CommandPalette from '@/components/home/CommandPalette.vue'
 import AppDetailsPanel from '@/components/home/AppDetailsPanel.vue'
 import HardwarePanel from '@/components/home/HardwarePanel.vue'
 import AtrioUpdateScreen from '@/components/settings/AtrioUpdateScreen.vue'
+import NotificationCenter from '@/components/home/NotificationCenter.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
@@ -28,6 +29,7 @@ export default {
     AppDetailsPanel,
     HardwarePanel,
     AtrioUpdateScreen,
+    NotificationCenter,
   },
   mixins: [mixin],
   provide() {
@@ -364,6 +366,7 @@ export default {
     <AppDetailsPanel />
     <HardwarePanel />
     <AtrioUpdateScreen />
+    <NotificationCenter />
 
     <!-- File Panel Start -->
     <b-modal
