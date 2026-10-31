@@ -551,5 +551,7 @@
   "Retry": "Riprova",
   "Installed": "Installata",
   "Not for {arch}": "Non per {arch}",
-  "This app does not support {arch}": "Questa app non supporta {arch}"
+  "This app does not support {arch}": "Questa app non supporta {arch}",
+  "Install failed": "Installazione non riuscita",
+  "Dismiss": "Chiudi"
 }

@@ -64,6 +64,16 @@
 				</div>
 			</template>
 			<!-- App Icon Card End -->
+			<!-- Atrio: apps being installed, until they join the list -->
+			<template #footer>
+				<InstallingAppCard
+					v-for="install in pendingInstalls"
+					v-show="filter === 'all'"
+					:key="'installing-' + install.name"
+					:install="install"
+					@dismiss="dismissInstall(install.name)"
+				/>
+			</template>
 		</draggable>
 		<p v-if="!isLoading && filter !== 'all' && !appList.some(matchesFilter)" class="atrio-empty-filter">
 			{{ filter === 'running' ? $t('No running apps') : $t('No stopped apps') }}
@@ -111,6 +121,7 @@
 import { asset } from '@/plugins/asset'
 import AppCard from './AppCard.vue'
 import AppCardSkeleton from './AppCardSkeleton.vue'
+import InstallingAppCard from './InstallingAppCard.vue'
 import AppPanel from './AppPanel.vue'
 import ExternalLinkPanel from '@/components/Apps/ExternalLinkPanel'
 import AppSectionTitleTip from './AppSectionTitleTip.vue'
@@ -184,11 +195,14 @@ export default {
 			appListErrorMessage: '',
 			skCount: 0,
 			ListRefreshTimer: null,
-			listLoading: false
+			listLoading: false,
+			// Atrio: installs in progress by app name, from the message bus
+			installing: {}
 		}
 	},
 	components: {
 		AppCard,
+		InstallingAppCard,
 		draggable,
 		AppSectionTitleTip,
 		AppCardSkeleton
@@ -223,6 +237,10 @@ export default {
 		},
 		exsitingAppsShow () {
 			return this.$store.state.existingAppsSwitch
+		},
+		// Installs whose app is not in the list yet
+		pendingInstalls () {
+			return Object.values(this.installing).filter(install => !this.appList.some(item => item.name === install.name))
 		}
 	},
 	created () {
@@ -266,6 +284,29 @@ export default {
 		},
 	},
 	methods: {
+		// Atrio: keeps the card of an app being installed up to date
+		trackInstall (properties, progress) {
+			const name = properties['app:name']
+			if (!name) return
+			let title = name
+			try {
+				title = ice_i18n(JSON.parse(properties['app:title'])) || name
+			} catch (e) {
+				// Title missing or not JSON: the app name will do
+			}
+			const install = this.installing[name] || { name, progress: 0, error: '' }
+			this.installing[name] = {
+				...install,
+				title,
+				icon: properties['app:icon'] || install.icon,
+				// A new install of the same app after a failure starts clean
+				error: progress === 0 ? '' : install.error,
+				progress: progress === undefined ? install.progress : progress,
+			}
+		},
+		dismissInstall (name) {
+			delete this.installing[name]
+		},
 		openSyncthingStore () {
 			this.showInstall(SYNCTHING_STORE_ID)
 		},
@@ -592,12 +633,22 @@ export default {
 		}
 	},
 	sockets: {
-		'app:install-end' () {
+		'app:install-begin' (res) {
+			this.trackInstall(res.Properties, 0)
+		},
+		'app:install-progress' (res) {
+			const progress = Number(res.Properties['app:progress'])
+			this.trackInstall(res.Properties, Number.isFinite(progress) ? Math.max(0, Math.min(100, Math.round(progress))) : undefined)
+		},
+		'app:install-end' (res) {
 			this.getList().then(() => {
+				delete this.installing[res.Properties['app:name']]
 				this.scrollToNewApp()
 			})
 		},
-		'app:install-error' () {
+		'app:install-error' (res) {
+			const name = res.Properties['app:name']
+			if (this.installing[name]) this.installing[name].error = res.Properties.message || this.$t('Install failed')
 			this.getList().then(() => {
 				this.scrollToNewApp()
 			})
