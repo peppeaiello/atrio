@@ -315,7 +315,7 @@ export default {
           </div>
         </section>
         <!-- Greeting End -->
-        <div class="columns is-variable is-2">
+        <div class="columns is-variable is-5">
           <div class="column is-one-quarter slider-content">
             <!-- SideBar Start -->
             <SideBar v-if="!hardwareInfoLoading" />
