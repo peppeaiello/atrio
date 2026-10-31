@@ -1,5 +1,5 @@
 <template>
-	<div :class="{ '_max-width-320': currentStep === 1 || currentStep === 3 || currentStep === 4 }" class="modal-card">
+	<div :class="{ '_max-width-320': currentStep === 1 || currentStep === 3 || currentStep === 4 }" class="modal-card atrio-glass-panel">
 		<!--    head-->
 		<header :class="{ 'pri-head': currentStep <= 2 }" class="modal-card-head ">
 			<b-icon v-if="currentStep === 1" class="mr-2 has-text-red" custom-class="_has-text-red-default"

@@ -1,5 +1,5 @@
 <template>
-	<div class="modal-card">
+	<div class="modal-card atrio-glass-panel">
 		<!-- Modal-Card Body Start -->
 		<section class="modal-card-body ">
 			<div class="close-container">

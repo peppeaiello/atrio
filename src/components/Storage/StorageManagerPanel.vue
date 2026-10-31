@@ -1,5 +1,5 @@
 <template>
-	<div class="modal-card">
+	<div class="modal-card atrio-glass-panel">
 
 		<template v-if="!isCreating">
 
