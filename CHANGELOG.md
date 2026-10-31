@@ -14,6 +14,11 @@ What changes in each Atrio release. The section for a version is also the text o
 - Quieter status: running apps get a small dot on their icon, and only exceptions get a label: Stopped, or
   Update available when a newer version is out. Labels stay readable on any wallpaper.
 - Compact tiles (about twice as many apps on screen) and a search field for the app grid.
+- **Push alerts to your phone**, even with Atrio closed, through [ntfy](https://ntfy.sh) (public or
+  self-hosted) or Gotify: disk almost full, disk health problems, a hot processor, apps installed or
+  removed, and new Atrio versions. Set them up in Settings → Push notifications, with a button to send a
+  test. A small service on your own server checks every 5 minutes; nothing goes through anyone else's
+  server. Existing installs get it by running the install command once more.
 
 **Fixed**
 

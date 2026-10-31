@@ -1,5 +1,6 @@
 <script>
 import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
+import PushAlerts from '@/components/settings/PushAlerts.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
@@ -18,6 +19,7 @@ export default {
   name: 'TopBar',
   components: {
     AtrioUpdate,
+    PushAlerts,
     AccountPanel,
   },
   mixins: [mixin],
@@ -715,6 +717,8 @@ export default {
                 </div>
                 <AtrioUpdate />
               </section>
+
+              <PushAlerts />
 
               <section class="atrio-settings-section">
                 <h3>{{ $t('System') }}</h3>

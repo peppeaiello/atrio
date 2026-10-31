@@ -1,0 +1,285 @@
+#!/bin/bash
+# Sends Atrio's warnings to a phone through ntfy or Gotify, even when no browser has Atrio open.
+# Run every 5 minutes by atrio-alerts.timer, and with --test by atrio-alerts-test.path when the
+# settings ask for a test message. The settings are in alerts.conf, written by Atrio through the
+# CasaOS file API: only the known keys are read, and their values are checked, never executed.
+set -uo pipefail
+
+STATE="${ATRIO_STATE:-/var/lib/casaos/atrio}"
+CONF="$STATE/alerts.conf"
+MEMORY="$STATE/alerts-memory"
+STATUS="$STATE/alerts-status.json"
+TEST_REQUEST="$STATE/alerts-test"
+APPS="${ATRIO_APPS:-/var/lib/casaos/apps}"
+WWW="${ATRIO_WWW:-/var/lib/casaos/www}"
+SYS="${ATRIO_SYS:-/sys}"
+REPO="peppeaiello/atrio"
+MODE="${1:-}"
+
+mkdir -p "$STATE"
+
+# One run at a time: the timer and a test could overlap
+exec 9>"$STATE/alerts.lock"
+flock -w 30 9 || exit 0
+
+# --- Settings ---------------------------------------------------------------------------------
+
+ENABLED=0 SERVICE=ntfy URL="https://ntfy.sh" TOPIC="" TOKEN="" LANGUAGE=en
+DISK=1 HEALTH=1 TEMP=1 APPS_CHANGES=1 UPDATES=1 DISK_LIMIT=90 TEMP_LIMIT=85
+
+read_conf() {
+	[ -f "$CONF" ] || return 0
+	local key value
+	while IFS='=' read -r key value; do
+		value="${value%$'\r'}"
+		case "$key" in
+			ENABLED | DISK | HEALTH | TEMP | APPS | UPDATES)
+				[[ "$value" =~ ^[01]$ ]] || continue
+				[ "$key" = APPS ] && key=APPS_CHANGES
+				printf -v "$key" '%s' "$value" ;;
+			SERVICE) [[ "$value" =~ ^(ntfy|gotify)$ ]] && SERVICE="$value" ;;
+			URL) [[ "$value" =~ ^https?://[A-Za-z0-9.:/_~%-]+$ ]] && URL="${value%/}" ;;
+			TOPIC) [[ "$value" =~ ^[A-Za-z0-9_-]{1,64}$ ]] && TOPIC="$value" ;;
+			TOKEN) [[ "$value" =~ ^[A-Za-z0-9._-]{0,128}$ ]] && TOKEN="$value" ;;
+			LANGUAGE) [[ "$value" =~ ^(en|it)$ ]] && LANGUAGE="$value" ;;
+			DISK_LIMIT) [[ "$value" =~ ^[5-9][0-9]$ ]] && DISK_LIMIT="$value" ;;
+			TEMP_LIMIT) [[ "$value" =~ ^([6-9][0-9]|10[0-9]|110)$ ]] && TEMP_LIMIT="$value" ;;
+		esac
+	done < "$CONF"
+}
+
+# --- What was already sent (key=value lines) -------------------------------------------------
+
+memory_get() {
+	sed -n "s/^$1=//p" "$MEMORY" 2>/dev/null | head -n 1
+}
+
+memory_set() {
+	{ grep -v "^$1=" "$MEMORY" 2>/dev/null; printf '%s=%s\n' "$1" "$2"; } > "$MEMORY.tmp"
+	mv "$MEMORY.tmp" "$MEMORY"
+}
+
+# --- Messages ----------------------------------------------------------------------------------
+
+text() {
+	local id="$1"; shift
+	if [ "$LANGUAGE" = it ]; then
+		case "$id" in
+			test_title) echo "Notifica di prova di Atrio" ;;
+			test_body) echo "Se leggi questo messaggio, gli avvisi push funzionano." ;;
+			disk_title) echo "Disco quasi pieno" ;;
+			disk_body) echo "$1 è pieno al $2%. Libera spazio perché app e CasaOS continuino a funzionare." ;;
+			health_title) echo "Problema di salute di un disco" ;;
+			health_body) echo "Il disco $1 segnala un problema (SMART). Fai un backup dei dati e controlla il disco." ;;
+			temp_title) echo "Processore caldo" ;;
+			temp_body) echo "Il processore è a $1 °C. Controlla il raffreddamento e cosa sta girando." ;;
+			installed_title) echo "App installata" ;;
+			installed_body) echo "$1 è installata." ;;
+			removed_title) echo "App rimossa" ;;
+			removed_body) echo "$1 è stata rimossa." ;;
+			update_title) echo "Nuova versione di Atrio" ;;
+			update_body) echo "È disponibile Atrio $1. Apri le impostazioni di Atrio per aggiornare." ;;
+		esac
+	else
+		case "$id" in
+			test_title) echo "Atrio test notification" ;;
+			test_body) echo "If you can read this, push alerts work." ;;
+			disk_title) echo "Disk almost full" ;;
+			disk_body) echo "$1 is $2% full. Free some space to keep apps and CasaOS working." ;;
+			health_title) echo "Disk health problem" ;;
+			health_body) echo "Disk $1 reports a problem (SMART). Back up your data and check the disk." ;;
+			temp_title) echo "Processor running hot" ;;
+			temp_body) echo "The processor is at $1 °C. Check the cooling and what is running." ;;
+			installed_title) echo "App installed" ;;
+			installed_body) echo "$1 is installed." ;;
+			removed_title) echo "App removed" ;;
+			removed_body) echo "$1 was removed." ;;
+			update_title) echo "New Atrio version" ;;
+			update_body) echo "Atrio $1 is available. Open Atrio's settings to update." ;;
+		esac
+	fi
+}
+
+# --- Sending -----------------------------------------------------------------------------------
+
+LAST_SENT="" LAST_ERROR=""
+
+# send TITLE MESSAGE PRIORITY(1-5) NTFY_TAGS
+send() {
+	local title="$1" message="$2" priority="$3" tags="$4" result
+	local curl=(curl -fsS --connect-timeout 10 --max-time 20)
+	if [ "$SERVICE" = gotify ]; then
+		result=$("${curl[@]}" -F "title=$title" -F "message=$message" -F "priority=$priority" \
+			"$URL/message?token=$TOKEN" 2>&1 >/dev/null)
+	else
+		local auth=()
+		[ -n "$TOKEN" ] && auth=(-H "Authorization: Bearer $TOKEN")
+		# ntfy reads the title from a header: RFC 2047 keeps accents intact
+		result=$("${curl[@]}" "${auth[@]}" -H "Title: =?UTF-8?B?$(printf '%s' "$title" | base64 -w0)?=" \
+			-H "Priority: $priority" -H "Tags: $tags" --data-binary "$message" "$URL/$TOPIC" 2>&1 >/dev/null)
+	fi
+	if [ $? -eq 0 ]; then
+		LAST_SENT="$title"
+		return 0
+	fi
+	LAST_ERROR="${result:-Could not reach $URL}"
+	return 1
+}
+
+# --- Checks ------------------------------------------------------------------------------------
+
+check_disks() {
+	local mount used
+	while read -r used mount; do
+		used="${used%\%}"
+		[[ "$used" =~ ^[0-9]+$ ]] || continue
+		local key="disk_$(printf '%s' "$mount" | tr -c 'A-Za-z0-9' '_')"
+		if [ "$used" -ge "$DISK_LIMIT" ]; then
+			[ "$(memory_get "$key")" = 1 ] && continue
+			send "$(text disk_title)" "$(text disk_body "$mount" "$used")" 4 "warning" && memory_set "$key" 1
+		elif [ "$used" -lt $((DISK_LIMIT - 5)) ]; then
+			memory_set "$key" 0
+		fi
+	done < <(df -P -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null |
+		awk 'NR > 1 && $6 !~ "^/(boot|snap)" { print $5, $6 }')
+}
+
+check_health() {
+	command -v smartctl >/dev/null || return 0
+	local disk
+	for disk in $(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2 == "disk" { print $1 }'); do
+		local output key="health_$disk"
+		output=$(smartctl -H "/dev/$disk" 2>/dev/null) || true
+		if printf '%s' "$output" | grep -Eq 'FAILED|FAILING'; then
+			[ "$(memory_get "$key")" = 1 ] && continue
+			send "$(text health_title)" "$(text health_body "/dev/$disk")" 5 "rotating_light" && memory_set "$key" 1
+		elif printf '%s' "$output" | grep -Eq 'PASSED|OK'; then
+			memory_set "$key" 0
+		fi
+	done
+}
+
+cpu_temperature() {
+	local hwmon best=0 value name
+	for hwmon in "$SYS"/class/hwmon/hwmon*; do
+		name=$(cat "$hwmon/name" 2>/dev/null) || continue
+		case "$name" in coretemp* | k10temp* | zenpower* | cpu_thermal* | soc_thermal*) ;; *) continue ;; esac
+		for value in "$hwmon"/temp*_input; do
+			value=$(cat "$value" 2>/dev/null) || continue
+			[[ "$value" =~ ^[0-9]+$ ]] && [ "$value" -gt "$best" ] && best="$value"
+		done
+	done
+	echo $((best / 1000))
+}
+
+check_temperature() {
+	local temp
+	temp=$(cpu_temperature)
+	[ "$temp" -gt 0 ] || return 0
+	if [ "$temp" -ge "$TEMP_LIMIT" ]; then
+		[ "$(memory_get temp)" = 1 ] && return 0
+		send "$(text temp_title)" "$(text temp_body "$temp")" 4 "fire" && memory_set temp 1
+	elif [ "$temp" -lt $((TEMP_LIMIT - 10)) ]; then
+		memory_set temp 0
+	fi
+}
+
+# The name an app shows in CasaOS: x-casaos > title > en_us in its compose file
+app_title() {
+	local file="$APPS/$1/docker-compose.yml" title
+	title=$(awk '/^x-casaos:/ { x = 1; next } /^[^ ]/ { x = 0 }
+		x && /^  title:/ { t = 1; next } x && /^  [^ ]/ { t = 0 }
+		t && /en_us:/ { sub(/^[^:]*: */, ""); gsub(/"/, ""); print; exit }' "$file" 2>/dev/null)
+	echo "${title:-$1}"
+}
+
+check_apps() {
+	[ -d "$APPS" ] || return 0
+	local now before name
+	now=$(find "$APPS" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tr '\n' ' ')
+	before=$(memory_get apps)
+	memory_set apps "$now"
+	# The first run, and runs with app alerts off, only take note of what is installed
+	[ -n "$before" ] && [ "${SEND_APPS:-1}" = 1 ] || return 0
+	for name in $now; do
+		[[ " $before " == *" $name "* ]] || send "$(text installed_title)" "$(text installed_body "$(app_title "$name")")" 3 "white_check_mark"
+	done
+	for name in $before; do
+		[[ " $now " == *" $name "* ]] || send "$(text removed_title)" "$(text removed_body "$name")" 2 "wastebasket"
+	done
+}
+
+check_updates() {
+	# GitHub is asked every 6 hours at most
+	local last now latest installed
+	last=$(memory_get update_checked)
+	now=$(date +%s)
+	[ -n "$last" ] && [ $((now - last)) -lt 21600 ] && return 0
+	memory_set update_checked "$now"
+	latest=$(curl -fsS --max-time 20 "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null |
+		sed -n 's/.*"tag_name" *: *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1)
+	installed=$(sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$WWW/atrio-version.json" 2>/dev/null)
+	[ -n "$latest" ] && [ -n "$installed" ] || return 0
+	[ "$latest" = "$installed" ] && return 0
+	# Only newer versions: the highest of the two must be the latest
+	[ "$(printf '%s\n%s\n' "$installed" "$latest" | sort -V | tail -n 1)" = "$latest" ] || return 0
+	[ "$(memory_get update_sent)" = "$latest" ] && return 0
+	send "$(text update_title)" "$(text update_body "$latest")" 3 "arrow_up" && memory_set update_sent "$latest"
+}
+
+# --- Status for the settings -------------------------------------------------------------------
+
+json_text() {
+	printf '%s' "$1" | tr -d '"\\' | tr '\n\r\t' '   ' | cut -c1-200
+}
+
+write_status() {
+	printf '{"state":"%s","message":"%s","last_sent":"%s","token":"%s","time":"%s"}\n' \
+		"$1" "$(json_text "$2")" "$(json_text "$LAST_SENT")" "$REQUEST_TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
+	mv "$STATUS.tmp" "$STATUS"
+}
+
+# --- Main --------------------------------------------------------------------------------------
+
+configured() {
+	if [ "$SERVICE" = gotify ]; then [ -n "$TOKEN" ]; else [ -n "$TOPIC" ]; fi
+}
+
+read_conf
+REQUEST_TOKEN=""
+
+if [ "$MODE" = "--test" ]; then
+	# The request carries a token so the settings recognise the answer to their own test
+	[ -f "$TEST_REQUEST" ] && REQUEST_TOKEN=$(head -c 64 "$TEST_REQUEST" | tr -cd 'A-Za-z0-9-')
+	rm -f "$TEST_REQUEST"
+	if ! configured; then
+		write_status error "Not set up yet"
+		exit 1
+	fi
+	if send "$(text test_title)" "$(text test_body)" 3 "bell"; then
+		write_status ok "Test sent"
+	else
+		write_status error "$LAST_ERROR"
+		exit 1
+	fi
+	exit 0
+fi
+
+if [ "$ENABLED" != 1 ] || ! configured; then
+	# Keep the app list current, so turning alerts on later does not announce every app
+	SEND_APPS=0 check_apps
+	write_status disabled ""
+	exit 0
+fi
+
+[ "$DISK" = 1 ] && check_disks
+[ "$HEALTH" = 1 ] && check_health
+[ "$TEMP" = 1 ] && check_temperature
+if [ "$APPS_CHANGES" = 1 ]; then check_apps; else SEND_APPS=0 check_apps; fi
+[ "$UPDATES" = 1 ] && check_updates
+
+if [ -n "$LAST_ERROR" ]; then
+	write_status error "$LAST_ERROR"
+else
+	write_status ok ""
+fi

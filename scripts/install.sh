@@ -40,11 +40,24 @@ main() {
 		echo "Original CasaOS UI saved in $BACKUP"
 	fi
 
+	# The helper scripts come from GitHub, or from a local folder when ATRIO_SOURCE points at
+	# a checkout's scripts/ (to try changes before they are published)
+	install_script() {
+		if [ -n "${ATRIO_SOURCE:-}" ]; then
+			cp "$ATRIO_SOURCE/$1" "/usr/local/bin/$1.tmp"
+		else
+			curl -fsSL --connect-timeout 20 --max-time 120 -o "/usr/local/bin/$1.tmp" "$RAW/scripts/$1"
+		fi
+		chmod 755 "/usr/local/bin/$1.tmp"
+		mv "/usr/local/bin/$1.tmp" "/usr/local/bin/$1"
+	}
+
 	# Updater: Atrio writes $STATE/update-request through the CasaOS file API,
 	# the path unit sees it and runs atrio-update as root.
-	curl -fsSL --connect-timeout 20 --max-time 120 -o /usr/local/bin/atrio-update.tmp "$RAW/scripts/atrio-update"
-	chmod 755 /usr/local/bin/atrio-update.tmp
-	mv /usr/local/bin/atrio-update.tmp /usr/local/bin/atrio-update
+	install_script atrio-update
+	# Push alerts: checks the server every 5 minutes and sends warnings to ntfy or Gotify,
+	# as set in Atrio's settings ($STATE/alerts.conf)
+	install_script atrio-alerts
 
 	cat > /etc/systemd/system/atrio-update.service <<'UNIT'
 [Unit]
@@ -89,9 +102,58 @@ PathChanged=/var/lib/casaos/www/index.html
 WantedBy=multi-user.target
 UNIT
 
+	cat > /etc/systemd/system/atrio-alerts.service <<'UNIT'
+[Unit]
+Description=Send Atrio's warnings to ntfy or Gotify
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-alerts
+TimeoutStartSec=3min
+UNIT
+
+	cat > /etc/systemd/system/atrio-alerts.timer <<'UNIT'
+[Unit]
+Description=Check the server for Atrio's push alerts every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+	# "Send a test" in the settings writes $STATE/alerts-test
+	cat > /etc/systemd/system/atrio-alerts-test.service <<'UNIT'
+[Unit]
+Description=Send a test push alert for Atrio
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-alerts --test
+TimeoutStartSec=1min
+UNIT
+
+	cat > /etc/systemd/system/atrio-alerts-test.path <<'UNIT'
+[Unit]
+Description=Watch for test requests from Atrio's push alert settings
+
+[Path]
+PathExists=/var/lib/casaos/atrio/alerts-test
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
 	systemctl daemon-reload
 	systemctl enable --now atrio-update.path >/dev/null
 	systemctl enable --now atrio-restore.path >/dev/null
+	systemctl enable --now atrio-alerts.timer >/dev/null
+	systemctl enable --now atrio-alerts-test.path >/dev/null
+	# A first run writes the status the settings read (alerts stay off until set up there)
+	/usr/local/bin/atrio-alerts || true
 
 	/usr/local/bin/atrio-update --force
 
