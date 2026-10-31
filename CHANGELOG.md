@@ -11,6 +11,10 @@ What changes in each Atrio release. The section for a version is also the text o
   says why, and Atrio keeps working as before. You will see it from the update after this one.
 - The settings icon shows a red dot when a new Atrio version is available, not only for CasaOS updates.
   Atrio checks again every 6 hours on a page left open.
+- **New App Store look.** A large search field first (every word must match the name, tagline or
+  category; Esc clears it), categories and authors as chips, a Featured row with arrows, and app cards
+  that say clearly whether an app is installed (with Open), being installed, or not available for this
+  machine. The app details opened from the store use the same style.
 
 ## 0.1.5 — 2026-10-31
 

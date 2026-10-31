@@ -535,5 +535,21 @@
   "You can keep using Atrio and try again later.": "You can keep using Atrio and try again later.",
   "This takes a few seconds. The page reloads by itself when the update is done.": "This takes a few seconds. The page reloads by itself when the update is done.",
   "The update failed, Atrio was not changed": "The update failed, Atrio was not changed",
-  "Could not download the release from GitHub, Atrio was not changed": "Could not download the release from GitHub, Atrio was not changed"
+  "Could not download the release from GitHub, Atrio was not changed": "Could not download the release from GitHub, Atrio was not changed",
+  "Search {count} apps…": "Search {count} apps…",
+  "Clear": "Clear",
+  "Categories": "Categories",
+  "Author": "Author",
+  "Official": "Official",
+  "By CasaOS": "By CasaOS",
+  "Community": "Community",
+  "Results": "Results",
+  "All apps": "All apps",
+  "No apps match \"{search}\".": "No apps match \"{search}\".",
+  "No apps in this category.": "No apps in this category.",
+  "Install a custom app": "Install a custom app",
+  "Retry": "Retry",
+  "Installed": "Installed",
+  "Not for {arch}": "Not for {arch}",
+  "This app does not support {arch}": "This app does not support {arch}"
 }

@@ -9,12 +9,12 @@ import isNull from 'lodash/isNull'
 import orderBy from 'lodash/orderBy'
 import debounce from 'lodash/debounce'
 import FileSaver from 'file-saver'
-import { Swiper, SwiperSlide } from '@/components/base/Swiper'
 import { ValidationObserver, ValidationProvider } from '@/plugins/validation'
 import { parse } from 'yaml'
 import { vOnClickOutside } from '@vueuse/components'
 import AppTerminalPanel from './AppTerminalPanel.vue'
 import AppStoreSourceManagement from '@/components/Apps/AppStoreSourceManagement.vue'
+import StoreAppCard from '@/components/Apps/StoreAppCard.vue'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import AppDetailInfo from '@/components/Apps/AppDetailInfo.vue'
 import ComposeConfig from '@/components/Apps/ComposeConfig.vue'
@@ -55,11 +55,10 @@ const data = [
 export default {
   components: {
     AppStoreSourceManagement,
+    StoreAppCard,
     AppDetailInfo,
     AppSideBar,
     LottieAnimation,
-    Swiper,
-    SwiperSlide,
     AppsInstallationLocation,
     ComposeConfig,
     ValidationObserver,
@@ -127,37 +126,13 @@ export default {
       pageSize: 5,
       listTotal: 0,
       pageList: {},
-      communityList: {},
-      recommendList: {},
+      recommendList: [],
       currentSlide: 0,
       currentInstallId: '',
 
-      // Featured Swiper
-      featureSwiperOptions: {
-        loop: false,
-        autoplay: true,
-        spaceBetween: 24,
-        navigation: {
-          nextEl: '.swiper-button-next',
-          prevEl: '.swiper-button-prev',
-          disabledClass: 'swiper-button-disabled',
-        },
-        breakpoints: {
-          640: {
-            slidesPerView: 1,
-          },
-          768: {
-            slidesPerView: 2,
-          },
-          1366: {
-            slidesPerView: 3,
-          },
-        },
-        // on: {
-        // 	slideChangeTransitionStart: this.handleFeaturedSlide
-        // },
-      },
       searchKey: '',
+      // What the search field shows; searchKey follows it after a short pause
+      searchInput: '',
       currentCate: {},
       // currentAuthor: {},
       currentAuthor: { count: 0, font: 'author', id: 0, name: 'All' },
@@ -267,18 +242,25 @@ export default {
       }
       return this.arch
     },
+    // Every word typed must appear in the name, tagline or category
     filteredPageList() {
-      if (Object.keys(this.pageList).length === 0)
+      if (!Array.isArray(this.pageList))
         return []
+      const terms = this.searchKey.toLocaleLowerCase().split(/\s+/).filter(Boolean)
+      if (!terms.length)
+        return this.pageList
       return this.pageList.filter((app) => {
-        const keywords = (app.title + app.tagline)?.toLocaleLowerCase() ?? ''
-        for (const term of this.searchKey.split(' ')) {
-          if (keywords.includes(term.toLocaleLowerCase())) {
-            return true
-          }
-        }
-        return false
+        const text = `${app.title} ${app.tagline} ${app.category}`.toLocaleLowerCase()
+        return terms.every(term => text.includes(term))
       })
+    },
+    showFeatured() {
+      return this.recommendList.length > 0 && !this.searchKey && this.currentCate?.name === 'All' && this.currentAuthor.id === 0
+    },
+    listTitle() {
+      if (this.searchKey)
+        return this.$t('Results')
+      return this.currentCate?.name && this.currentCate.name !== 'All' ? this.currentCate.name : this.$t('All apps')
     },
     isMobile() {
       return this.$store.state.isMobile
@@ -391,7 +373,7 @@ export default {
     this.currentSlide === 0
     && !this.isMobile
     && this.$nextTick().then(() => {
-      this.$refs.search_app.$el.children[0].focus()
+      this.$refs.search_app?.focus()
     })
     this.searchAndSourcesStatusController()
   },
@@ -1131,6 +1113,21 @@ export default {
     debounceSearchInput: debounce(function (e) {
       this.searchKey = e
     }, 250),
+    onSearchInput(value) {
+      this.searchInput = value
+      this.debounceSearchInput(value.trim())
+    },
+    clearSearch() {
+      this.searchInput = ''
+      this.searchKey = ''
+    },
+    authorLabel(name) {
+      return { All: this.$t('All'), official: this.$t('Official'), by_casaos: this.$t('By CasaOS'), community: this.$t('Community') }[name] || name
+    },
+    scrollFeatured(direction) {
+      const row = this.$refs.featured
+      row?.scrollBy({ left: direction * row.clientWidth * 0.8, behavior: 'smooth' })
+    },
   },
 
   destroyed() {
@@ -1299,373 +1296,127 @@ export default {
       <!-- Modal-Card Header End -->
       <!-- Modal-Card Body Start -->
       <!-- App Store List Start -->
-      <section v-if="currentSlide == 0" :class="{ _hideOverflow: !isCasa }" class="modal-card-body pt-3 _pl">
+      <section v-if="currentSlide == 0" class="modal-card-body atrio-store">
         <template v-if="!isLoadError">
-          <template v-if="recommendList.length > 0">
-            <h3 class="title is-5 has-text-weight-normal">
-              {{ $t('Featured Apps') }}
-            </h3>
-            <!-- Featured Slider Start -->
-            <div class="is-relative featured-app b-line">
-              <Swiper ref="featureSwiper" :options="featureSwiperOptions" class="swiper">
-                <SwiperSlide
-                  v-for="(item, index) in recommendList"
-                  :key="index + item.title + item.id"
-                  class="pb-5"
-                >
-                  <div class="gap" @click="showAppDetial(item.id)">
-                    <b-image
-                      :placeholder="$asset('@/assets/img/app/swiper_placeholder.png')"
-                      :src="item.thumbnail"
-                      :src-fallback="$asset('@/assets/img/app/swiper_placeholder.png')"
-                      class="border-8 is-clickable"
-                      ratio="16by9"
-                    />
-                  </div>
-                  <div class="is-flex pt-5 is-align-items-center">
-                    <div class="mr-3" @click="showAppDetial(item.id)">
-                      <b-image
-                        :placeholder="$asset('@/assets/img/app/default.svg')"
-                        :src="item.icon"
-                        :src-fallback="$asset('@/assets/img/app/default.svg')"
-                        class="is-64x64 is-clickable icon-shadow"
-                      />
-                    </div>
-                    <div
-                      class="is-flex-grow-1 mr-4 is-clickable"
-                      @click="
-                        showAppDetial(item.id);
-                        $messageBus('appstore_detail', item.title);
-                      "
-                    >
-                      <h6 class="title is-6 mb-2">
-                        {{ item.title }}
-                      </h6>
-                      <p class="is-size-7 two-line">
-                        {{ item.tagline }}
-                      </p>
-                    </div>
-                    <div>
-                      <b-button
-                        v-if="installedList.includes(item.id)"
-                        :loading="item.id == currentInstallId"
-                        rounded
-                        size="is-small"
-                        type="is-primary is-light"
-                        @click="openThirdContainerByAppInfo(item)"
-                      >
-                        {{ $t('launch-and-open') }}
-                      </b-button>
-                      <b-button
-                        v-else
-                        :disabled="!item.architectures?.includes(arch)"
-                        :loading="item.id == currentInstallId"
-                        rounded
-                        size="is-small"
-                        type="is-primary is-light"
-                        @click="
-                          quickInstall(item.id);
-                          $messageBus('appstore_install', item.title);
-                        "
-                      >
-                        {{ $t('Install') }}
-                      </b-button>
-                    </div>
-                  </div>
-                </SwiperSlide>
-              </Swiper>
-              <div class="swiper-button-prev" @click="$messageBus('appstore_slide')" />
-              <div class="swiper-button-next" @click="$messageBus('appstore_slide')" />
-            </div>
-          </template>
-          <!-- Featured Slider End -->
-
-          <!-- List condition Start -->
-          <div class="is-flex mt-5 mb-5 is-justify-content-center">
-            <!-- Cate Start -->
-            <transition name="slide-fade">
-              <div
-                v-if="!activeAppStoreSourceInput || !isMobile"
-                class="mr-2 hover-effect is-flex is-align-items-center _dropdown is-clickable"
-              >
-                <b-dropdown
-                  v-model="currentCate"
-                  :max-height="240"
-                  :mobile-modal="false"
-                  animation="fade1"
-                  aria-role="list"
-                  class="app-select file-dropdown"
-                  scrollable
-                >
-                  <template #trigger="{ active }">
-                    <b-button
-                      :label="currentCate.name"
-                      type="is-text"
-                      icon-left="category"
-                      icon-pack="casa"
-                      :icon-right="active ? 'up-outline' : 'down-outline'"
-                    />
-                  </template>
-                  <b-dropdown-item
-                    v-for="menu in cateMenu"
-                    :key="menu.id"
-                    :class="menu.id == currentCate.id ? 'is-active' : ''"
-                    :data-title="menu.count"
-                    :value="menu"
-                    aria-role="listitem"
-                    class="_dropdown__item"
-                  >
-                    <div
-                      class="media is-align-items-center is-flex has-text-full-03"
-                      @click="$messageBus('appstore_type', menu.name)"
-                    >
-                      <div class="media-content">
-                        <h3>{{ menu.name }}</h3>
-                      </div>
-                    </div>
-                  </b-dropdown-item>
-                </b-dropdown>
-              </div>
-            </transition>
-            <!-- Cate End -->
-
-            <!-- Author Start -->
-            <transition name="slide-fade">
-              <div
-                v-if="!activeAppStoreSourceInput || !isMobile"
-                class="hover-effect is-flex is-align-items-center _dropdown is-clickable"
-              >
-                <b-dropdown
-                  v-model="currentAuthor"
-                  :max-height="240"
-                  :mobile-modal="false"
-                  animation="fade1"
-                  aria-role="list"
-                  class="app-select file-dropdown"
-                  position="is-bottom-right"
-                  scrollable
-                >
-                  <template #trigger="{ active }">
-                    <b-button
-                      :label="currentAuthor.name"
-                      type="is-text"
-                      icon-left="posted-by"
-                      icon-pack="casa"
-                      :icon-right="active ? 'up-outline' : 'down-outline'"
-                    />
-                  </template>
-                  <b-dropdown-item
-                    v-for="menu in authorMenu"
-                    :key="menu.id"
-                    :class="menu.id == currentAuthor.id ? 'is-active' : ''"
-                    :data-title="menu.count"
-                    :value="menu"
-                    aria-role="listitem"
-                    class="_dropdown__item"
-                  >
-                    <div
-                      class="media is-align-items-center is-flex has-text-full-03"
-                      @click="$messageBus('appstore_author', menu.name)"
-                    >
-                      <div class="media-content">
-                        <h3>{{ menu.name }}</h3>
-                      </div>
-                    </div>
-                  </b-dropdown-item>
-                </b-dropdown>
-              </div>
-            </transition>
-            <!-- Author End -->
-
-            <transition name="search-fade">
-              <b-icon
-                v-if="searchAndSourcesStatus === 'showSources'"
-                class="is-flex is-align-self-center ml-2 is-clickable"
-                icon="search-outline"
-                pack="casa"
-                @click.native="searchAndSourcesStatusController"
-              />
-            </transition>
-            <transition name="search-fade">
-              <b-input
-                v-if="searchAndSourcesStatus !== 'showSources'"
+          <!-- Search first: it is the quickest way to an app among hundreds -->
+          <div class="atrio-store-toolbar">
+            <label class="atrio-store-search">
+              <b-icon icon="search-outline" pack="casa" size="is-20" />
+              <input
                 ref="search_app"
-                v-on-click-outside="resetSearchAndSourcesStatus"
-                :placeholder="$t('Search an app...')"
-                class="app-search ml-2"
-                @update:model-value="debounceSearchInput"
-                @keyup.enter.native="counterPatchGetStoreList++"
-              />
-            </transition>
-            <div class="is-flex-grow-1" />
+                :aria-label="$t('Search an app...')"
+                :placeholder="pageList.length ? $t('Search {count} apps…', { count: pageList.length }) : $t('Search an app...')"
+                :value="searchInput"
+                type="search"
+                @input="onSearchInput($event.target.value)"
+                @keydown.esc.stop.prevent="clearSearch"
+                @keyup.esc.stop
+              >
+              <button v-if="searchInput" :aria-label="$t('Clear')" class="atrio-store-clear" type="button" @click="clearSearch">
+                <b-icon icon="close-outline" pack="casa" size="is-16" />
+              </button>
+            </label>
             <AppStoreSourceManagement
-              v-show="searchAndSourcesStatus !== 'showSearch'"
               :total-apps="pageList.length"
-              class="ml-2"
+              class="atrio-store-sources"
               @refreshAppStore="getStoreList"
               @refreshSize="refreshAppStoreSourceManagementSizeStatus"
             />
           </div>
 
-          <!-- List condition End -->
-          <!-- App list Start -->
-          <div class="columns f-list is-multiline is-mobile pb-3 mb-5">
-            <div
-              v-for="(item, index) in filteredPageList"
-              :key="index + item.title + item.id"
-              class="column app-item is-one-quarter"
-            >
-              <div class="is-flex">
-                <div class="mr-4 is-clickable" @click="showAppDetial(item.id)">
-                  <b-image
-                    :src="item.icon"
-                    :src-fallback="$asset('@/assets/img/app/default.svg')"
-                    class="is-64x64 icon-shadow"
-                    style="display: flex; align-items: center"
-                    webp-fallback=".jpg"
-                  />
-                </div>
-                <div
-                  class="is-flex-grow-1 mr-4 is-clickable"
-                  @click="
-                    showAppDetial(item.id);
-                    $messageBus('appstore_detail', item.title);
-                  "
-                >
-                  <h6 class="title is-6 mb-2">
-                    {{ item.title }}
-                  </h6>
-                  <p class="is-size-7 two-line">
-                    {{ item.tagline }}
-                  </p>
-                </div>
-              </div>
-              <div class="mt-1 ml-7 is-flex is-align-items-center">
-                <div class="is-flex-grow-1 is-size-7 has-text-grey-light">
-                  {{ item.category }}
-                </div>
-                <b-button
-                  v-if="installedList.includes(item.id)"
-                  :loading="item.id == currentInstallId"
-                  rounded
-                  size="is-small"
-                  type="is-primary is-light"
-                  @click="openThirdContainerByAppInfo(item)"
-                >
-                  {{ $t('launch-and-open') }}
-                </b-button>
-                <b-button
-                  v-else
-                  :disabled="!item.architectures?.includes(arch)"
-                  :loading="item.id == currentInstallId"
-                  rounded
-                  size="is-small"
-                  type="is-primary is-light"
-                  @click="
-                    quickInstall(item.id);
-                    $messageBus('appstore_install', item.title);
-                  "
-                >
-                  {{ $t('Install') }}
-                </b-button>
-              </div>
-            </div>
-          </div>
-
-          <!-- App list End -->
-
-          <!-- Community App List Start -->
-          <template v-if="communityList.length > 0">
-            <h3 class="title is-5 has-text-weight-normal">
-              {{ $t('Community Apps') }}
-            </h3>
-            <h3 class="subtitle is-7 has-text-grey-light">
-              {{
-                $t(
-                  'From community contributors, not optimized for CasaOS, but provides a basic App nexperience.',
-                )
-              }}
-            </h3>
-
-            <div class="columns f-list is-multiline is-mobile pb-3 mb-5">
-              <div
-                v-for="(item, index) in communityList"
-                :key="index + item.title + item.id"
-                class="column is-one-quarter"
+          <div class="atrio-store-filters">
+            <div :aria-label="$t('Categories')" class="atrio-store-chips" role="group">
+              <button
+                v-for="menu in cateMenu"
+                :key="menu.id"
+                :aria-pressed="menu.id === currentCate.id"
+                :class="{ 'is-active': menu.id === currentCate.id }"
+                class="atrio-store-chip"
+                type="button"
+                @click="currentCate = menu; $messageBus('appstore_type', menu.name)"
               >
-                <div class="is-flex is-align-items-center">
-                  <div class="mr-4 is-clickable" @click="showAppDetial(item.id)">
-                    <b-image
-                      :src="item.icon"
-                      :src-fallback="$asset('@/assets/img/app/default.svg')"
-                      class="is-64x64 icon-shadow"
-                      webp-fallback=".jpg"
-                    />
-                  </div>
-                  <div
-                    class="is-flex-grow-1 mr-4 is-clickable"
-                    @click="
-                      showAppDetial(item.id);
-                      $messageBus('appstorecommunity_detail', item.title);
-                    "
-                  >
-                    <h6 class="title is-6 mb-2">
-                      {{ item.title }}
-                    </h6>
-                    <p class="is-size-7 two-line">
-                      {{ item.tagline }}
-                    </p>
-                  </div>
-                </div>
-                <div class="mt-1 ml-7 is-flex is-align-items-center">
-                  <div class="is-flex-grow-1 is-size-7 has-text-grey-light">
-                    {{ item.category }}
-                  </div>
-                  <b-button
-                    v-if="installedList.includes(item.id)"
-                    :loading="item.id == currentInstallId"
-                    rounded
-                    size="is-small"
-                    type="is-primary is-light"
-                    @click="openThirdContainerByAppInfo(item)"
-                  >
-                    {{ $t('launch-and-open') }}
-                  </b-button>
-                  <b-button
-                    v-else
-                    :disabled="!item.architectures?.includes(arch)"
-                    :loading="item.id == currentInstallId"
-                    rounded
-                    size="is-small"
-                    type="is-primary is-light"
-                    @click="
-                      quickInstall(item.id);
-                      $messageBus('appstorecommunity_install', item.title);
-                    "
-                  >
-                    {{ $t('Install') }}
-                  </b-button>
-                </div>
-              </div>
+                {{ menu.name === 'All' ? $t('All') : menu.name }}<span class="atrio-store-count">{{ menu.count }}</span>
+              </button>
             </div>
-          </template>
-
-          <!-- Community App List End -->
-        </template>
-        <template v-else>
-          <div class="is-flex is-align-items-center is-justify-content-center mt-6 mb-6">
-            <div class="has-text-centered mt-6 mb-6">
-              <div class="is-flex is-align-items-center mb-5">
-                <b-icon class="mr-2" icon="alert-circle-outline" pack="casa" type="is-danger" />
-                {{ $t('There was an error loading the data, please try again!') }}
-              </div>
-
-              <b-button rounded type="is-primary" @click="retry()">
-                Retry
-              </b-button>
+            <div :aria-label="$t('Author')" class="atrio-store-authors" role="group">
+              <button
+                v-for="menu in authorMenu"
+                :key="menu.id"
+                :aria-pressed="menu.id === currentAuthor.id"
+                :class="{ 'is-active': menu.id === currentAuthor.id }"
+                type="button"
+                @click="currentAuthor = menu; $messageBus('appstore_author', menu.name)"
+              >
+                {{ authorLabel(menu.name) }}
+              </button>
             </div>
           </div>
+
+          <!-- Featured Start -->
+          <section v-if="showFeatured" class="atrio-store-section">
+            <div class="atrio-store-section-head">
+              <h3>{{ $t('Featured Apps') }}</h3>
+              <div class="atrio-store-arrows">
+                <button :aria-label="$t('Previous')" type="button" @click="scrollFeatured(-1)">
+                  <b-icon icon="left-outline" pack="casa" size="is-16" />
+                </button>
+                <button :aria-label="$t('Next')" type="button" @click="scrollFeatured(1)">
+                  <b-icon icon="right-outline" pack="casa" size="is-16" />
+                </button>
+              </div>
+            </div>
+            <div ref="featured" class="atrio-store-featured">
+              <StoreAppCard
+                v-for="item in recommendList"
+                :key="`featured-${item.id}`"
+                :arch="arch"
+                :installed="installedList.includes(item.id)"
+                :installing="item.id == currentInstallId"
+                :item="item"
+                featured
+                @details="showAppDetial(item.id); $messageBus('appstore_detail', item.title)"
+                @install="quickInstall(item.id); $messageBus('appstore_install', item.title)"
+                @open="openThirdContainerByAppInfo(item)"
+              />
+            </div>
+          </section>
+          <!-- Featured End -->
+
+          <!-- App list Start -->
+          <section class="atrio-store-section">
+            <div class="atrio-store-section-head">
+              <h3>{{ listTitle }}</h3>
+              <span class="atrio-store-total">{{ filteredPageList.length }}</span>
+            </div>
+            <div v-if="filteredPageList.length" class="atrio-store-grid">
+              <StoreAppCard
+                v-for="item in filteredPageList"
+                :key="item.id"
+                :arch="arch"
+                :installed="installedList.includes(item.id)"
+                :installing="item.id == currentInstallId"
+                :item="item"
+                @details="showAppDetial(item.id); $messageBus('appstore_detail', item.title)"
+                @install="quickInstall(item.id); $messageBus('appstore_install', item.title)"
+                @open="openThirdContainerByAppInfo(item)"
+              />
+            </div>
+            <div v-else-if="!isLoading" class="atrio-store-empty">
+              <p v-if="searchKey">{{ $t('No apps match "{search}".', { search: searchKey }) }}</p>
+              <p v-else>{{ $t('No apps in this category.') }}</p>
+              <button class="atrio-store-action" type="button" @click="currentSlide = 1">
+                {{ $t('Install a custom app') }}
+              </button>
+            </div>
+          </section>
+          <!-- App list End -->
         </template>
+        <div v-else class="atrio-store-empty is-error">
+          <p>{{ $t('There was an error loading the data, please try again!') }}</p>
+          <button class="atrio-store-action is-primary" type="button" @click="retry()">
+            {{ $t('Retry') }}
+          </button>
+        </div>
       </section>
       <!-- App Store List End -->
 
@@ -2114,6 +1865,467 @@ export default {
 .card-width {
     max-width: 35rem;
     min-width: 30rem;
+}
+</style>
+
+<style lang="scss">
+// App Store list in the Calm glass style. The install and settings forms keep the CasaOS look
+// until their own redesign.
+.app-panel ._stepStoreList {
+    background: var(--atrio-glass-bg-strong);
+    backdrop-filter: blur(32px) saturate(150%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 64px rgba(0, 0, 0, 0.4);
+    color: var(--atrio-text);
+
+    .modal-card-head {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: transparent;
+
+        .setting_title {
+            color: var(--atrio-text);
+            font-size: 1.375rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .close-button,
+        .modal-close-container-line::before {
+            color: var(--atrio-text);
+        }
+
+        .button.is-primary {
+            height: 2.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--atrio-text);
+            font-weight: 600;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.16);
+            }
+        }
+    }
+
+    .modal-card-body,
+    .modal-card-foot {
+        background: transparent;
+    }
+
+    .modal-card-foot {
+        border-top: 0;
+    }
+}
+
+// App details opened from the store: same glass, CasaOS markup underneath
+.app-panel ._stepStoreList .app-detial {
+    // Opaque: it lies over the list inside the same glass window, and nested glass cannot blur
+    background: linear-gradient(var(--atrio-glass-bg-strong), var(--atrio-glass-bg-strong)), #0b1222;
+    color: var(--atrio-text);
+
+    .modal-card-head {
+        border-bottom: 0;
+        background: transparent;
+
+        .button.is-ghost {
+            color: var(--atrio-text-soft);
+            font-weight: 600;
+            text-decoration: none;
+
+            &:hover {
+                color: var(--atrio-text);
+            }
+        }
+    }
+
+    .modal-card-body {
+        background: transparent;
+    }
+
+    .b-line {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .header-icon img {
+        border-radius: 1.75rem;
+    }
+
+    .store-title,
+    .title {
+        color: var(--atrio-text);
+    }
+
+    .subtitle {
+        color: var(--atrio-text-soft);
+    }
+
+    .button.is-primary {
+        background: var(--atrio-text);
+        color: #0b1120;
+        font-weight: 700;
+
+        &:hover,
+        &:focus {
+            background: #e2e8f0;
+            color: #0b1120;
+        }
+    }
+
+    // Versions menu next to Install
+    .custom-install-button .dropdown-content {
+        background: var(--atrio-glass-bg-strong);
+
+        .button.is-primary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--atrio-text);
+        }
+    }
+
+    .level {
+        padding: 1rem 0;
+        border-radius: var(--atrio-radius-md, 20px);
+        background: rgba(255, 255, 255, 0.04);
+
+        .heading {
+            color: var(--atrio-text-muted);
+            letter-spacing: 0.06em;
+        }
+
+        .title,
+        .icon {
+            color: var(--atrio-text);
+        }
+
+        .footing {
+            color: var(--atrio-text-soft) !important;
+        }
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        color: var(--atrio-text);
+    }
+
+    // Description, rendered from Markdown
+    .v-md-editor {
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .github-markdown-body {
+        color: var(--atrio-text-soft);
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        strong {
+            border-color: rgba(255, 255, 255, 0.08);
+            color: var(--atrio-text);
+        }
+
+        a {
+            color: #67e8f9;
+        }
+
+        code,
+        pre {
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--atrio-text);
+        }
+
+        blockquote {
+            border-left-color: rgba(255, 255, 255, 0.16);
+            color: var(--atrio-text-muted);
+        }
+
+        hr {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        table tr {
+            border-color: rgba(255, 255, 255, 0.1);
+            background: transparent;
+
+            th,
+            td {
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+
+            &:nth-child(2n) {
+                background: rgba(255, 255, 255, 0.03);
+            }
+        }
+
+        img {
+            background: transparent;
+        }
+    }
+}
+
+.atrio-store {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.25rem 1.5rem 2rem !important;
+}
+
+.atrio-store-toolbar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.atrio-store-search {
+    display: flex;
+    flex: 1;
+    gap: 0.625rem;
+    align-items: center;
+    height: 3rem;
+    padding: 0 0.75rem 0 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    color: var(--atrio-text-soft);
+    cursor: text;
+
+    &:focus-within {
+        box-shadow: inset 0 0 0 2px var(--atrio-accent);
+    }
+
+    input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--atrio-text);
+        font: inherit;
+        font-size: 1rem;
+
+        &::placeholder {
+            color: var(--atrio-text-muted);
+        }
+
+        &::-webkit-search-cancel-button {
+            display: none;
+        }
+    }
+}
+
+.atrio-store-clear {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 0.625rem;
+    background: transparent;
+    color: var(--atrio-text-soft);
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+}
+
+// The source manager is a CasaOS component: dress its buttons like ours
+.atrio-store-sources .button {
+    height: 3rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--atrio-text);
+    font-weight: 600;
+
+    .icon {
+        color: inherit;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--atrio-text);
+    }
+}
+
+.atrio-store-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: -0.5rem;
+
+    @include mobile {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.atrio-store-chips {
+    display: flex;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.125rem 2rem 0.125rem 0.125rem;
+    overflow-x: auto;
+    // Scrolls sideways with the wheel or a swipe; the fade on the right says there is more
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.atrio-store-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 0.375rem;
+    align-items: center;
+    height: 2.25rem;
+    padding: 0 0.875rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    color: var(--atrio-text-soft);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--atrio-text);
+    }
+
+    &.is-active {
+        background: var(--atrio-text);
+        box-shadow: none;
+        color: #0b1120;
+
+        .atrio-store-count {
+            color: rgba(11, 17, 32, 0.6);
+        }
+    }
+}
+
+.atrio-store-count {
+    color: var(--atrio-text-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.atrio-store-authors {
+    display: inline-flex;
+    flex-shrink: 0;
+    padding: 0.25rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+
+    button {
+        height: 1.875rem;
+        padding: 0 0.75rem;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--atrio-text-soft);
+        font: inherit;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--atrio-text);
+        }
+
+        &.is-active {
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--atrio-text);
+        }
+    }
+}
+
+.atrio-store-section-head {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.875rem;
+
+    h3 {
+        color: var(--atrio-text);
+        font-size: 1.0625rem;
+        font-weight: 700;
+    }
+}
+
+.atrio-store-total {
+    color: var(--atrio-text-muted);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.atrio-store-arrows {
+    display: flex;
+    gap: 0.375rem;
+
+    button {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--atrio-text);
+        cursor: pointer;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.16);
+        }
+    }
+}
+
+.atrio-store-featured {
+    display: grid;
+    grid-auto-columns: minmax(17rem, calc((100% - 2rem) / 3));
+    grid-auto-flow: column;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    // The arrows above move it
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    > * {
+        scroll-snap-align: start;
+    }
+}
+
+.atrio-store-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr));
+    gap: 1rem;
+}
+
+.atrio-store-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    padding: 3rem 1rem;
+    color: var(--atrio-text-soft);
+    text-align: center;
+
+    &.is-error {
+        margin: auto;
+    }
 }
 </style>
 

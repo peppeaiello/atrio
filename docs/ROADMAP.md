@@ -24,6 +24,8 @@ Docker management is what people use most, so it gets the next redesign.
   (image, network and ports, storage, environment, advanced), helpful defaults and validation messages.
   First step done: the tag defaults to "latest" and "name:tag" typed in the image field is split.
 - App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
+  First step done: search first, category and author chips, featured row, clear installed / installing /
+  not available states, details in the same style. Install progress on the home app card still to do.
 - Bulk actions from the app list (restart or update several apps).
 - [x] Atrio updates: red dot on the settings icon when a version is available, full-page progress screen
   while it installs.
