@@ -40,6 +40,8 @@ main() {
 		exit 1
 	fi
 	rm -rf "$WWW.old"
+	# New file dates for the gateway, so browsers drop their cached Atrio
+	systemctl try-restart casaos-gateway.service >/dev/null 2>&1 || true
 
 	rm -f /etc/systemd/system/atrio-update.path /etc/systemd/system/atrio-update.service \
 		/etc/systemd/system/atrio-restore.path /etc/systemd/system/atrio-restore.service /usr/local/bin/atrio-update
