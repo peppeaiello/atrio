@@ -25,6 +25,8 @@ Docker management is what people use most, so it gets the next redesign.
   First step done: the tag defaults to "latest" and "name:tag" typed in the image field is split.
 - App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
 - Bulk actions from the app list (restart or update several apps).
+- [x] Atrio updates: red dot on the settings icon when a version is available, full-page progress screen
+  while it installs.
 - [x] Hardware panel, opened from the health chip or the System Status widget: machine, BIOS, operating
   system, processor, memory and every hwmon sensor (temperatures, and fans, voltages and power where the
   machine reports them), read from /proc and /sys with no server component. Disk SMART data needs root

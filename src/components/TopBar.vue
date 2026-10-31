@@ -1,5 +1,6 @@
 <script>
 import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
+import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import AccountPanel from './account/AccountPanel.vue'
 import TerminalPanel from './logsAndTerminal/TerminalPanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -73,6 +74,10 @@ export default {
     }
   },
   computed: {
+    // CasaOS or Atrio has an update: the dot on the settings icon says there is something inside
+    hasUpdate() {
+      return this.updateInfo.need_update || atrioUpdateAvailable()
+    },
     sidebarIcon() {
       return this.$store.state.sidebarOpen ? 'close-outline' : 'menu-outline'
     },
@@ -144,6 +149,7 @@ export default {
   },
   mounted() {
     this.checkVersion()
+    this.atrioTimer = startRechecking()
     this.getUserInfo()
     this.getUsbStatus()
     this.getHardwareInfo()
@@ -151,6 +157,7 @@ export default {
 
   beforeUnmount() {
     clearInterval(this.powerTimer)
+    clearInterval(this.atrioTimer)
   },
   methods: {
     /*************************************************
@@ -538,7 +545,7 @@ export default {
           >
             <p role="button">
               <b-icon
-                :class="{ 'update-icon-dot': updateInfo.need_update }"
+                :class="{ 'update-icon-dot': hasUpdate }"
                 class="picon"
                 icon="control-outline"
                 pack="casa"
