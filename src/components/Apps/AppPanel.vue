@@ -214,9 +214,12 @@ export default {
         if (!this.isCasa) {
           return `${this.$t('Import')} ${this.currentInstallId}`
         }
+        if (this.state === 'install') {
+          return this.$t('Install a custom app')
+        }
         else {
           return this.settingData != undefined || this.settingComposeData != undefined
-            ? `${this.currentInstallId} ${this.$t('Setting')}`
+            ? this.$t('{name} settings', { name: this.currentInstallId })
             : this.$t('Install a new App manually')
         }
       }
@@ -1185,7 +1188,7 @@ export default {
 <template>
   <div
     :class="{ 'narrow': currentSlide > 0, 'card-width': isFirstInstall, '_stepStoreList': currentSlide === 0 }"
-    class="modal-card"
+    class="modal-card atrio-glass-panel"
   >
     <!--    first setting！！ apps installation location -->
     <template v-if="isFirstInstall">
@@ -1869,9 +1872,8 @@ export default {
 </style>
 
 <style lang="scss">
-// App Store list in the Calm glass style. The install and settings forms keep the CasaOS look
-// until their own redesign.
-.app-panel ._stepStoreList {
+// The App Store, install, settings and progress share the Calm glass window
+.atrio-glass-panel {
     background: var(--atrio-glass-bg-strong);
     backdrop-filter: blur(32px) saturate(150%);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 64px rgba(0, 0, 0, 0.4);
@@ -1889,8 +1891,17 @@ export default {
         }
 
         .close-button,
-        .modal-close-container-line::before {
+        .modal-close-container-line::before,
+        .icon-button {
             color: var(--atrio-text);
+        }
+
+        .icon-button {
+            border-radius: 0.5rem;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
         }
 
         .button.is-primary {
@@ -2060,6 +2071,318 @@ export default {
 
         img {
             background: transparent;
+        }
+    }
+}
+
+// Install and settings forms on the glass: CasaOS form controls in dark
+.atrio-glass-panel {
+    .label {
+        color: var(--atrio-text-soft);
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    .tab-content,
+    .modal-card-body {
+        scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        scrollbar-width: thin;
+    }
+
+    // Image name wider than its tag
+    .atrio-form-section .field.is-grouped > .field-body > :first-child,
+    .atrio-form-section .field.is-grouped > :first-child {
+        flex: 2 1 0;
+    }
+
+    .input,
+    .textarea,
+    .select select,
+    .taginput .taginput-container.is-focusable {
+        border-color: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: none;
+        color: var(--atrio-text);
+
+        &::placeholder {
+            color: var(--atrio-text-muted);
+        }
+
+        &:focus,
+        &.is-focused {
+            border-color: var(--atrio-accent);
+            box-shadow: 0 0 0 1px var(--atrio-accent);
+        }
+
+        &[readonly] {
+            color: var(--atrio-text-soft);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        &.is-danger {
+            border-color: #f87171;
+        }
+
+        &.is-success {
+            border-color: rgba(134, 239, 172, 0.5);
+        }
+    }
+
+    .taginput .taginput-container .input {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .select:not(.is-multiple):not(.is-loading)::after {
+        border-color: var(--atrio-text-soft);
+    }
+
+    select option,
+    select optgroup {
+        background: #111a2e;
+        color: var(--atrio-text);
+    }
+
+    .control.has-icons-left .icon,
+    .control.has-icons-right .icon {
+        color: var(--atrio-text-soft);
+    }
+
+    .help {
+        color: var(--atrio-text-muted);
+
+        &.is-danger {
+            color: #fca5a5;
+        }
+
+        &.is-success {
+            color: #86efac;
+        }
+    }
+
+    .button.is-static {
+        border-color: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .dropdown-content {
+        background: #111a2e;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 32px rgba(0, 0, 0, 0.4);
+
+        .dropdown-item {
+            color: var(--atrio-text);
+
+            &:hover,
+            &.is-hovered,
+            &.is-active {
+                background: rgba(255, 255, 255, 0.1);
+                color: var(--atrio-text);
+            }
+        }
+    }
+
+    .tag:not(body) {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--atrio-text);
+    }
+
+    .switch input[type='checkbox'] + .check {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    .switch input[type='checkbox']:checked + .check {
+        background: var(--atrio-accent);
+    }
+
+    // "No volumes now, click + to add one" and the row icons of the CasaOS form groups
+    .info {
+        color: var(--atrio-text-muted);
+    }
+
+    .port-item .icon,
+    .field .is-clickable {
+        color: var(--atrio-text-soft);
+    }
+
+    // Services of a compose app, as tabs
+    .b-tabs .tabs {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+
+        li a {
+            border-bottom-color: transparent;
+            color: var(--atrio-text-muted);
+        }
+
+        li.is-active a {
+            border-bottom-color: var(--atrio-accent);
+            color: var(--atrio-text);
+        }
+    }
+
+    .vue-slider-rail {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .vue-slider-process {
+        background: var(--atrio-accent);
+    }
+
+    .vue-slider-mark-step {
+        background: #111a2e;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+    }
+
+    .vue-slider-mark-label {
+        color: var(--atrio-text-muted);
+    }
+
+    // Footer and form buttons
+    .modal-card-foot .button,
+    .modal-card-body .button:not(.is-static):not(.atrio-store-action),
+    .b-tabs .button:not(.is-static) {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--atrio-text);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        &.is-primary {
+            border-color: transparent;
+            background: var(--atrio-text);
+            color: #0b1120;
+            font-weight: 700;
+
+            &:hover {
+                background: #e2e8f0;
+            }
+        }
+    }
+
+    // Installing step
+    .installing-warpper {
+        .title {
+            color: var(--atrio-text) !important;
+
+            &.has-text-danger {
+                color: #fca5a5 !important;
+            }
+        }
+
+        .progress {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-value {
+            color: var(--atrio-text);
+        }
+    }
+}
+
+.atrio-form-index {
+    position: sticky;
+    // Over the 1rem top padding of the scrolling tab content, so nothing shows above it
+    top: -1rem;
+    z-index: 5;
+    display: flex;
+    gap: 0.375rem;
+    margin: -1rem -1.5rem 1rem;
+    padding: 1rem 1.5rem 0.75rem;
+    overflow-x: auto;
+    background: linear-gradient(var(--atrio-glass-bg-strong), var(--atrio-glass-bg-strong)), #0b1222;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    button {
+        flex-shrink: 0;
+        height: 2rem;
+        padding: 0 0.75rem;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--atrio-text-soft);
+        font: inherit;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--atrio-text);
+        }
+    }
+}
+
+.atrio-form-section {
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+    border-radius: var(--atrio-radius-md, 20px);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    scroll-margin-top: 3.75rem;
+
+    > h3,
+    summary h3 {
+        margin-bottom: 1rem;
+        color: var(--atrio-text);
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .field:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.atrio-form-hint {
+    margin: -0.625rem 0 1rem;
+    color: var(--atrio-text-muted);
+    font-size: 0.8125rem;
+}
+
+.atrio-form-advanced {
+    summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.75rem;
+        align-items: baseline;
+        list-style: none;
+        cursor: pointer;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+
+        &::before {
+            content: '';
+            align-self: center;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-right: 2px solid var(--atrio-text-soft);
+            border-bottom: 2px solid var(--atrio-text-soft);
+            transform: rotate(-45deg);
+            transition: transform 0.2s ease;
+        }
+
+        h3 {
+            margin-bottom: 0 !important;
+        }
+
+        .atrio-form-hint {
+            margin: 0;
+        }
+    }
+
+    &[open] summary {
+        margin-bottom: 1.25rem;
+
+        &::before {
+            transform: rotate(45deg);
         }
     }
 }

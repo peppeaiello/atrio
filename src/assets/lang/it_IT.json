@@ -553,5 +553,12 @@
   "Not for {arch}": "Non per {arch}",
   "This app does not support {arch}": "Questa app non supporta {arch}",
   "Install failed": "Installazione non riuscita",
-  "Dismiss": "Chiudi"
+  "Dismiss": "Chiudi",
+  "Network and ports": "Rete e porte",
+  "Environment": "Ambiente",
+  "Advanced": "Avanzate",
+  "Folders of this server the app can use, and devices it can reach.": "Cartelle del server che l'app può usare e dispositivi a cui può accedere.",
+  "Settings passed to the app, such as time zone, user IDs or passwords.": "Impostazioni passate all'app, come fuso orario, ID utente o password.",
+  "Command, privileges, resources, restart policy and capabilities": "Comando, privilegi, risorse, riavvio automatico e capability",
+  "{name} settings": "Impostazioni di {name}"
 }

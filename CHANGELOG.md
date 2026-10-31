@@ -18,6 +18,9 @@ What changes in each Atrio release. The section for a version is also the text o
 - **Install progress on the home screen.** An app being installed appears in the app grid right away, with
   a progress ring and the percentage, and becomes a normal app card when it is ready. If the install
   fails, the card says so (the reason is in its tooltip) until you dismiss it.
+- **Install and settings screens in the new style.** The form is split into sections (App, Network and
+  ports, Storage, Environment, Advanced) with a quick index on top; the advanced options start folded.
+  The whole window, including the install progress, uses the same glass look as the dashboard.
 
 ## 0.1.5 — 2026-10-31
 

@@ -22,7 +22,8 @@ Docker management is what people use most, so it gets the next redesign.
   First step done: Overview, Logs (filter, follow, download) and a read-only Configuration tab.
 - New install and settings screens in the Calm glass style: fewer fields at once, clear sections
   (image, network and ports, storage, environment, advanced), helpful defaults and validation messages.
-  First step done: the tag defaults to "latest" and "name:tag" typed in the image field is split.
+  Done: sections with a quick index, Advanced folded, glass style for install, settings and progress, the tag
+  defaults to "latest" and "name:tag" is split. Still open: friendlier validation messages per field.
 - App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
   First step done: search first, category and author chips, featured row, clear installed / installing /
   not available states, details in the same style, and install progress as a card in the home grid.

@@ -553,5 +553,12 @@
   "Not for {arch}": "Not for {arch}",
   "This app does not support {arch}": "This app does not support {arch}",
   "Install failed": "Install failed",
-  "Dismiss": "Dismiss"
+  "Dismiss": "Dismiss",
+  "Network and ports": "Network and ports",
+  "Environment": "Environment",
+  "Advanced": "Advanced",
+  "Folders of this server the app can use, and devices it can reach.": "Folders of this server the app can use, and devices it can reach.",
+  "Settings passed to the app, such as time zone, user IDs or passwords.": "Settings passed to the app, such as time zone, user IDs or passwords.",
+  "Command, privileges, resources, restart policy and capabilities": "Command, privileges, resources, restart policy and capabilities",
+  "{name} settings": "{name} settings"
 }
