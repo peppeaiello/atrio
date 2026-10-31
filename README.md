@@ -39,6 +39,7 @@ its respective owners.
 - **Many apps at once**: select apps and start, stop, restart or update them together.
 - **Hardware details**: machine, BIOS, processor, memory and every sensor the machine reports.
 - **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor.
+- **A new file manager**: places in a sidebar, list and grid views, previews, upload by drag and drop.
 - **One console** for the logs and terminals of the server and every app.
 - **Widgets your way**: show, hide and reorder them, and add any web page of your network.
 - **Command palette** (`Ctrl K`) to reach apps, actions and settings from the keyboard.
@@ -46,6 +47,9 @@ its respective owners.
 - **Works on phones**, and can be added to the home screen as an app (over HTTPS).
 
 <table>
+  <tr>
+    <td colspan="2"><img alt="The new file manager with places in a sidebar and a list of folders" src="docs/screenshots/files.jpg"></td>
+  </tr>
   <tr>
     <td><img alt="The App Store" src="docs/screenshots/app-store.jpg"></td>
     <td><img alt="The panel of an app" src="docs/screenshots/app-panel.jpg"></td>
