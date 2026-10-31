@@ -2,6 +2,16 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.6 — unreleased
+
+**New**
+
+- **Update screen.** While Atrio updates itself, a full-page screen shows each step (download, install,
+  restart of CasaOS, reload) and stays until the page reloads into the new version. If the update fails it
+  says why, and Atrio keeps working as before. You will see it from the update after this one.
+- The settings icon shows a red dot when a new Atrio version is available, not only for CasaOS updates.
+  Atrio checks again every 6 hours on a page left open.
+
 ## 0.1.5 — 2026-10-31
 
 **New**

@@ -524,5 +524,16 @@
   "This machine does not report fans, voltages or power. They appear here on machines whose sensors expose them.": "This machine does not report fans, voltages or power. They appear here on machines whose sensors expose them.",
   "Temperature": "Temperature",
   "Fan": "Fan",
-  "Voltage": "Voltage"
+  "Voltage": "Voltage",
+  "Updating…": "Updating…",
+  "Updating Atrio": "Updating Atrio",
+  "Update failed": "Update failed",
+  "Preparing": "Preparing",
+  "Downloading": "Downloading",
+  "Restarting CasaOS": "Restarting CasaOS",
+  "Reloading": "Reloading",
+  "You can keep using Atrio and try again later.": "You can keep using Atrio and try again later.",
+  "This takes a few seconds. The page reloads by itself when the update is done.": "This takes a few seconds. The page reloads by itself when the update is done.",
+  "The update failed, Atrio was not changed": "The update failed, Atrio was not changed",
+  "Could not download the release from GitHub, Atrio was not changed": "Could not download the release from GitHub, Atrio was not changed"
 }

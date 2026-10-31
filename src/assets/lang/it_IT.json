@@ -524,5 +524,16 @@
   "This machine does not report fans, voltages or power. They appear here on machines whose sensors expose them.": "Questa macchina non segnala ventole, tensioni o consumi. Compaiono qui sulle macchine i cui sensori li forniscono.",
   "Temperature": "Temperatura",
   "Fan": "Ventola",
-  "Voltage": "Tensione"
+  "Voltage": "Tensione",
+  "Updating…": "Aggiornamento in corso…",
+  "Updating Atrio": "Aggiornamento di Atrio",
+  "Update failed": "Aggiornamento non riuscito",
+  "Preparing": "Preparazione",
+  "Downloading": "Download",
+  "Restarting CasaOS": "Riavvio di CasaOS",
+  "Reloading": "Ricarico la pagina",
+  "You can keep using Atrio and try again later.": "Puoi continuare a usare Atrio e riprovare più tardi.",
+  "This takes a few seconds. The page reloads by itself when the update is done.": "Ci vuole qualche secondo. Al termine la pagina si ricarica da sola.",
+  "The update failed, Atrio was not changed": "Aggiornamento non riuscito, Atrio non è stato modificato",
+  "Could not download the release from GitHub, Atrio was not changed": "Impossibile scaricare la release da GitHub, Atrio non è stato modificato"
 }
