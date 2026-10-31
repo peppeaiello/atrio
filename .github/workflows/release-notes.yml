@@ -1,0 +1,32 @@
+name: Release notes
+
+# Keeps the text of published releases in step with CHANGELOG.md, so a summary can be written or
+# corrected after the release is out.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - CHANGELOG.md
+      - scripts/release-notes.sh
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update every release that has a section in the changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(gh release list --limit 100 --json tagName --jq '.[].tagName'); do
+            grep -q "^## ${tag#v} " CHANGELOG.md || continue
+            scripts/release-notes.sh "$tag" > notes.md
+            gh release edit "$tag" --notes-file notes.md
+            echo "Updated $tag"
+          done
