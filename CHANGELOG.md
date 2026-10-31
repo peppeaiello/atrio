@@ -11,6 +11,9 @@ What changes in each Atrio release. The section for a version is also the text o
   and System has a shortcut to the Hardware panel next to Restart and Shut down.
 - **Account panel.** The account icon opens a side panel with your picture (click it to change and crop
   it), name, password and Log out, in the same style. Changing the password now confirms it worked.
+- **One console for terminal and logs.** The terminal icon opens a console with the server and every app
+  on the left. For each one: logs with a filter, follow and download, and a terminal (an SSH sign-in for
+  the server, the app's own shell for apps).
 
 **Fixed**
 

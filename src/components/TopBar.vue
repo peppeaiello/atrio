@@ -3,7 +3,7 @@ import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import AccountPanel from './account/AccountPanel.vue'
-import TerminalPanel from './logsAndTerminal/TerminalPanel.vue'
+import ConsolePanel from './logsAndTerminal/ConsolePanel.vue'
 import PortPanel from './settings/PortPanel.vue'
 import UpdateModal from './settings/UpdateModal.vue'
 import { mixin } from '@/mixins/mixin'
@@ -427,9 +427,9 @@ export default {
       this.$messageBus('terminallogs')
       this.$store.commit('SET_SIDEBAR_CLOSE')
       this.$buefy.modal.open({
-        component: TerminalPanel,
+        component: ConsolePanel,
         hasModalCard: true,
-        customClass: 'terminal-modal',
+        customClass: 'terminal-modal atrio-console-modal',
         trapFocus: true,
         canCancel: [],
         scroll: 'keep',

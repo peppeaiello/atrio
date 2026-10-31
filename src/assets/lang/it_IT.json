@@ -588,5 +588,8 @@
   "Change Avatar": "Cambia foto",
   "Enter a name": "Inserisci un nome",
   "Password changed": "Password cambiata",
-  "Preview": "Anteprima"
+  "Preview": "Anteprima",
+  "Server": "Server",
+  "{count} lines": "{count} righe",
+  "Sign in with an account of the server (SSH) to open its shell.": "Accedi con un account del server (SSH) per aprire la sua shell."
 }

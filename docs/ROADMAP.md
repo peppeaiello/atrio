@@ -41,7 +41,7 @@ Docker management is what people use most, so it gets the next redesign.
   system), including the Atrio updater.
 - [x] Account panel: profile picture, name, password and log out, in the new style. Active sessions need an API
   CasaOS does not have.
-- Terminal and logs: a single console with tabs for the host and each app, follow mode, search in logs, download.
+- [x] Terminal and logs: a single console with the host and each app, follow mode, search in logs, download.
 
 ## 0.5 — Home, round two
 
