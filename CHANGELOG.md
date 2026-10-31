@@ -18,6 +18,7 @@ What changes in each Atrio release. The section for a version is also the text o
 **Fixed**
 
 - A built-in wallpaper saved by an older build could disappear after an update; it is now found again.
+- On phones the icons of the top bar sat lower than the logo.
 
 ## 0.1.9 — 2026-10-31
 
