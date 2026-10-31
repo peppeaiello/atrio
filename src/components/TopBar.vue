@@ -470,7 +470,7 @@ export default {
     </a>
 
     <!-- Search / command palette -->
-    <button class="atrio-search" type="button" @click="$EventBus.$emit('atrio:open-palette')">
+    <button :aria-label="$t('Search apps, actions and settings…')" class="atrio-search" type="button" @click="$EventBus.$emit('atrio:open-palette')">
       <b-icon icon="search-outline" pack="casa" size="is-20" />
       <span class="atrio-search-label">{{ $t('Search apps, actions and settings…') }}</span>
       <kbd>Ctrl K</kbd>
@@ -485,9 +485,9 @@ export default {
           position="is-right"
           type="is-dark"
         >
-          <div role="button" @click="showSideBar">
+          <button :aria-label="sidebarIconLabel" class="atrio-icon-button" type="button" @click="showSideBar">
             <b-icon :icon="sidebarIcon" class="picon" pack="casa" size="is-20" />
-          </div>
+          </button>
         </b-tooltip>
       </div>
       <!-- SideBar Button Start -->
@@ -815,7 +815,7 @@ export default {
       <!-- Settings Dropmenu End -->
 
       <!-- Terminal  Start -->
-      <div class="is-flex is-align-items-center ml-3 _fixed-height" @click="showTerminalPanel">
+      <div class="is-flex is-align-items-center ml-3 _fixed-height">
         <b-tooltip
           :active="!$store.state.isMobile"
           :label="$t('Terminal & Logs')"
@@ -823,7 +823,9 @@ export default {
           style="height: 1.25rem"
           type="is-dark"
         >
-          <b-icon class="picon" icon="terminal-outline" pack="casa" size="is-20" />
+          <button :aria-label="$t('Terminal & Logs')" class="atrio-icon-button" type="button" @click="showTerminalPanel">
+            <b-icon class="picon" icon="terminal-outline" pack="casa" size="is-20" />
+          </button>
         </b-tooltip>
       </div>
       <!-- Terminal  End -->
@@ -1231,6 +1233,22 @@ export default {
 
 	&:hover {
 		color: var(--atrio-text);
+	}
+}
+
+.atrio-icon-button {
+	display: inline-flex;
+	align-items: center;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+	border-radius: 0.375rem;
+
+	&:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
 	}
 }
 

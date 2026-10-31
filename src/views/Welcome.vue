@@ -141,17 +141,25 @@ export default {
 		 */
 		register() {
 			const initKey = this.$store.state.initKey;
-			this.$api.users.register(this.username, this.password, initKey).then(res => {
+			this.$api.users.register(this.username, this.password, initKey).then(async res => {
 				if (res.data.success == 200) {
-					this.login().then(() => {
-						// First login set default app order
-						this.$api.users.setCustomStorage("app_order", {data: ["App Store", "Files"]})
-					});
+					// The account exists now: never send the user back to the setup page
+					this.$store.commit("SET_NEED_INITIALIZATION", false);
+					// Log in before the "done" step, whose animation decides where to go next
+					try {
+						await this.login();
+						if (this.isLogin) {
+							// First login set default app order
+							this.$api.users.setCustomStorage("app_order", {data: ["App Store", "Files"]})
+						}
+					} catch (e) {
+						this.isLogin = false
+					}
 					this.goToStep(3);
 				}
 			}).catch(err => {
 				this.$buefy.toast.open({
-					message: err.response.data.message,
+					message: err.response?.data?.message || this.$t('the action failed'),
 					type: 'is-danger',
 					position: 'is-top',
 					duration: 5000,

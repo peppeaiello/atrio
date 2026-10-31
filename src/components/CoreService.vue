@@ -147,29 +147,29 @@ export default {
       return socket
     },
     initUIEventBus() {
-      this.$EventBus.$on('casaUI:openInFiles', (path) => {
-        this.homeShowFiles(path)
-      })
-
-      this.$EventBus.$on('casaUI:openDiskLearnMore', () => {
-        this.$buefy.modal.open({
-          component: DiskLearnMore,
-          hasModalCard: true,
-          customClass: 'storage-modal',
-          trapFocus: true,
-          canCancel: [],
-          scroll: 'keep',
-          animation: 'zoom-in',
-        })
-      })
-
+      this.$EventBus.$on('casaUI:openInFiles', this.openInFiles)
+      this.$EventBus.$on('casaUI:openDiskLearnMore', this.openDiskLearnMore)
       // this.$EventBus.$on('casaUI:openStorageManager', () => {
       //  this.showStorageSettingsModal();
       // });
     },
+    openInFiles(path) {
+      this.homeShowFiles(path)
+    },
+    openDiskLearnMore() {
+      this.$buefy.modal.open({
+        component: DiskLearnMore,
+        hasModalCard: true,
+        customClass: 'storage-modal',
+        trapFocus: true,
+        canCancel: [],
+        scroll: 'keep',
+        animation: 'zoom-in',
+      })
+    },
     destroyUIEventBus() {
-      this.$EventBus.$off('casaUI:openInFiles')
-      this.$EventBus.$off('casaUI:openDiskLearnMore')
+      this.$EventBus.$off('casaUI:openInFiles', this.openInFiles)
+      this.$EventBus.$off('casaUI:openDiskLearnMore', this.openDiskLearnMore)
       // this.$EventBus.$off('casaUI:openStorageManager');
     },
     triggerUIEventBus(event) {

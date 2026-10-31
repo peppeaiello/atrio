@@ -96,15 +96,13 @@ export default {
     }
     this.$messageBus('global_visit')
 
-    this.$EventBus.$on('casaUI:openStorageManager', () => {
-      this.showStorageManagerPanelModal()
-    })
+    this.$EventBus.$on('casaUI:openStorageManager', this.showStorageManagerPanelModal)
   },
   beforeUnmount() {
     clearInterval(this.clockTimer)
     this.$EventBus.$off('atrio:apps-summary', this.setAppsSummary)
     window.removeEventListener('resize', this.onResize)
-    this.$EventBus.$off('casaUI:openStorageManager')
+    this.$EventBus.$off('casaUI:openStorageManager', this.showStorageManagerPanelModal)
   },
   sockets: {
     'casaos:system:utilization'(res) {

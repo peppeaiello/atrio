@@ -90,7 +90,7 @@ export default {
 			}).catch(err => {
 				this.isLoading = false;
 				this.errorType = "is-danger"
-				this.errors = err.response.data.message
+				this.errors = err.response?.data?.message
 			})
 		},
 		checkUpdate() {

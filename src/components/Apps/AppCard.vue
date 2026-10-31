@@ -62,7 +62,7 @@ export default {
         return this.$t('Restarting')
       }
       else if (this.isStarting) {
-        return this.$t('updateState')
+        return this.$t('Starting')
       }
       else if (this.isRebuilding) {
         return this.$t('Rebuilding')
@@ -217,7 +217,7 @@ export default {
         }
       }).catch((err) => {
         this.$buefy.toast.open({
-          message: err.response.data.data || err.response.data.message,
+          message: err.response?.data?.data || err.response?.data?.message,
           type: 'is-danger',
           position: 'is-top',
           duration: 5000,
@@ -232,7 +232,7 @@ export default {
         this.updateState()
       }).catch((err) => {
         this.$buefy.toast.open({
-          message: err.response.data.data || err.response.data.message,
+          message: err.response?.data?.data || err.response?.data?.message,
           type: 'is-danger',
           position: 'is-top',
           duration: 5000,
@@ -284,7 +284,7 @@ export default {
           }
         }).catch((err) => {
           this.$buefy.toast.open({
-            message: err.response.data.data,
+            message: err.response?.data?.data,
             type: 'is-danger',
             position: 'is-top',
             duration: 5000,
@@ -299,7 +299,7 @@ export default {
           }
         }).catch((err) => {
           this.$buefy.toast.open({
-            message: err.response.data.data,
+            message: err.response?.data?.data,
             type: 'is-danger',
             position: 'is-top',
             duration: 5000,
@@ -397,7 +397,7 @@ export default {
         }
       }).catch((err) => {
         this.$buefy.toast.open({
-          message: err.response.data.data || err.response.data.message,
+          message: err.response?.data?.data || err.response?.data?.message,
           type: 'is-danger',
           position: 'is-top',
           duration: 3000,
@@ -414,7 +414,7 @@ export default {
       }).catch((err) => {
         this.$buefy.dialog.alert({
           title: 'Error',
-          message: err.response.data.data || err.response.data.message,
+          message: err.response?.data?.data || err.response?.data?.message,
           type: 'is-danger',
           ariaRole: 'alertdialog',
           ariaModal: true,
@@ -457,7 +457,7 @@ export default {
 
           this.$api.container.install(initData).catch((err) => {
             this.$buefy.toast.open({
-              message: err.response.data.message,
+              message: err.response?.data?.message,
               type: 'is-warning',
             })
           }).then(() => {
@@ -479,7 +479,7 @@ export default {
         FileSaver.saveAs(blob, `${item.image}.yaml`)
       }).catch((err) => {
         this.$buefy.toast.open({
-          message: err.response.data.message,
+          message: err.response?.data?.message,
           type: 'is-warning',
         })
       })
@@ -700,7 +700,7 @@ export default {
 <template>
   <div
     class="common-card is-flex is-align-items-center is-justify-content-center  app-card"
-    @mouseleave="hover = true" @mouseover="hover = true"
+    @mouseleave="hover = false" @mouseover="hover = true"
   >
     <!-- Action Button Start -->
     <div v-if="item.app_type !== 'system' && !isContainerApp && !isUninstalling" class="action-btn">

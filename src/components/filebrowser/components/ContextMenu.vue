@@ -239,7 +239,7 @@ export default {
 			} catch (error) {
 				this.isSaving = false
 				this.$buefy.toast.open({
-					message: error.response.data.message,
+					message: error.response?.data?.message,
 					type: 'is-danger'
 				})
 			}

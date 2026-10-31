@@ -119,8 +119,9 @@ _____             _____ _____
 		this.setInitLang();
 		window.addEventListener('resize', this.onWindowResize);
 		this.onWindowResize();
-		let vh = window.innerHeight * 0.01;
-		this["vh"] = `${vh}px`;
+	},
+	beforeUnmount() {
+		window.removeEventListener('resize', this.onWindowResize);
 	},
 	methods: {
 		/**
@@ -139,6 +140,8 @@ _____             _____ _____
 		onWindowResize() {
 			const isMobile = document.body.clientWidth < 480
 			this.$store.commit('SET_IS_MOBILE', isMobile)
+			// Follows rotation and the mobile browser bars
+			this.vh = `${window.innerHeight * 0.01}px`
 		},
 	},
 	sockets: {

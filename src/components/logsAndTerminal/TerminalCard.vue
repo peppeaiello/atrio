@@ -48,7 +48,8 @@ import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { AttachAddon } from 'xterm-addon-attach'
 
-const fitAddon = new FitAddon();
+// Recreated with every terminal: an addon can only belong to one
+let fitAddon = new FitAddon();
 export default {
 	name: "terminal-card",
 	props: {
@@ -119,7 +120,7 @@ export default {
 			} catch (error) {
 				this.notificationShow = true
 				this.isConnecting = false
-				this.message = error.response.data.data
+				this.message = error.response?.data?.data
 			}
 
 		},
@@ -140,6 +141,7 @@ export default {
 			const attachAddon = new AttachAddon(this.socket);
 
 			term.loadAddon(attachAddon);
+			fitAddon = new FitAddon();
 			term.loadAddon(fitAddon);
 			term.open(document.getElementById('xterm'));
 			fitAddon.fit();

@@ -94,7 +94,7 @@ export default {
 
 	mounted() {
 		this.getDiskInfo(this.$store.state.hardwareInfo.sys_disk)
-		this.usbDisks = this.$store.state.hardwareInfo.sys_usb
+		this.usbDisks = this.$store.state.hardwareInfo.sys_usb || []
 	},
 	methods: {
 		getDiskInfo(diskInfo) {
@@ -123,7 +123,7 @@ export default {
 			// DISK
 			this.getDiskInfo(JSON.parse(data.sys_disk))
 			// USB
-			this.usbDisks = JSON.parse(data.sys_usb)
+			this.usbDisks = JSON.parse(data.sys_usb) || []
 		}
 	}
 }

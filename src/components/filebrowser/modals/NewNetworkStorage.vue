@@ -157,7 +157,7 @@ export default {
 					}).catch(err => {
 						this.isConnecting = false
 						this.$buefy.toast.open({
-							message: this.$t(err.response.data.data || err.response.data.message),
+							message: this.$t(err.response?.data?.data || err.response?.data?.message),
 							type: 'is-danger'
 						})
 					})
