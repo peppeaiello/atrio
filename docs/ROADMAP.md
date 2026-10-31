@@ -37,7 +37,7 @@ Docker management is what people use most, so it gets the next redesign.
 
 ## 0.4 — Settings, account, terminal and logs
 
-- Settings move from the dropdown to a full panel with sections (appearance, search, network, storage, updates,
+- [x] Settings move from the dropdown to a full panel with sections (appearance, search, network, storage, updates,
   system), including the Atrio updater.
 - Account panel: profile picture, password, sessions, in the new style.
 - Terminal and logs: a single console with tabs for the host and each app, follow mode, search in logs, download.

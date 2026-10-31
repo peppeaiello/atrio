@@ -1,6 +1,7 @@
 <script>
 import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
+import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import AccountPanel from './account/AccountPanel.vue'
 import TerminalPanel from './logsAndTerminal/TerminalPanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -27,6 +28,8 @@ export default {
   data() {
     return {
       timer: 0,
+      // Atrio settings panel
+      settingsOpen: false,
       // User
       userInfo: this.$store.state.user,
       // System
@@ -150,6 +153,8 @@ export default {
   mounted() {
     this.checkVersion()
     this.atrioTimer = startRechecking()
+    this.$EventBus.$on('atrio:open-settings', this.openSettings)
+    window.addEventListener('keydown', this.onSettingsKey)
     this.getUserInfo()
     this.getUsbStatus()
     this.getHardwareInfo()
@@ -158,6 +163,8 @@ export default {
   beforeUnmount() {
     clearInterval(this.powerTimer)
     clearInterval(this.atrioTimer)
+    this.$EventBus.$off('atrio:open-settings', this.openSettings)
+    window.removeEventListener('keydown', this.onSettingsKey)
   },
   methods: {
     /*************************************************
@@ -180,17 +187,33 @@ export default {
      * @param {boolean} isOpen
      * @return {*}
      */
-    onOpen(isOpen) {
-      if (isOpen) {
-        this.$store.commit('SET_SIDEBAR_CLOSE')
-        this.checkVersion()
-      }
-      else {
-        // Reset the text when the Settings layer closes
-        // this.resetPower(true)
-        this.restart = 'Restart'
-        this.shutdown = 'Shutdown'
-      }
+    // Atrio: settings live in a side panel, opened from the icon or the command palette
+    openSettings() {
+      if (this.settingsOpen) return
+      this.$messageBus('dashboardsetting')
+      this.settingsReturnFocus = document.activeElement
+      this.settingsOpen = true
+      this.$store.commit('SET_SIDEBAR_CLOSE')
+      this.checkVersion()
+      this.$nextTick(() => this.$refs.settingsSheet?.focus())
+    },
+    closeSettings(giveFocusBack = true) {
+      if (!this.settingsOpen) return
+      this.settingsOpen = false
+      // Restart and Shutdown ask again next time
+      this.restart = 'Restart'
+      this.shutdown = 'Shutdown'
+      if (giveFocusBack !== false) this.$nextTick(() => restoreFocus(this.settingsReturnFocus))
+    },
+    onSettingsKey(event) {
+      // A modal opened from the panel (port, wallpaper, update) handles its own keys
+      if (!this.settingsOpen || document.querySelector('.modal.is-active')) return
+      if (event.key === 'Escape') this.closeSettings()
+      else trapTab(event, this.$refs.settingsSheet)
+    },
+    openHardware() {
+      this.closeSettings(false)
+      this.$EventBus.$emit('atrio:open-hardware')
     },
 
     /**
@@ -238,7 +261,7 @@ export default {
      * @return {*}
      */
     showPortPanel() {
-      this.$refs.settingsDrop.toggle()
+      this.closeSettings(false)
       this.$buefy.modal.open({
         component: PortPanel,
         hasModalCard: true,
@@ -254,7 +277,7 @@ export default {
     },
     showChangeWallpaperModal() {
       this.$EventBus.$emit(events.SHOW_CHANGE_WALLPAPER_MODAL)
-      this.$refs.settingsDrop.toggle()
+      this.closeSettings(false)
     },
 
     /*************************************************
@@ -420,7 +443,7 @@ export default {
         this[key.toLowerCase()] = 'Are you sure?'
         return
       }
-      this.$refs.settingsDrop.toggle()
+      this.closeSettings(false)
       this.showPower = true
       switch (key) {
         case 'Restart':
@@ -527,299 +550,161 @@ export default {
       </b-dropdown>
       <!-- Account Dropmenu End -->
 
-      <!-- Settings Dropmenu Start -->
-      <b-dropdown
-        ref="settingsDrop"
-        animation="fade1"
-        aria-role="list"
-        class="navbar-item"
-        @active-change="onOpen"
-      >
-        <template #trigger>
-          <b-tooltip
-            :active="!$store.state.isMobile"
-            :label="$t('Settings')"
-            position="is-right"
-            type="is-dark"
-            @click.native="$messageBus('dashboardsetting')"
-          >
-            <p role="button">
-              <b-icon
-                :class="{ 'update-icon-dot': hasUpdate }"
-                class="picon"
-                icon="control-outline"
-                pack="casa"
-                size="is-20"
-              />
-            </p>
-          </b-tooltip>
-        </template>
+      <!-- Settings Start: the icon opens the settings panel -->
+      <div class="is-flex is-align-items-center navbar-item">
+        <b-tooltip :active="!$store.state.isMobile" :label="$t('Settings')" position="is-right" type="is-dark">
+          <button :aria-label="$t('Settings')" class="atrio-header-icon" type="button" @click="openSettings">
+            <b-icon :class="{ 'update-icon-dot': hasUpdate }" class="picon" icon="control-outline" pack="casa" size="is-20" />
+          </button>
+        </b-tooltip>
+      </div>
 
-        <b-dropdown-item :focusable="false" aria-role="menu-item" class="p-0" custom>
-          <h2 class="_title mb-4 has-text-weight-bold">
-            {{ $t("Settings") }}
-          </h2>
-          <!-- Search Engine Switch Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="show-search-outline" pack="casa" size="is-20" />
-              {{ $t("Web search in the search") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="barData.search_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @update:model-value="saveData"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!-- Search Engine Switch End  -->
-
-          <!-- Search Engine Start -->
-          <div
-            v-if="barData.search_switch"
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="search-outline" pack="casa" size="is-20" />
-              {{ $t("Search Engine") }}
-            </div>
-            <div>
-              <b-field>
-                <b-select
-                  v-model="barData.search_engine"
-                  class="set-select"
-                  size="is-small"
-                  @update:model-value="saveData"
-                >
-                  <option v-for="item in searchEngines" :key="item.name" :value="item.url">
-                    {{ item.name }}
-                  </option>
-                </b-select>
-              </b-field>
-            </div>
-          </div>
-          <!-- Search Engine End -->
-
-          <!-- Language Start -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="language-outline" pack="casa" size="is-20" />
-              {{ $t("Language") }}
-            </div>
-            <div>
-              <b-field>
-                <b-select v-model="barData.lang" class="set-select" size="is-small" @update:model-value="saveData">
-                  <option v-for="lang in languages" :key="lang.lang" :value="lang.lang">
-                    {{ lang.name }}
-                  </option>
-                </b-select>
-              </b-field>
-            </div>
-          </div>
-          <!-- Language End -->
-
-          <!-- WebUI Port Start -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="port-outline" pack="casa" size="is-20" />
-              {{ $t("WebUI Port") }}
-            </div>
-            <div>
-              {{ port }}
-            </div>
-            <div class="ml-2">
-              <b-button rounded size="is-small" type="is-dark" @click="showPortPanel">
-                {{ $t("Change") }}
-              </b-button>
-            </div>
-          </div>
-          <!-- WebUI Port End -->
-
-          <!-- Background Start -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="wallpaper-outline" pack="casa" size="is-20" />
-              {{ $t("Wallpaper") }}
-            </div>
-            <div class="ml-2">
-              <b-button rounded size="is-small" type="is-dark" @click="showChangeWallpaperModal">
-                {{ $t("Change") }}
-              </b-button>
-            </div>
-          </div>
-          <!-- Background End -->
-
-          <!--  Show other Docker container app(s) Switch Start  -->
-          <div
-            v-if="$store.state.notImportList.length > 0"
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="docker-outline" pack="casa" size="is-20" />
-              {{ $t("Show other Docker container app(s)") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="barData.existing_apps_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @update:model-value="saveData"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!--  Show other Docker container app(s) Switch End  -->
-
-          <!--  Show other Docker container app(s) Switch Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="news-outline" pack="casa" size="is-20" />
-              {{ $t("Show news feed from CasaOS Blog") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="rss_switch"
-                  :native-value="barData.rss_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @update:model-value="rssConfirm"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!--  Show other Docker container app(s) Switch End  -->
-          <!--  Recommended modules Switch Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon
-                class="mr-1 ml-2"
-                icon="display-applications-outline"
-                pack="casa"
-                size="is-20"
-              />
-              {{ $t("Show Recommended Apps") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="barData.recommend_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @update:model-value="saveData"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!-- Recommended modules Switch End  -->
-
-          <!-- Automount USB Drive Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="usb-outline" pack="casa" size="is-20" />
-              {{ $t("Automount USB Drive") }}
-              <b-tooltip
-                v-if="isRaspberryPi"
-                :label="
-                  $t(
-                    'Enabling this function may cause boot failures when the Raspberry Pi device is booted from USB',
-                  )
-                "
-                multilined
-                type="is-dark"
-              >
-                <b-icon class="ml-1" icon="question-outline" pack="casa" size="is-small" />
-              </b-tooltip>
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="autoUsbMount"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @update:model-value="usbAutoMount"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!-- Automount USB Drive End  -->
-
-          <!-- Update Start -->
-          <div class="_is-large hover-effect _is-radius pr-2 mr-4 ml-4">
-            <div class="is-flex is-align-items-center">
-              <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-                <b-icon class="mr-1 ml-2" icon="update-outline" pack="casa" size="is-20" />
-                <div :class="{ 'update-text-dot': updateInfo.need_update }">
-                  {{ $t("Update") }}
+      <Teleport to="body">
+        <transition name="atrio-sheet">
+          <div v-if="settingsOpen" class="atrio-sheet-backdrop" @click.self="closeSettings">
+            <aside ref="settingsSheet" :aria-label="$t('Settings')" aria-modal="true" class="atrio-sheet atrio-settings" role="dialog" tabindex="-1">
+              <header class="atrio-sheet-head">
+                <span class="atrio-settings-icon">
+                  <b-icon icon="control-outline" pack="casa" />
+                </span>
+                <div class="atrio-sheet-title">
+                  <h2>{{ $t('Settings') }}</h2>
                 </div>
-              </div>
-              <div class="_has-text-gray">
-                v{{ updateInfo.current_version }}
-              </div>
-            </div>
+                <button :aria-label="$t('Close')" class="atrio-icon-button" type="button" @click="closeSettings">
+                  <b-icon icon="close-outline" pack="casa" />
+                </button>
+              </header>
 
-            <div v-if="!updateInfo.need_update" class="is-flex is-align-items-center pl-55 ml-1 is-size-7">
-              {{ $t(latestText) }}
-              <b-icon class="ml-1" custom-size="mdi-18px" icon="check" type="is-success" />
-            </div>
-            <div v-else class="is-flex is-align-items-center is-justify-content-end update-container pl-5">
-              <div class="is-flex-grow-1 is-size-7">
-                {{ $t(updateText) }}
-              </div>
-              <b-button class="ml-2" rounded size="is-small" type="is-dark" @click="showUpdateModal">
-                {{ $t("Update") }}
-              </b-button>
-            </div>
+              <section class="atrio-settings-section">
+                <h3>{{ $t('Appearance') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="language-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Language') }}</span>
+                  <b-select v-model="barData.lang" class="set-select" size="is-small" @update:model-value="saveData">
+                    <option v-for="lang in languages" :key="lang.lang" :value="lang.lang">
+                      {{ lang.name }}
+                    </option>
+                  </b-select>
+                </div>
+                <div class="atrio-setting-row">
+                  <b-icon icon="wallpaper-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Wallpaper') }}</span>
+                  <button class="atrio-button is-small" type="button" @click="showChangeWallpaperModal">
+                    {{ $t('Change') }}
+                  </button>
+                </div>
+              </section>
+
+              <section class="atrio-settings-section">
+                <h3>{{ $t('Web search') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="show-search-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Web search in the search') }}</span>
+                  <b-switch v-model="barData.search_switch" class="mr-0" @update:model-value="saveData" />
+                </div>
+                <div v-if="barData.search_switch" class="atrio-setting-row">
+                  <b-icon icon="search-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Search Engine') }}</span>
+                  <b-select v-model="barData.search_engine" class="set-select" size="is-small" @update:model-value="saveData">
+                    <option v-for="item in searchEngines" :key="item.name" :value="item.url">
+                      {{ item.name }}
+                    </option>
+                  </b-select>
+                </div>
+              </section>
+
+              <section class="atrio-settings-section">
+                <h3>{{ $t('Dashboard') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="display-applications-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Show Recommended Apps') }}</span>
+                  <b-switch v-model="barData.recommend_switch" class="mr-0" @update:model-value="saveData" />
+                </div>
+                <div class="atrio-setting-row">
+                  <b-icon icon="news-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Show news feed from CasaOS Blog') }}</span>
+                  <b-switch v-model="rss_switch" :native-value="barData.rss_switch" class="mr-0" @update:model-value="rssConfirm" />
+                </div>
+                <div v-if="$store.state.notImportList.length > 0" class="atrio-setting-row">
+                  <b-icon icon="docker-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Show other Docker container app(s)') }}</span>
+                  <b-switch v-model="barData.existing_apps_switch" class="mr-0" @update:model-value="saveData" />
+                </div>
+              </section>
+
+              <section class="atrio-settings-section">
+                <h3>{{ $t('Network') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="port-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('WebUI Port') }}</span>
+                  <span class="atrio-setting-value">{{ port }}</span>
+                  <button class="atrio-button is-small" type="button" @click="showPortPanel">
+                    {{ $t('Change') }}
+                  </button>
+                </div>
+              </section>
+
+              <section class="atrio-settings-section">
+                <h3>{{ $t('Storage') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="usb-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">
+                    {{ $t('Automount USB Drive') }}
+                    <small v-if="isRaspberryPi" class="atrio-setting-note">
+                      {{ $t('Enabling this function may cause boot failures when the Raspberry Pi device is booted from USB') }}
+                    </small>
+                  </span>
+                  <b-switch v-model="autoUsbMount" class="mr-0" @update:model-value="usbAutoMount" />
+                </div>
+              </section>
+
+              <section class="atrio-settings-section">
+                <h3>{{ $t('Updates') }}</h3>
+                <div class="atrio-setting-row is-update">
+                  <b-icon icon="update-outline" pack="casa" size="is-20" />
+                  <span class="atrio-setting-label">
+                    <span :class="{ 'update-text-dot': updateInfo.need_update }">CasaOS</span>
+                    <small class="atrio-setting-note">
+                      <template v-if="!updateInfo.need_update">
+                        {{ $t(latestText) }}
+                        <b-icon custom-size="mdi-16px" icon="check" type="is-success" />
+                      </template>
+                      <template v-else>{{ $t(updateText) }}</template>
+                    </small>
+                  </span>
+                  <span class="atrio-setting-value">v{{ updateInfo.current_version }}</span>
+                  <button v-if="updateInfo.need_update" class="atrio-button is-small is-primary" type="button" @click="showUpdateModal">
+                    {{ $t('Update') }}
+                  </button>
+                </div>
+                <AtrioUpdate />
+              </section>
+
+              <section class="atrio-settings-section">
+                <h3>{{ $t('System') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="chip" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Hardware details') }}</span>
+                  <button class="atrio-button is-small" type="button" @click="openHardware">
+                    {{ $t('Open') }}
+                  </button>
+                </div>
+                <div class="atrio-settings-power">
+                  <button class="atrio-button" type="button" @click="power('Restart')">
+                    <b-icon icon="restart-outline" pack="casa" size="is-16" />
+                    {{ $t(restart) }}
+                  </button>
+                  <button class="atrio-button is-danger" type="button" @click="power('Shutdown')">
+                    <b-icon icon="shutdown-outline" pack="casa" size="is-16" />
+                    {{ $t(shutdown) }}
+                  </button>
+                </div>
+              </section>
+            </aside>
           </div>
-          <!-- Update End -->
-          <AtrioUpdate />
-          <!-- Restart or Shutdown Start -->
-          <div
-            class="is-flex is-align-content-center is-justify-content-center _footer mt-4 pl-3 pr-3 pt-2 pb-2"
-          >
-            <div
-              class="mr-1 column is-half is-flex is-align-items-center is-justify-content-center hover-effect is-clickable _is-radius _is-normal"
-              @click="power('Restart')"
-            >
-              <b-icon class="mr-1" icon="restart-outline" pack="casa" />
-              {{ $t(restart) }}
-            </div>
-            <div
-              class="ml-1 column is-half is-flex is-align-items-center is-justify-content-center is-clickable hover-effect-attention _has-text-attention _is-radius"
-              @click="power('Shutdown')"
-            >
-              <b-icon
-                class="mr-1"
-                custom-class="_has-text-attention"
-                icon="shutdown-outline"
-                pack="casa"
-              />
-              {{ $t(shutdown) }}
-            </div>
-          </div>
-          <!-- Restart or Shutdown End -->
-        </b-dropdown-item>
-      </b-dropdown>
-      <!-- Settings Dropmenu End -->
+        </transition>
+      </Teleport>
+      <!-- Settings End -->
 
       <!-- Terminal  Start -->
       <div class="is-flex is-align-items-center navbar-item">
@@ -1307,6 +1192,167 @@ export default {
 		.atrio-search-label,
 		kbd {
 			display: none;
+		}
+	}
+}
+</style>
+
+<style lang="scss">
+// Atrio settings panel (shares the sheet styles of the app details panel)
+.atrio-settings {
+	width: min(32rem, calc(100% - 2rem));
+	gap: 1rem;
+	scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+	scrollbar-width: thin;
+}
+
+.atrio-settings-icon {
+	display: grid;
+	place-items: center;
+	width: 3rem;
+	height: 3rem;
+	border-radius: 1rem;
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--atrio-text);
+}
+
+.atrio-settings-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 0.75rem;
+	border-radius: var(--atrio-radius-md, 20px);
+	background: rgba(255, 255, 255, 0.04);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+	> h3 {
+		margin: 0.125rem 0.5rem 0.375rem;
+		color: var(--atrio-text-muted);
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	// The Atrio update row comes from the old menu: fit it to the panel
+	> ._is-large {
+		margin: 0 !important;
+		padding: 0.625rem 0.5rem !important;
+		border-radius: 0.75rem;
+		color: var(--atrio-text);
+
+		._has-text-gray,
+		.is-size-7 {
+			color: var(--atrio-text-soft);
+		}
+
+		.pl-55 {
+			padding-left: 2rem !important;
+		}
+
+		// Logo in the same column as the other rows' icons
+		.atrio-update-logo {
+			margin: 0 0.75rem 0 0 !important;
+		}
+
+		a {
+			color: #67e8f9;
+		}
+
+		.button.is-dark {
+			background: var(--atrio-text);
+			color: #0b1120;
+			font-weight: 700;
+		}
+	}
+}
+
+.atrio-setting-row {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	min-height: 3rem;
+	padding: 0.375rem 0.5rem;
+	border-radius: 0.75rem;
+	color: var(--atrio-text);
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.04);
+	}
+
+	> .icon {
+		flex-shrink: 0;
+		color: var(--atrio-text-soft);
+	}
+
+	.field {
+		margin: 0;
+	}
+
+	.select select {
+		border-color: rgba(255, 255, 255, 0.12);
+		background: rgba(255, 255, 255, 0.06);
+		color: var(--atrio-text);
+
+		option {
+			background: #111a2e;
+		}
+	}
+
+	.select:not(.is-multiple):not(.is-loading)::after {
+		border-color: var(--atrio-text-soft);
+	}
+
+	.switch input[type='checkbox'] + .check {
+		background: rgba(255, 255, 255, 0.18);
+	}
+
+	.switch input[type='checkbox']:checked + .check {
+		background: var(--atrio-accent);
+	}
+}
+
+.atrio-setting-label {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.atrio-setting-note {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	color: var(--atrio-text-muted);
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+.atrio-setting-value {
+	color: var(--atrio-text-soft);
+	font-size: 0.875rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.atrio-settings-power {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+
+	.atrio-button {
+		justify-content: center;
+	}
+
+	.atrio-button.is-danger {
+		border-color: rgba(248, 113, 113, 0.35);
+		color: #fca5a5;
+
+		&:hover {
+			background: rgba(248, 113, 113, 0.12);
 		}
 	}
 }
