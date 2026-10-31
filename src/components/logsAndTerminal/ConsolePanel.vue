@@ -266,10 +266,36 @@ export default {
 		font-weight: 700;
 	}
 
+	// Phones: the server and the apps become one row of chips that scrolls sideways
 	@include mobile {
-		max-height: 12rem;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.75rem;
+		overflow-x: auto;
 		border-right: 0;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		scrollbar-width: none;
+
+		h2,
+		.atrio-console-group,
+		> .atrio-console-input,
+		.atrio-console-source-note {
+			display: none;
+		}
+
+		.atrio-console-list {
+			flex-direction: row;
+			gap: 0.375rem;
+			overflow: visible;
+		}
+
+		.atrio-console-source {
+			flex-shrink: 0;
+			width: auto;
+			max-width: 12rem;
+			background: rgba(255, 255, 255, 0.05);
+		}
 	}
 }
 

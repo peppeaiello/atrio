@@ -1,18 +1,37 @@
 {
+    "id": "/",
     "name": "Atrio",
     "short_name": "Atrio",
-    "icons": [{
+    "description": "The front door of your home server",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "theme_color": "#0F172A",
+    "background_color": "#0F172A",
+    "icons": [
+        {
             "src": "/img/icon/android-chrome-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "/img/icon/android-chrome-512x512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/img/icon/maskable-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/img/icon/maskable-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
-    ],
-    "theme_color": "#0F172A",
-    "background_color": "#0F172A",
-    "display": "standalone"
+    ]
 }

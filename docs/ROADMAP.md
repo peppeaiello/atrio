@@ -48,7 +48,7 @@ Docker management is what people use most, so it gets the next redesign.
 - [x] Widgets that can be added, removed and reordered from the dashboard, plus a first custom widget:
   a web page (for example an app's own status page).
 - [x] Notifications centre (app updates, disk warnings, finished installs).
-- Mobile pass: layout, touch targets, PWA install.
+- [x] Mobile pass: layout, touch targets, PWA install.
 
 ## Before the public announcement
 
