@@ -2,6 +2,7 @@
 import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
+import { unreadCount } from '@/plugins/notifications'
 import AccountPanel from './account/AccountPanel.vue'
 import ConsolePanel from './logsAndTerminal/ConsolePanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -79,6 +80,9 @@ export default {
   },
   computed: {
     // CasaOS or Atrio has an update: the dot on the settings icon says there is something inside
+    unreadNotifications() {
+      return unreadCount()
+    },
     hasUpdate() {
       return this.updateInfo.need_update || atrioUpdateAvailable()
     },
@@ -232,6 +236,11 @@ export default {
       if (!this.accountOpen) return
       this.accountOpen = false
       this.$nextTick(() => restoreFocus(this.accountReturnFocus))
+    },
+    openNotifications() {
+      this.closeSettings(false)
+      this.closeAccount()
+      this.$EventBus.$emit('atrio:open-notifications')
     },
     openHardware() {
       this.closeSettings(false)
@@ -543,6 +552,20 @@ export default {
         </b-tooltip>
       </div>
       <!-- SideBar Button Start -->
+
+      <!-- Notifications Start: the bell opens the notification centre -->
+      <div class="is-flex is-align-items-center navbar-item">
+        <b-tooltip :active="!$store.state.isMobile" :label="$t('Notifications')" position="is-right" type="is-dark">
+          <button
+            :aria-label="unreadNotifications ? $t('Notifications, {count} new', { count: unreadNotifications }) : $t('Notifications')"
+            class="atrio-header-icon atrio-bell" type="button" @click="openNotifications"
+          >
+            <b-icon class="picon" icon="bell-outline" pack="mdi" size="is-20" />
+            <span v-if="unreadNotifications" class="atrio-bell-badge">{{ unreadNotifications > 9 ? '9+' : unreadNotifications }}</span>
+          </button>
+        </b-tooltip>
+      </div>
+      <!-- Notifications End -->
 
       <!-- Account Start: the icon opens the account panel -->
       <div class="is-flex is-align-items-center navbar-item">
@@ -1348,6 +1371,26 @@ export default {
 	color: var(--atrio-text-soft);
 	font-size: 0.875rem;
 	font-variant-numeric: tabular-nums;
+}
+
+.atrio-bell {
+	position: relative;
+}
+
+.atrio-bell-badge {
+	position: absolute;
+	top: -0.375rem;
+	right: -0.5rem;
+	min-width: 1.125rem;
+	height: 1.125rem;
+	padding: 0 0.3125rem;
+	border-radius: 999px;
+	background: #f87171;
+	color: #fff;
+	font-size: 0.6875rem;
+	font-weight: 700;
+	line-height: 1.125rem;
+	text-align: center;
 }
 
 .atrio-settings-power {
