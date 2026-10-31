@@ -68,7 +68,15 @@ function changeInputState(alwaysNotDisplay = false) {
 function registerAppStore(url) {
 	if (url) {
 		addLoadingState.value = true
-		app.$openAPI.appManagement.appStore.registerAppStore(url)
+		app.$openAPI.appManagement.appStore.registerAppStore(url).catch(err => {
+			// Rejected right away (bad URL, already added): no socket event will follow
+			app.$buefy.toast.open({
+				message: err.response?.data?.message || "Failed to update the information source of the app store.",
+				duration: 5000,
+				type: 'is-warning'
+			})
+			addLoadingState.value = false;
+		})
 	}
 }
 

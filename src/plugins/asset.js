@@ -20,6 +20,7 @@ export function asset(path) {
 // Wallpaper settings saved by CasaOS-UI point at webpack build files such as
 // "/img/wallpaper02.92a6b52e.jpg", which no longer exist: map them to the bundled wallpapers.
 export function builtInWallpaper(path) {
+	if (typeof path !== 'string') return path
 	const legacy = path.match(/\/img\/(wallpaper0\d)\.[0-9a-f]+\.jpg$/)
 	return legacy ? asset(`@/assets/background/${legacy[1]}.jpg`) : path
 }

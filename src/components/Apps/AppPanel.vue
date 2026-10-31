@@ -801,11 +801,11 @@ export default {
             })
             .catch((err) => {
               if (err.response.status === 400) {
-                console.log('Get ERROR:', err.response.data)
-                this.errInfo = err.response.data
+                console.log('Get ERROR:', err.response?.data)
+                this.errInfo = err.response?.data
               }
               this.$buefy.toast.open({
-                message: err.response.data.message,
+                message: err.response?.data?.message,
                 duration: 5000,
                 type: 'is-warning',
               })
@@ -844,7 +844,7 @@ export default {
             .catch((err) => {
               this.isLoading = false
               this.$buefy.toast.open({
-                message: err.response.data.message,
+                message: err.response?.data?.message,
                 type: 'is-warning',
               })
             })
@@ -1020,7 +1020,7 @@ export default {
         })
       }
       catch (error) {
-        console.log(error.response.message)
+        console.log(error.response?.data?.message)
       }
     },
 

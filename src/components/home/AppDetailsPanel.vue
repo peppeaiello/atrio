@@ -1,6 +1,7 @@
 <script>
 // Side panel with an app's health, resource usage and live logs, plus its main actions.
 // Opened with `$EventBus.$emit('atrio:open-app', app)` for compose (v2) apps.
+import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
 import { ice_i18n } from '@/mixins/base/common-i18n'
@@ -94,7 +95,9 @@ export default {
 	},
 	methods: {
 		show(app) {
+			if (!this.open) this.returnFocus = document.activeElement
 			this.app = app
+			this.$nextTick(() => this.$refs.sheet?.focus())
 			this.status = app.status || ''
 			this.containers = []
 			this.logs = ''
@@ -107,12 +110,16 @@ export default {
 		close() {
 			this.app = null
 			this.stopPolling()
+			this.$nextTick(() => restoreFocus(this.returnFocus))
 		},
 		stopPolling() {
 			clearInterval(this.timer)
 		},
 		onKey(event) {
-			if (event.key === 'Escape' && this.open) this.close()
+			// A modal opened from the panel (settings, uninstall) handles its own keys
+			if (!this.open || document.querySelector('.modal.is-active')) return
+			if (event.key === 'Escape') this.close()
+			else trapTab(event, this.$refs.sheet)
 		},
 		async refresh() {
 			// Usage needs the container names
@@ -222,7 +229,7 @@ export default {
 	<Teleport to="body">
 		<transition name="atrio-sheet">
 			<div v-if="open" class="atrio-sheet-backdrop" @click.self="close">
-				<aside :aria-label="title" aria-modal="true" class="atrio-sheet" role="dialog">
+				<aside ref="sheet" :aria-label="title" aria-modal="true" class="atrio-sheet" role="dialog" tabindex="-1">
 					<header class="atrio-sheet-head">
 						<img :src="app.icon" alt="" class="atrio-sheet-icon">
 						<div class="atrio-sheet-title">

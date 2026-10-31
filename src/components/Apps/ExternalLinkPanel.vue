@@ -122,7 +122,7 @@ export default {
       }).catch((err) => {
         this.isLoading = false
         this.$buefy.toast.open({
-          message: err.response.data.message || 'NOT FOUND',
+          message: err.response?.data?.message || 'NOT FOUND',
           type: 'is-danger',
         })
       })
@@ -149,7 +149,7 @@ export default {
       }).catch((err) => {
         this.isLoading = false
         this.$buefy.toast.open({
-          message: err.response.data.message || 'NOT FOUND',
+          message: err.response?.data?.message || 'NOT FOUND',
           type: 'is-danger',
         })
       })

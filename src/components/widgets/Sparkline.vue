@@ -18,8 +18,9 @@ const height = 32
 
 const points = computed(() => {
 	const step = 100 / Math.max(props.capacity - 1, 1)
-	const max = props.max ?? Math.max(10, ...props.values.map((v) => v * 1.25))
-	return props.values.slice(-props.capacity).map((value, index) => {
+	const values = props.values.map((v) => (Number.isFinite(v) ? v : 0))
+	const max = props.max ?? Math.max(10, ...values.map((v) => v * 1.25))
+	return values.slice(-props.capacity).map((value, index) => {
 		const ratio = Math.min(Math.max(value / max, 0), 1)
 		return [(index * step).toFixed(2), (height - 2 - ratio * (height - 4)).toFixed(2)]
 	})

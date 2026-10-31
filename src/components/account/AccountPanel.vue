@@ -146,6 +146,8 @@ export default {
         }
         reader.readAsArrayBuffer(files[0])
       }
+      // Choosing the same file again must trigger a new change event
+      event.target.value = ''
     },
     defaultSize({ imageSize, visibleArea }) {
       return {
@@ -161,7 +163,7 @@ export default {
         this.goto(1)
       }
       catch (error) {
-        console.error(error.response.message)
+        console.error(error.response?.data?.message)
       }
     },
     async saveUser() {
@@ -174,7 +176,7 @@ export default {
         this.isLoading = false
       }
       catch (error) {
-        console.error(error.response.message)
+        console.error(error.response?.data?.message)
         this.isLoading = false
       }
     },
@@ -195,11 +197,14 @@ export default {
       catch (error) {
         this.isLoading = false
         this.notificationShow = true
-        this.message = error.response.data.message
+        this.message = error.response?.data?.message
       }
     },
 
     async saveAvatar() {
+      // The cropper reports its canvas after the first change
+      if (!this.result.canvas)
+        return
       this.isLoading = true
       const imageData = this.result.canvas.toDataURL()
       this.$api.users.saveAvatar({ file: imageData }).then(() => {
@@ -209,6 +214,8 @@ export default {
         })
         this.isLoading = false
         this.state = 1
+        // Same URL as before: add a parameter so the new picture is loaded
+        this.avatarUrl = `${avatarUrlPrefix}${this.$store.state.token || localStorage.getItem('access_token')}&t=${Date.now()}`
       }).catch(() => {
         this.$buefy.toast.open({
           message: this.$t(`Update failure`),

@@ -282,7 +282,7 @@ export default {
 				this.diskData = diskRes.data.data.disks
 				this.unDiskData = diskRes.data.data.avail
 			} catch (error) {
-				console.log(error.response.message);
+				console.log(error.response?.data?.message);
 			}
 
 			// get storage list
@@ -486,7 +486,7 @@ export default {
 				this.isValiding = false
 				this.$buefy.toast.open({
 					duration: 3000,
-					message: err.response.data.message,
+					message: err.response?.data?.message,
 					type: 'is-danger'
 				})
 				console.error(err)
@@ -529,7 +529,7 @@ export default {
 			}).catch(err => {
 				this.$buefy.toast.open({
 					duration: 3000,
-					message: err.response.data.message,
+					message: err.response?.data?.message,
 					type: 'is-danger'
 				})
 				console.error(err)

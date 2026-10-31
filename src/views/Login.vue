@@ -83,7 +83,7 @@ export default {
 				}
 				this.$router.push("/");
 			} catch (err) {
-				this.message = this.$t(err.response.data.message)
+				this.message = this.$t(err.response?.data?.message || 'Username or Password error!')
 				this.notificationShow = true
 			}
 		}

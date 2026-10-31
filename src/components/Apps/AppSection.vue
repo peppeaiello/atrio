@@ -183,7 +183,8 @@ export default {
 			retryCount: 0,
 			appListErrorMessage: '',
 			skCount: 0,
-			ListRefreshTimer: null
+			ListRefreshTimer: null,
+			listLoading: false
 		}
 	},
 	components: {
@@ -227,20 +228,17 @@ export default {
 	created () {
 		this.getList()
 		this.draggable = '.handle'
-		this.$EventBus.$on(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, () => {
-			this.showInstall(SYNCTHING_STORE_ID)
-		})
+		this.$EventBus.$on(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, this.openSyncthingStore)
+		this.$EventBus.$on(events.RELOAD_APP_LIST, this.getList)
 
-		this.$EventBus.$on(events.RELOAD_APP_LIST, () => {
-			this.getList()
-		})
-
+		// Polling skips while a request is running or an app is being dragged
 		this.ListRefreshTimer = setInterval(() => {
-			this.getList()
+			if (!this.listLoading && !this.drag) this.getList()
 		}, 5000)
 	},
 	beforeDestroy () {
-		this.$EventBus.$off(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING)
+		this.$EventBus.$off(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, this.openSyncthingStore)
+		this.$EventBus.$off(events.RELOAD_APP_LIST, this.getList)
 		this.$EventBus.$off('atrio:refresh-apps', this.getList)
 		this.$EventBus.$off('atrio:config-app', this.openConfigFromPanel)
 		window.removeEventListener('resize', this.getSkCount)
@@ -268,6 +266,9 @@ export default {
 		},
 	},
 	methods: {
+		openSyncthingStore () {
+			this.showInstall(SYNCTHING_STORE_ID)
+		},
 		openConfigFromPanel (item) {
 			this.showConfigPanel(item, true)
 		},
@@ -310,6 +311,7 @@ export default {
 		 * @return {*} void
 		 */
 		async getList () {
+			this.listLoading = true
 			try {
 				const orgAppList = await this.$openAPI.appGrid.getAppGrid().then(res => res.data.data || [])
 				let orgOldAppList = [],
@@ -362,19 +364,23 @@ export default {
 				this.appListErrorMessage = ''
 			} catch (error) {
 				console.error(error)
-				this.isLoading = true
+				// Keep showing the last list while it refreshes; skeletons only before the first load
+				this.isLoading = this.appList.length === 0
 				if (this.retryCount < 5) {
 					setTimeout(() => {
 						this.retryCount++
 						this.getList()
 					}, 2000)
-				} else {
+				} else if (!this.appListErrorMessage) {
+					// Once, not on every polling tick while the backend is down
 					this.appListErrorMessage = 'Failed to get app list.'
 					this.$buefy.toast.open({
 						message: this.$t(`Failed to load apps, please refresh later.`),
 						type: 'is-danger'
 					})
 				}
+			} finally {
+				this.listLoading = false
 			}
 		},
 

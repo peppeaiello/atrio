@@ -1,5 +1,6 @@
 <script>
 // Command palette (Ctrl/Cmd + K): find an app or an action and run it from the keyboard.
+import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
 import { ice_i18n } from '@/mixins/base/common-i18n'
@@ -113,6 +114,7 @@ export default {
 	},
 	methods: {
 		async show() {
+			if (!this.open) this.returnFocus = document.activeElement
 			this.query = ''
 			this.active = 0
 			this.open = true
@@ -130,6 +132,7 @@ export default {
 		},
 		close() {
 			this.open = false
+			this.$nextTick(() => restoreFocus(this.returnFocus))
 		},
 		onGlobalKey(event) {
 			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -139,6 +142,7 @@ export default {
 		},
 		onKey(event) {
 			if (event.key === 'Escape') this.close()
+			else if (event.key === 'Tab') trapTab(event, event.currentTarget)
 			else if (event.key === 'ArrowDown') {
 				event.preventDefault()
 				this.active = Math.min(this.active + 1, this.results.length - 1)

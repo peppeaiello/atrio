@@ -48,14 +48,6 @@ export default {
 		perc() {
 			return -(this.line - 1) / this.line * 100 + '%'
 		},
-		isShow() {
-			return this.$route.path !== '/login' || this.$route.path !== '/welcome'
-		},
-	},
-	watch: {
-		isShow(val) {
-			val && this.parseFeed()
-		}
 	},
 	data() {
 		return {
@@ -63,7 +55,15 @@ export default {
 		};
 	},
 	methods: {
-		async parseFeed() {			
+		async parseFeed() {
+			// The feed is optional: offline or blocked, the bar just shows no news
+			try {
+				await this.loadFeed()
+			} catch (e) {
+				this.rss = []
+			}
+		},
+		async loadFeed() {
 			let params = await this.$api.file.getContent('/var/lib/casaos/baseinfo.conf').then(res => {
 				return JSON.parse(res.data.data)
 			})
@@ -78,8 +78,6 @@ export default {
 				}
 			})
 			this.rss = newFeed
-			
-			
 		},
 
 		gotoLink(link) {

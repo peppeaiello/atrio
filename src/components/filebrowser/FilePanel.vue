@@ -592,7 +592,7 @@ export default {
 					this.isLoading = false;
 					this.isEmpty = false;
 					this.listData = [];
-					this.errorMsg = error.response.data.data;
+					this.errorMsg = error.response?.data?.data;
 					this.handelListChange(this.listData);
 				});
 
