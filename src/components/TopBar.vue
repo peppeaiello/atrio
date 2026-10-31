@@ -1231,6 +1231,36 @@ export default {
 		}
 	}
 }
+
+// Phones: the mark alone, and icons with comfortable tap areas that still fit in one row
+@media screen and (max-width: 480px) {
+	.top-bar.atrio-header {
+		gap: 0.375rem;
+		padding: 0.375rem 0.375rem 0.375rem 0.625rem;
+
+		.navbar-brand.atrio-actions .navbar-item {
+			justify-content: center;
+			height: 2.75rem;
+			padding: 0;
+		}
+
+		// The whole 40 x 44 area answers the tap, not only the 20 px icon
+		.atrio-header-icon {
+			justify-content: center;
+			width: 2.5rem;
+			height: 2.75rem;
+		}
+	}
+
+	.atrio-brand span {
+		display: none;
+	}
+
+	.atrio-search {
+		flex-basis: 2.5rem;
+		margin: 0 auto 0 0;
+	}
+}
 </style>
 
 <style lang="scss">

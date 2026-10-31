@@ -14,6 +14,10 @@ What changes in each Atrio release. The section for a version is also the text o
   order (drag them or use the arrows). The order is saved on the server.
 - **Web page widget.** Add any page of your network to the widget column, for example an app's status page
   or a small dashboard, with a title and a height. You can add several, edit or remove them.
+- **Better on phones.** The top bar fits in one row with larger tap areas, the app filters get their own
+  row, the App Store header stays on one line, and the console shows its sources as a row of chips.
+- **Install Atrio as an app.** On a phone or in Chrome, "Add to home screen" or "Install" opens Atrio full
+  screen with its own icon (over HTTPS, as browsers require).
 
 ## 0.1.7 — 2026-10-31
 

@@ -1,7 +1,7 @@
 <template>
 	<div class="home-section has-text-left">
 		<!-- Title Bar Start -->
-		<div class="is-flex is-align-items-center mb-4">
+		<div class="is-flex is-align-items-center mb-4 atrio-apps-bar">
 			<app-section-title-tip
 				id="appTitle1"
 				class="is-flex-grow-1 has-text-sub-04"
@@ -16,7 +16,7 @@
 				@click="selecting ? stopSelecting() : startSelecting()"
 			>
 				<b-icon custom-size="mdi-18px" icon="checkbox-multiple-marked-outline" pack="mdi" />
-				{{ selecting ? $t('Done') : $t('Select') }}
+				<span class="atrio-select-label">{{ selecting ? $t('Done') : $t('Select') }}</span>
 			</button>
 
 			<!-- Atrio: filter by status -->
@@ -857,6 +857,40 @@ export default {
 </style>
 
 <style lang="scss">
+// Atrio: on phones the filters go to their own row under the title
+@media screen and (max-width: 480px) {
+	.atrio-apps-bar {
+		flex-wrap: wrap;
+		row-gap: 0.75rem;
+
+		.atrio-segmented {
+			order: 5;
+			flex-basis: 100%;
+			margin-right: 0 !important;
+
+			button {
+				flex: 1;
+				height: 2.5rem;
+			}
+		}
+
+		.atrio-select-toggle {
+			min-width: 2.75rem;
+			justify-content: center;
+		}
+
+		// Bigger tap area for the + menu
+		.file-dropdown .dropdown-trigger .icon {
+			width: 2.75rem;
+			height: 2.75rem;
+		}
+
+		.atrio-select-toggle:not(.is-active) .atrio-select-label {
+			display: none;
+		}
+	}
+}
+
 // Atrio: selection mode for actions on several apps
 .atrio-select-toggle {
 	display: inline-flex;

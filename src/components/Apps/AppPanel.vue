@@ -1932,6 +1932,21 @@ export default {
             &:hover {
                 background: rgba(255, 255, 255, 0.16);
             }
+
+            // Phones: the icon alone, so the title keeps one line
+            @include mobile {
+                width: 2.75rem;
+                height: 2.75rem;
+                padding: 0;
+
+                span:not(.icon) {
+                    display: none;
+                }
+
+                .icon {
+                    margin: 0 !important;
+                }
+            }
         }
     }
 
