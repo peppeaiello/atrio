@@ -1,0 +1,16 @@
+name: Idea
+description: Suggest something Atrio could do better
+labels: [idea]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: The task, and what makes it hard with Atrio today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: How you imagine it. A sketch, or a screenshot of another app that does it well, is welcome.

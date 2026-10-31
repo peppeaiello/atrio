@@ -59,8 +59,8 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-wiki@casaos.io.
+reported privately to the maintainer of Atrio, using the contacts listed on
+[peppeaiello.cloud](https://www.peppeaiello.cloud).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in Atrio does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Before posting screenshots or logs, hide host names, domains, IP addresses,
+        user names and passwords.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        1. Opened the App Store
+        2. Clicked Install on Jellyfin
+        3. Expected the app to appear in the grid, but…
+    validations:
+      required: true
+  - type: input
+    id: atrio
+    attributes:
+      label: Atrio version
+      description: Settings → Updates → Atrio
+      placeholder: "0.1.8"
+    validations:
+      required: true
+  - type: input
+    id: casaos
+    attributes:
+      label: CasaOS version
+      description: Settings → Updates → CasaOS
+      placeholder: "0.4.15"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Firefox on Windows, Safari on an iPhone…
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or errors
+      description: A screenshot, or errors from the browser console (F12 → Console).
