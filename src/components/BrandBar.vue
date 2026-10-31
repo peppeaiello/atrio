@@ -94,8 +94,8 @@ export default {
 	bottom: 0;
 	//z-index: 10;
 
-	span {
-		//font-size: 1.125rem;
+	// Only the line itself: the spans inside it would otherwise sit higher than the links
+	> span {
 		margin-bottom: 7px;
 	}
 

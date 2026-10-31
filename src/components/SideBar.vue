@@ -206,10 +206,13 @@ export default {
     }
 }
 
+// The scrollbar (8px) and a small gap sit outside the column, so the widgets are as wide as the
+// settings card below them, with or without a scrollbar
 .scroll-area {
     flex: 1 1 auto;
     min-height: 0;
     padding-right: 0.25rem;
-    margin-right: -0.25rem;
+    margin-right: -0.75rem;
+    scrollbar-gutter: stable;
 }
 </style>
