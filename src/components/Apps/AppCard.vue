@@ -1145,6 +1145,11 @@ export default {
 		color: var(--atrio-text);
 		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
 	}
+
+	// Icon, name and status sit above the hit area: let clicks through to it
+	.cards-content {
+		pointer-events: none;
+	}
 }
 
 .atrio-card-menu {
