@@ -24,7 +24,6 @@ export default {
   },
   data() {
     return {
-      hover: false,
       dropState: false,
       isUninstalling: false,
       isCloning: false,
@@ -108,10 +107,6 @@ export default {
   },
 
   watch: {
-    hover(val) {
-      if (!val && this.dropState)
-        this.$refs.dro.toggle()
-    },
     isLoading(active) {
       // design :: The first display is three seconds long
       if (this.isCheckThenUpdate && this.activeTimer === undefined) {
@@ -700,7 +695,6 @@ export default {
 <template>
   <div
     class="common-card is-flex is-align-items-center is-justify-content-center  app-card"
-    @mouseleave="hover = false" @mouseover="hover = true"
   >
     <!-- Action Button Start -->
     <div v-if="item.app_type !== 'system' && !isContainerApp && !isUninstalling" class="action-btn">
