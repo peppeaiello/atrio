@@ -21,6 +21,10 @@ What changes in each Atrio release. The section for a version is also the text o
 - **Install and settings screens in the new style.** The form is split into sections (App, Network and
   ports, Storage, Environment, Advanced) with a quick index on top; the advanced options start folded.
   The whole window, including the install progress, uses the same glass look as the dashboard.
+- Form errors say what to type: an example image, a version, a valid port or range, the allowed characters
+  of a container name, a port already in use. Port fields now show their message too.
+- **Actions on several apps.** "Select" next to the app filters lets you tick apps and start, stop,
+  restart or update them together. Apps that do not accept the action stay selected, so you can retry.
 
 ## 0.1.5 — 2026-10-31
 

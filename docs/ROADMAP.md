@@ -23,11 +23,11 @@ Docker management is what people use most, so it gets the next redesign.
 - New install and settings screens in the Calm glass style: fewer fields at once, clear sections
   (image, network and ports, storage, environment, advanced), helpful defaults and validation messages.
   Done: sections with a quick index, Advanced folded, glass style for install, settings and progress, the tag
-  defaults to "latest" and "name:tag" is split. Still open: friendlier validation messages per field.
+  defaults to "latest" and "name:tag" is split, and each field says what to type when it is wrong.
 - App Store restyled: search first, categories, clear "installed" state, install progress in the app card.
   First step done: search first, category and author chips, featured row, clear installed / installing /
   not available states, details in the same style, and install progress as a card in the home grid.
-- Bulk actions from the app list (restart or update several apps).
+- [x] Bulk actions from the app list: select apps, then start, stop, restart or update them together.
 - [x] Atrio updates: red dot on the settings icon when a version is available, full-page progress screen
   while it installs.
 - [x] Hardware panel, opened from the health chip or the System Status widget: machine, BIOS, operating
