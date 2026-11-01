@@ -910,17 +910,19 @@ export default {
               <span v-if="statusClass.includes('is-running')" aria-hidden="true" class="atrio-icon-dot" />
               <!-- Atrio: download of an update, with the same ring as an install -->
               <div
-                v-if="isPulling" :aria-label="`${title}: ${statusPill}`" :aria-valuenow="pullProgress"
-                aria-valuemax="100" aria-valuemin="0" class="atrio-pull-ring" role="progressbar"
+                v-if="isPulling" :aria-label="`${title}: ${statusPill}`" :aria-valuenow="pullProgress < 100 ? pullProgress : undefined"
+                :class="{ 'is-restarting': pullProgress >= 100 }" aria-valuemax="100" aria-valuemin="0" class="atrio-pull-ring" role="progressbar"
               >
                 <svg aria-hidden="true" viewBox="0 0 72 72">
                   <circle :r="pullRadius" class="atrio-installing-track" cx="36" cy="36" />
                   <circle
-                    :r="pullRadius" :stroke-dasharray="pullCircumference" :stroke-dashoffset="pullOffset"
+                    :r="pullRadius" :stroke-dasharray="pullCircumference" :stroke-dashoffset="pullProgress < 100 ? pullOffset : pullCircumference * 0.72"
                     class="atrio-installing-ring" cx="36" cy="36"
                   />
                 </svg>
                 <span v-if="pullProgress > 0 && pullProgress < 100" class="atrio-installing-percent">{{ pullProgress }}%</span>
+                <!-- Download done: the container is being recreated -->
+                <b-icon v-else-if="pullProgress >= 100" class="atrio-pull-restart" custom-size="mdi-24px" icon="restart" pack="mdi" />
               </div>
               <!-- Unstable -->
               <CTooltip v-if="newAppIds.includes(item.name)" class="__position" content="NEW" />
@@ -1229,6 +1231,32 @@ export default {
 	circle {
 		fill: none;
 		stroke-width: 3.5;
+	}
+
+	// An arc going round until the app is back
+	&.is-restarting svg {
+		animation: atrio-pull-spin 1.1s linear infinite;
+	}
+}
+
+.atrio-pull-restart {
+	color: #fff;
+	filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes atrio-pull-spin {
+	from {
+		transform: rotate(-90deg);
+	}
+
+	to {
+		transform: rotate(270deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.atrio-pull-ring.is-restarting svg {
+		animation: none;
 	}
 }
 

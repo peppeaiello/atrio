@@ -7,7 +7,7 @@ What changes in each Atrio release. The section for a version is also the text o
 **New**
 
 - **Update progress.** While an app updates, its tile shows the download of the new version with the same
-  progress ring as installs, then "Updating" until it restarts (#3).
+  progress ring as installs, then a spinning arc and "Updating" while it restarts (#3).
 
 **Fixed**
 
