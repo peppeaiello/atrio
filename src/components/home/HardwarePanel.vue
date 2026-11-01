@@ -198,6 +198,18 @@ export default {
 
 						<section>
 							<h3>{{ $t('Processor') }}</h3>
+							<div v-if="live?.cpu" class="atrio-hardware-meter">
+								<div class="atrio-hardware-meter-text">
+									<span>{{ $t('In use') }}</span>
+									<span>{{ live.cpu.total }}%</span>
+								</div>
+								<div class="atrio-hardware-bar"><span :style="{ width: `${live.cpu.total}%` }" /></div>
+								<ul v-if="live.cpu.cores.length > 1" :aria-label="$t('Usage per core')" class="atrio-hardware-cores">
+									<li v-for="(core, i) in live.cpu.cores" :key="i" :title="`${$t('Core')} ${i}: ${core}%`">
+										<span :style="{ height: `${Math.max(core, 3)}%` }" />
+									</li>
+								</ul>
+							</div>
 							<dl class="atrio-sheet-info">
 								<dt>{{ $t('Model') }}</dt>
 								<dd :title="info.cpu.model">{{ info.cpu.model || '—' }}</dd>
@@ -380,5 +392,35 @@ export default {
 
 .atrio-hardware-swap {
 	margin-top: 0.5rem;
+}
+
+// One thin column per core, filled from the bottom
+.atrio-hardware-cores {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(0.875rem, 1fr));
+	gap: 0.25rem;
+	margin: 0.625rem 0 0.75rem;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		align-items: flex-end;
+		height: 1.75rem;
+		overflow: hidden;
+		border-radius: 3px;
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	span {
+		display: block;
+		width: 100%;
+		background: #818cf8;
+		transition: height 0.4s ease;
+	}
+}
+
+.atrio-hardware-meter + .atrio-sheet-info {
+	margin-top: 0.75rem;
 }
 </style>

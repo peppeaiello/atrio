@@ -156,16 +156,56 @@ export async function discoverSensors(api) {
 // hwmon units: millidegrees, RPM, millivolts, microwatts, milliamps
 const SCALE = { temp: 1000, fan: 1, voltage: 1000, power: 1000000, current: 1000 }
 
-/** The values that change: sensors, frequency, memory, uptime, load. */
+// /proc/stat counts time since boot, so usage is the share of busy time between two readings
+let lastStat = null
+
+function parseStat(text) {
+	const out = {}
+	for (const line of (text || '').split('\n')) {
+		const match = /^(cpu\d*)\s+(.*)$/.exec(line)
+		if (!match) continue
+		// user nice system idle iowait irq softirq steal; guest time is already inside user
+		const [user, nice, system, idle, iowait, irq, softirq, steal] = match[2].split(/\s+/).map(Number)
+		const total = user + nice + system + idle + (iowait || 0) + (irq || 0) + (softirq || 0) + (steal || 0)
+		out[match[1]] = { idle: idle + (iowait || 0), total }
+	}
+	return out
+}
+
+function usage(now, before) {
+	const busy = (key) => {
+		const dt = now[key].total - (before[key]?.total ?? 0)
+		const di = now[key].idle - (before[key]?.idle ?? 0)
+		return dt > 0 ? Math.min(100, Math.max(0, Math.round(((dt - di) / dt) * 100))) : 0
+	}
+	const cores = Object.keys(now).filter((key) => key !== 'cpu').sort((a, b) => Number(a.slice(3)) - Number(b.slice(3)))
+	return now.cpu ? { total: busy('cpu'), cores: cores.map(busy) } : null
+}
+
+async function readUsage(api) {
+	let now = parseStat(await read(api, '/proc/stat'))
+	// The first time there is nothing to compare with: take a second reading shortly after
+	if (!lastStat && now.cpu) {
+		lastStat = now
+		await new Promise((resolve) => setTimeout(resolve, 500))
+		now = parseStat(await read(api, '/proc/stat'))
+	}
+	const result = now.cpu && lastStat?.cpu ? usage(now, lastStat) : null
+	if (now.cpu) lastStat = now
+	return result
+}
+
+/** The values that change: sensors, CPU usage, frequency, memory, uptime, load. */
 export async function readLive(api, groups, threads) {
 	const sensors = groups.flatMap((group) => group.sensors)
 	const freqPaths = Array.from({ length: threads || 0 }, (_, i) => `/sys/devices/system/cpu/cpu${i}/cpufreq/scaling_cur_freq`)
-	const [values, freqs, meminfo, uptime, loadavg] = await Promise.all([
+	const [values, freqs, meminfo, uptime, loadavg, cpuUsage] = await Promise.all([
 		Promise.all(sensors.map((sensor) => read(api, sensor.path))),
 		Promise.all(freqPaths.map((path) => read(api, path))),
 		read(api, '/proc/meminfo'),
 		read(api, '/proc/uptime'),
 		read(api, '/proc/loadavg'),
+		readUsage(api),
 	])
 	sensors.forEach((sensor, i) => {
 		const value = number(values[i])
@@ -175,6 +215,7 @@ export async function readLive(api, groups, threads) {
 	const mem = fields(meminfo)
 	const kb = (key) => (number((mem[key] || '').replace(/\s*kB$/, '')) || 0) * 1024
 	return {
+		cpu: cpuUsage,
 		avgMHz: mhz.length ? Math.round(mhz.reduce((a, b) => a + b, 0) / mhz.length) : null,
 		memory: {
 			total: kb('MemTotal'),
