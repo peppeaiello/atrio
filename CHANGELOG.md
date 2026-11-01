@@ -15,6 +15,8 @@ What changes in each Atrio release. The section for a version is also the text o
 - Apps whose image is pinned to an exact build (`name:tag@sha256:…`, as Immich and Nginx do) showed the long
   hash as their tag in the settings form. The form now shows the real tag, and the details panel shows only
   the start of the hash.
+- On CasaOS forks that only send live data to a signed-in user, such as ReCasaOS, the dashboard stayed frozen:
+  graphs, install progress and notifications now arrive there too.
 
 ## 0.1.11 — 2026-11-01
 
@@ -30,8 +32,6 @@ What changes in each Atrio release. The section for a version is also the text o
 **Fixed**
 
 - A failed app update no longer causes an error in the app grid.
-- On CasaOS forks that only send live data to a signed-in user, such as ReCasaOS, the dashboard stayed frozen:
-  graphs, install progress and notifications now arrive there too.
 
 ## 0.1.10 — 2026-11-01
 
