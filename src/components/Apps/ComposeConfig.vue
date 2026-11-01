@@ -787,12 +787,15 @@ export default {
       }
     },
 
-    // "registry:5000/app:1.2" -> ["registry:5000/app", "1.2"]: the tag is after the last colon
-    // only when that colon comes after the last slash
+    // "registry:5000/app:1.2@sha256:ab…" -> ["registry:5000/app", "1.2", "sha256:ab…"]: a digest
+    // comes after "@", and the tag is after the last colon only when that colon comes after the last slash
     splitImage(image = '') {
-      const slash = image.lastIndexOf('/')
-      const colon = image.lastIndexOf(':')
-      return colon > slash ? [image.slice(0, colon), image.slice(colon + 1)] : [image, '']
+      const at = image.indexOf('@')
+      const digest = at === -1 ? '' : image.slice(at + 1)
+      const ref = at === -1 ? image : image.slice(0, at)
+      const slash = ref.lastIndexOf('/')
+      const colon = ref.lastIndexOf(':')
+      return colon > slash ? [ref.slice(0, colon), ref.slice(colon + 1), digest] : [ref, '', digest]
     },
 
     getFirstField(image) {
@@ -803,14 +806,21 @@ export default {
       return this.splitImage(image)[1]
     },
 
+    // The digest pins one exact build, so it is kept only while name and tag stay the same
+    joinImage(service, name, tag) {
+      const [oldName, oldTag, digest] = this.splitImage(service.image)
+      const keep = digest && name === oldName && tag === oldTag
+      return `${name}:${tag}${keep ? `@${digest}` : ''}`
+    },
+
     // A tag typed with the name wins, then the tag already set, then "latest"
     setImageName(service, typed) {
       const [name, tag] = this.splitImage(String(typed || '').trim())
-      service.image = name ? `${name}:${tag || this.getLateField(service.image) || 'latest'}` : ''
+      service.image = name ? this.joinImage(service, name, tag || this.getLateField(service.image) || 'latest') : ''
     },
 
     setImageTag(service, tag) {
-      service.image = `${this.getFirstField(service.image)}:${String(tag || '').trim()}`
+      service.image = this.joinImage(service, this.getFirstField(service.image), String(tag || '').trim())
     },
   },
 }

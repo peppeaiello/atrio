@@ -107,7 +107,9 @@ export default {
 			const services = this.compose?.services || {}
 			return Object.entries(services).map(([name, service]) => ({
 				name,
-				image: service.image || '',
+				// "name:tag@sha256:…": the digest is a long hash, so only its start is shown
+				image: (service.image || '').split('@')[0],
+				digest: (service.image || '').split('@')[1]?.replace(/^(sha256:)?(\w{12})\w*$/, '$1$2…') || '',
 				ports: (service.ports || []).map((port) =>
 					typeof port === 'string' ? { label: port } : { label: `${port.published || '—'} → ${port.target}`, protocol: port.protocol || 'tcp', published: port.published },
 				),
@@ -422,7 +424,10 @@ export default {
 							<h3 v-if="services.length > 1">{{ service.name }}</h3>
 							<dl class="atrio-sheet-info">
 								<dt>{{ $t('Image') }}</dt>
-								<dd class="is-mono">{{ service.image }}</dd>
+								<dd class="is-mono">
+									{{ service.image }}
+									<span v-if="service.digest" class="atrio-image-digest" :title="$t('Pinned to this exact build')">{{ service.digest }}</span>
+								</dd>
 								<dt>{{ $t('Network') }}</dt>
 								<dd>{{ service.network }}</dd>
 								<dt>{{ $t('Restart policy') }}</dt>
@@ -844,6 +849,12 @@ export default {
 
 .atrio-sheet-config .is-mono {
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.atrio-image-digest {
+	display: block;
+	color: var(--atrio-text-muted);
+	font-size: 0.75rem;
 }
 
 .atrio-config-empty,
