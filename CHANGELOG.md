@@ -2,6 +2,19 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.12 — unreleased
+
+**New**
+
+- **Update progress.** While an app updates, its tile shows the download of the new version with the same
+  progress ring as installs, then "Updating" until it restarts (#3).
+
+**Fixed**
+
+- Apps whose image is pinned to an exact build (`name:tag@sha256:…`, as Immich and Nginx do) showed the long
+  hash as their tag in the settings form. The form now shows the real tag, and the details panel shows only
+  the start of the hash.
+
 ## 0.1.11 — 2026-11-01
 
 **New**
@@ -12,8 +25,6 @@ What changes in each Atrio release. The section for a version is also the text o
   disconnect or eject them.
 - The greeting above the dashboard can be large, small or hidden (Settings → Dashboard → Greeting); the status
   chips stay either way.
-- **Update progress.** While an app updates, its tile shows the download of the new version with the same
-  progress ring as installs, then "Updating" until it restarts (#3).
 
 **Fixed**
 
