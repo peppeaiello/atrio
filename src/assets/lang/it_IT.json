@@ -669,5 +669,6 @@
   "Could not save the push alert settings": "Impossibile salvare le impostazioni degli avvisi push",
   "Could not reach the alert service on the server": "Impossibile contattare il servizio degli avvisi sul server",
   "Test sent: check your phone": "Prova inviata: controlla il telefono",
-  "The server did not answer": "Il server non ha risposto"
+  "The server did not answer": "Il server non ha risposto",
+  "Size not reported by CasaOS": "Dimensione non fornita da CasaOS"
 }

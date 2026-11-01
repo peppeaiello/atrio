@@ -24,6 +24,8 @@ What changes in each Atrio release. The section for a version is also the text o
 
 - A built-in wallpaper saved by an older build could disappear after an update; it is now found again.
 - On phones the icons of the top bar sat lower than the logo.
+- On machines where CasaOS reports no disk size (for example in a Proxmox LXC container), the Storage widget
+  showed an endless red animated bar. It now says the size is not reported (#2).
 
 ## 0.1.9 — 2026-10-31
 

@@ -669,5 +669,6 @@
   "Could not save the push alert settings": "Could not save the push alert settings",
   "Could not reach the alert service on the server": "Could not reach the alert service on the server",
   "Test sent: check your phone": "Test sent: check your phone",
-  "The server did not answer": "The server did not answer"
+  "The server did not answer": "The server did not answer",
+  "Size not reported by CasaOS": "Size not reported by CasaOS"
 }
