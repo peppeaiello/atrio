@@ -87,6 +87,7 @@
 					<app-card
 						:item="item"
 						:update-available="Boolean(updates[item.name])"
+						:pull-progress="pulling[item.name] ?? null"
 						@configApp="showConfigPanel"
 						@importApp="showContainerPanel"
 						@updateState="getList"
@@ -279,6 +280,8 @@ export default {
 			listLoading: false,
 			// Atrio: installs in progress by app name, from the message bus
 			installing: {},
+			// Atrio: download progress of apps already in the grid (updates, new settings), by app name
+			pulling: {},
 			// Atrio: selection mode for actions on several apps
 			selecting: false,
 			selected: [],
@@ -360,6 +363,7 @@ export default {
 
 		clearInterval(this.ListRefreshTimer)
 		clearInterval(this.updatesTimer)
+		Object.values(this.pullTimers || {}).forEach(clearTimeout)
 	},
 	mounted () {
 		window.addEventListener('resize', this.getSkCount)
@@ -404,6 +408,19 @@ export default {
 		},
 		dismissInstall (name) {
 			delete this.installing[name]
+		},
+		// Atrio: an update downloads the new image with the same progress events as an install
+		trackPull (name, progress) {
+			this.pulling[name] = progress ?? this.pulling[name] ?? 0
+			this.pullTimers = this.pullTimers || {}
+			clearTimeout(this.pullTimers[name])
+			// No end event (CasaOS restarted, socket dropped): stop showing the ring after a while
+			this.pullTimers[name] = setTimeout(() => this.endPull(name), 120000)
+		},
+		endPull (name) {
+			if (!name) return
+			clearTimeout(this.pullTimers?.[name])
+			delete this.pulling[name]
 		},
 		// Atrio: actions on several apps. Only compose apps take start, stop, restart and update
 		appTitle (item) {
@@ -824,8 +841,11 @@ export default {
 			this.trackInstall(res.Properties, 0)
 		},
 		'app:install-progress' (res) {
-			const progress = Number(res.Properties['app:progress'])
-			this.trackInstall(res.Properties, Number.isFinite(progress) ? Math.max(0, Math.min(100, Math.round(progress))) : undefined)
+			const value = Number(res.Properties['app:progress'])
+			const progress = Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : undefined
+			const name = res.Properties['app:name']
+			if (name && !this.installing[name] && this.appList.some(item => item.name === name)) this.trackPull(name, progress)
+			else this.trackInstall(res.Properties, progress)
 		},
 		'app:install-end' (res) {
 			this.getList().then(() => {
@@ -844,10 +864,12 @@ export default {
 			this.getList()
 		},
 		'app:apply-changes-error' (res) {
+			this.endPull(res.Properties['app:name'])
 			// toast info
 			this.messageBusToast(res.Properties.message, 'is-danger')
 		},
 		'app:apply-changes-end' (res) {
+			this.endPull(res.Properties['app:name'])
 			let languages = JSON.parse(res.Properties['app:title'])
 			const title = ice_i18n(languages)
 			// toast info
@@ -866,6 +888,7 @@ export default {
 		 * @return {void}
 		 */
 		'app:update-end' (data) {
+			this.endPull(data.Properties['app:name'])
 			if (data.Properties['docker:image:updated'] === 'true') {
 				// business :: Tagging of new app / scrollIntoView
 				this.addIdToSessionStorage(data.Properties['app:name'])
@@ -882,13 +905,8 @@ export default {
 			}
 		},
 		'app:update-error' (data) {
-			if (data.Properties.cid === this.item.id) {
-				this.isUpdating = false
-				this.$buefy.toast.open({
-					message: this.$t(data.Properties['error']),
-					type: 'is-danger'
-				})
-			}
+			// The app card shows the error; here the grid only stops showing the download
+			this.endPull(data.Properties['app:name'])
 		}
 	}
 }

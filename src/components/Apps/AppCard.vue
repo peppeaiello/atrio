@@ -10,6 +10,10 @@ import business_LinkApp from '@/mixins/app/Business_LinkApp'
 import tipEditorModal from '@/components/Apps/TipEditorModal.vue'
 import commonI18n, { ice_i18n } from '@/mixins/base/common-i18n'
 
+// The update ring, the same size as the install one
+const PULL_RADIUS = 30
+const PULL_CIRCUMFERENCE = 2 * Math.PI * PULL_RADIUS
+
 export default {
   name: 'AppCard',
   components: {
@@ -26,6 +30,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // Atrio: download progress (0-100) of an update or new settings, null when nothing is downloading
+    pullProgress: {
+      type: Number,
+      default: null,
+    },
   },
   emits: ['configApp', 'importApp', 'updateState'],
   data() {
@@ -33,6 +42,8 @@ export default {
       dropState: false,
       // Atrio: a stopped app asks what to do instead of starting on a click
       confirmStart: false,
+      pullRadius: PULL_RADIUS,
+      pullCircumference: PULL_CIRCUMFERENCE,
       isUninstalling: false,
       isCloning: false,
       isCheckThenUpdate: false,
@@ -71,13 +82,21 @@ export default {
       return this.$t('Open {name}', { name: this.title })
     },
     // Quiet status: running is the normal case, only exceptions get a visible label
+    isPulling() {
+      return this.pullProgress !== null
+    },
+    pullOffset() {
+      return PULL_CIRCUMFERENCE * (1 - Math.min(100, Math.max(0, this.pullProgress || 0)) / 100)
+    },
     statusPill() {
+      if (this.isPulling) return this.pullProgress < 100 ? `${this.$t('Downloading')} ${this.pullProgress}%` : this.$t('Updating')
       if (this.item.app_type === 'system' || !this.item.status) return ''
       if (this.isStopped) return this.$t('Stopped')
       if (this.updateAvailable) return this.$t('Update available')
       return ''
     },
     statusClass() {
+      if (this.isPulling) return 'is-busy is-pill'
       if (this.item.app_type === 'system' || !this.item.status) return 'is-invisible'
       if (this.isStopped) return 'is-stopped is-pill'
       if (this.updateAvailable) return 'is-update is-pill'
@@ -889,13 +908,27 @@ export default {
               />
               <!-- Atrio: running is shown by a small round dot on the icon; the label is for screen readers -->
               <span v-if="statusClass.includes('is-running')" aria-hidden="true" class="atrio-icon-dot" />
+              <!-- Atrio: download of an update, with the same ring as an install -->
+              <div
+                v-if="isPulling" :aria-label="`${title}: ${statusPill}`" :aria-valuenow="pullProgress"
+                aria-valuemax="100" aria-valuemin="0" class="atrio-pull-ring" role="progressbar"
+              >
+                <svg aria-hidden="true" viewBox="0 0 72 72">
+                  <circle :r="pullRadius" class="atrio-installing-track" cx="36" cy="36" />
+                  <circle
+                    :r="pullRadius" :stroke-dasharray="pullCircumference" :stroke-dashoffset="pullOffset"
+                    class="atrio-installing-ring" cx="36" cy="36"
+                  />
+                </svg>
+                <span v-if="pullProgress > 0 && pullProgress < 100" class="atrio-installing-percent">{{ pullProgress }}%</span>
+              </div>
               <!-- Unstable -->
               <CTooltip v-if="newAppIds.includes(item.name)" class="__position" content="NEW" />
             </div>
 
             <!-- Loading Bar Start -->
             <b-loading
-              :model-value="isLoading" :can-cancel="false" :is-full-page="false"
+              :model-value="isLoading && !isPulling" :can-cancel="false" :is-full-page="false"
               class="has-background-gray-800 op80 is-64x64"
               style="top: auto;bottom: auto; right: auto; left: auto; border-radius: 11.5px"
             >
@@ -1176,6 +1209,29 @@ export default {
 }
 
 // Running: a small round dot on the icon instead of a label on every tile
+.atrio-pull-ring {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	border-radius: 11.5px;
+	background: rgba(2, 6, 23, 0.55);
+	pointer-events: none;
+
+	svg {
+		position: absolute;
+		inset: -0.5rem;
+		width: 5rem;
+		height: 5rem;
+		transform: rotate(-90deg);
+	}
+
+	circle {
+		fill: none;
+		stroke-width: 3.5;
+	}
+}
+
 .atrio-icon-dot {
 	position: absolute;
 	right: -0.25rem;
@@ -1288,6 +1344,15 @@ export default {
 			border-bottom: 0.45rem solid var(--atrio-accent);
 			border-left: 0.3rem solid transparent;
 			background: none;
+		}
+	}
+
+	&.is-busy {
+		color: #a5f3fc;
+
+		.atrio-app-dot {
+			border-radius: 50%;
+			background: var(--atrio-accent);
 		}
 	}
 
