@@ -9,12 +9,15 @@ import FilesIcon from './FilesIcon.vue'
 import FilesMenu from './FilesMenu.vue'
 import FilesSidebar from './FilesSidebar.vue'
 import FolderPicker from './FolderPicker.vue'
+import NetworkFolderDialog from './NetworkFolderDialog.vue'
 import {
   ROOT,
   activity,
   baseName,
+  canDisconnect,
   createFile,
   createFolder,
+  disconnect,
   download,
   enqueueUploads,
   errorMessage,
@@ -22,9 +25,11 @@ import {
   isInside,
   joinPath,
   kindOf,
+  listCloudServices,
   listFolder,
   listLocations,
   onUploaded,
+  openCloudSignIn,
   parentPath,
   previewMode,
   remove,
@@ -77,6 +82,9 @@ const focusIndex = ref(-1)
 const locations = ref({ places: [], storage: [] })
 const sidebarOpen = ref(false)
 const editingPath = ref(false)
+const cloudServices = ref([])
+const networkDialog = ref(false)
+const ejecting = ref(null) // { location, busy, error }
 
 const collator = computed(() => new Intl.Collator(locale.value, { numeric: true, sensitivity: 'base' }))
 
@@ -185,17 +193,6 @@ async function loadLocations() {
   }
   catch {}
 }
-
-// Called by the home page each time the file manager is shown.
-let initialized = false
-function init(start) {
-  initialized = true
-  readWallpaper()
-  focusRoot()
-  loadLocations()
-  go(start || ROOT, { record: path.value !== (start || ROOT) && !!entries.value.length })
-}
-defineExpose({ init })
 
 /* ------------------------------------------------------------------ path editing */
 
@@ -706,7 +703,11 @@ function runAction(id) {
     sortDir.value = id.slice(4)
     return focusRoot()
   }
+  if (id.startsWith('cloud:'))
+    return connectCloud(Number(id.slice(6)))
   const handlers = {
+    network: () => { networkDialog.value = true },
+    localDisk: openStorageManager,
     hidden: () => { showHidden.value = !showHidden.value },
     open: () => open(list[0]),
     download: () => downloadItems(list),
@@ -726,7 +727,7 @@ function runAction(id) {
     reload: () => load(true),
   }
   handlers[id]?.()
-  if (!dialog.value && !picker.value && !previewItem.value)
+  if (!dialog.value && !picker.value && !previewItem.value && !networkDialog.value)
     focusRoot()
 }
 
@@ -752,6 +753,119 @@ function closeMenu() {
   focusRoot()
 }
 
+/* ------------------------------------------------------------------ remote storage */
+
+async function loadCloudServices() {
+  try {
+    cloudServices.value = await listCloudServices()
+  }
+  catch {
+    cloudServices.value = []
+  }
+}
+
+function openAddStorageMenu(e) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  const services = cloudServices.value.map((service, index) => ({
+    id: `cloud:${index}`,
+    label: t('connectService', { name: service.name }),
+    icon: 'cloud',
+    image: service.icon,
+  }))
+  menu.value = {
+    x: rect.left,
+    y: rect.bottom + 6,
+    title: t('addStorage'),
+    actions: [
+      { id: 'network', label: t('networkFolder'), icon: 'network' },
+      ...(services.length ? [{ id: 'd1', divider: true }, ...services] : []),
+      { id: 'd2', divider: true },
+      { id: 'localDisk', label: t('localDisk'), icon: 'hdd' },
+    ],
+  }
+}
+
+function connectCloud(index) {
+  const service = cloudServices.value[index]
+  if (!service)
+    return
+  const origin = `${vm.$protocol || window.location.protocol}//${vm.$baseURL || window.location.host}`
+  if (openCloudSignIn(service, origin))
+    notify(t('cloudWindow', { name: service.name }))
+  else
+    notify(t('popupBlocked'), 'error')
+}
+
+// The home page owns the storage manager (new disks, formatting, merging).
+const OPEN_STORAGE_MANAGER = 'casaUI:openStorageManager'
+function openStorageManager() {
+  vm.$EventBus?.$emit(OPEN_STORAGE_MANAGER)
+}
+
+async function onNetworkConnected(mountPoint) {
+  networkDialog.value = false
+  notify(t('connected'))
+  await loadLocations()
+  if (mountPoint)
+    go(mountPoint)
+  else
+    focusRoot()
+}
+
+function startDisconnect(location) {
+  if (canDisconnect(location))
+    ejecting.value = { location, busy: false, error: '' }
+}
+
+async function confirmDisconnect() {
+  const state = ejecting.value
+  if (!state || state.busy)
+    return
+  state.busy = true
+  try {
+    await disconnect(state.location)
+    ejecting.value = null
+    notify(t('disconnected'))
+    if (isInside(path.value, state.location.path))
+      go(ROOT)
+    else
+      focusRoot()
+    loadLocations()
+  }
+  catch (e) {
+    state.busy = false
+    state.error = errorMessage(e)
+  }
+}
+
+function closeEject() {
+  ejecting.value = null
+  focusRoot()
+}
+
+// The message bus reports the end of a cloud sign-in started from the menu.
+function onCloudMounted(event) {
+  const props = event?.Properties || {}
+  const unquote = value => String(value || '').replace(/^["'](.*)["']$/, '$1')
+  const status = unquote(props.status)
+  if (props.message)
+    notify(vm.$t(unquote(props.message)), status === 'fail' ? 'error' : 'info')
+  if (status !== 'fail')
+    loadLocations()
+}
+
+// Called by the home page each time the file manager is shown.
+let initialized = false
+function init(start) {
+  initialized = true
+  readWallpaper()
+  focusRoot()
+  loadLocations()
+  loadCloudServices()
+  go(start || ROOT, { record: path.value !== (start || ROOT) && !!entries.value.length })
+}
+defineExpose({ init })
+
 /* ------------------------------------------------------------------ keyboard */
 
 const filterInput = ref(null)
@@ -774,7 +888,7 @@ function moveFocus(next, e) {
 }
 
 function onKeydown(e) {
-  if (dialog.value || picker.value || previewItem.value || menu.value)
+  if (dialog.value || picker.value || previewItem.value || menu.value || networkDialog.value || ejecting.value)
     return
   const tag = e.target.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
@@ -904,6 +1018,7 @@ onMounted(() => {
   // vue-socket.io-extended (Vue 2) wraps the client in $socket.client; the Vue 3 plugin exposes it as $socket.
   socket = vm.$socket?.client || vm.$socket || null
   socket?.on?.('casaos:file:operate', onFileOperate)
+  socket?.on?.('casaos:file:recover', onCloudMounted)
   // The home page calls init() right after mounting; load the home folder if nothing does.
   setTimeout(() => {
     if (!initialized)
@@ -913,6 +1028,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   socket?.off?.('casaos:file:operate', onFileOperate)
+  socket?.off?.('casaos:file:recover', onCloudMounted)
   stopUploadListener()
   reloadTimers.forEach(clearTimeout)
   clearTimeout(toastTimer)
@@ -991,7 +1107,10 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
               <FilesIcon name="x" />
             </button>
           </div>
-          <FilesSidebar :current="path" :places="locations.places" :storage="locations.storage" @go="go" />
+          <FilesSidebar
+            :current="path" :places="locations.places" :storage="locations.storage" @add="openAddStorageMenu" @disconnect="startDisconnect"
+            @go="go"
+          />
         </aside>
 
         <!-- Folder -->
@@ -1148,6 +1267,27 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
         </button>
         <button :disabled="dialog.busy" class="btn btn--danger-solid" type="button" @click="submitDialog">
           <FilesIcon :size="16" name="trash" />{{ $t('files.delete') }}
+        </button>
+      </template>
+    </FilesDialog>
+
+    <NetworkFolderDialog v-if="networkDialog" @close="networkDialog = false; focusRoot()" @connected="onNetworkConnected" />
+
+    <FilesDialog
+      v-if="ejecting"
+      :title="$t(ejecting.location.kind === 'usb' ? 'files.ejectTitle' : 'files.disconnectTitle', { name: ejecting.location.label || ejecting.location.name })"
+      @close="closeEject"
+    >
+      <p>{{ $t(ejecting.location.kind === 'usb' ? 'files.ejectBody' : 'files.disconnectBody') }}</p>
+      <p v-if="ejecting.error" class="field__error" role="alert">
+        {{ ejecting.error }}
+      </p>
+      <template #actions>
+        <button class="btn" type="button" @click="closeEject">
+          {{ $t('files.cancel') }}
+        </button>
+        <button :disabled="ejecting.busy" class="btn btn--primary" type="button" @click="confirmDisconnect">
+          <FilesIcon :size="16" name="eject" />{{ $t(ejecting.location.kind === 'usb' ? 'files.eject' : 'files.disconnect') }}
         </button>
       </template>
     </FilesDialog>

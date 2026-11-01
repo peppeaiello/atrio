@@ -2,6 +2,15 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## Unreleased
+
+**New**
+
+- **Add storage from the file manager**, as in the classic CasaOS panel: a + next to Storage connects a
+  network folder (SMB, with a name and password or as a guest), Google Drive, Dropbox or OneDrive, or opens
+  the storage manager for a local disk. Network folders, cloud drives and USB disks get a button to
+  disconnect or eject them.
+
 ## 0.1.10 — 2026-11-01
 
 **New**
