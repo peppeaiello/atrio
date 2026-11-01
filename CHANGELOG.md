@@ -12,6 +12,12 @@ What changes in each Atrio release. The section for a version is also the text o
   disconnect or eject them.
 - The greeting above the dashboard can be large, small or hidden (Settings → Dashboard → Greeting); the status
   chips stay either way.
+- **Update progress.** While an app updates, its tile shows the download of the new version with the same
+  progress ring as installs, then "Updating" until it restarts (#3).
+
+**Fixed**
+
+- A failed app update no longer causes an error in the app grid.
 
 ## 0.1.10 — 2026-11-01
 
