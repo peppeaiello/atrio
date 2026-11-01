@@ -25,13 +25,18 @@
 									<b-tag v-if="health" type="is-success">{{ $t('Healthy') }}</b-tag>
 									<b-tag v-else type="is-danger">{{ $t('Damage') }}</b-tag>
 								</h4>
-								<p class="has-text-left is-size-14px disk-info">
+								<p v-if="totalSize > 0" class="has-text-left is-size-14px disk-info">
 									{{ $t('Used') }}: {{ renderSize(totalUsed) }}<br>
 									{{ $t('Total') }}: {{ renderSize(totalSize) }}
 								</p>
+								<!-- Atrio: containers (LXC) and some VMs report no disk size -->
+								<p v-else class="has-text-left is-size-14px disk-info">
+									{{ $t('Size not reported by CasaOS') }}
+								</p>
 							</div>
 						</div>
-						<b-progress :type="totalPercent | getProgressType" :value="totalPercent" class="mt-2"
+						<!-- A missing value would make Buefy draw an endless animated bar: no bar instead -->
+						<b-progress v-if="totalSize > 0" :type="totalPercent | getProgressType" :value="totalPercent" class="mt-2"
 							size="is-small"></b-progress>
 					</div>
 				</div>
@@ -58,8 +63,8 @@
 								</p>
 							</div>
 						</div>
-						<b-progress :type="(Math.floor((item.size - item.avail) * 100 / item.size)) | getProgressType"
-							:value="Math.floor((item.size - item.avail) * 100 / item.size)" class="mt-2"
+						<b-progress v-if="item.size > 0" :type="usedPercent(item.size, item.avail) | getProgressType"
+							:value="usedPercent(item.size, item.avail)" class="mt-2"
 							size="is-small"></b-progress>
 					</div>
 				</div>
@@ -97,10 +102,15 @@ export default {
 		this.usbDisks = this.$store.state.hardwareInfo.sys_usb || []
 	},
 	methods: {
-		getDiskInfo(diskInfo) {
-			this.totalSize = diskInfo.size
-			this.totalUsed = diskInfo.used
-			this.totalPercent = 100 - Math.floor(diskInfo.avail * 100 / this.totalSize)
+		// Atrio: a size of 0 or a missing value (containers, some VMs) used to give NaN
+		usedPercent(size, avail) {
+			if (!(size > 0) || !Number.isFinite(avail)) return 0
+			return Math.min(100, Math.max(0, 100 - Math.floor(avail * 100 / size)))
+		},
+		getDiskInfo(diskInfo = {}) {
+			this.totalSize = Number(diskInfo.size) || 0
+			this.totalUsed = Number(diskInfo.used) || 0
+			this.totalPercent = this.usedPercent(this.totalSize, Number(diskInfo.avail))
 			this.health = diskInfo.health
 		},
 

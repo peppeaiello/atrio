@@ -1001,7 +1001,7 @@ export default {
             fsType: storage.type,
             size: storage.size,
             availSize: storage.avail,
-            usePercent: 100 - Math.floor((storage.avail * 100) / storage.size),
+            usePercent: (storage.size > 0 ? 100 - Math.floor(storage.avail * 100 / storage.size) : 0),
             diskName: storage.drive_name,
             path: storage.path,
             mount_point: storage.mount_point,
