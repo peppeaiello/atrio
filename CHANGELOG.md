@@ -2,6 +2,13 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.11 — unreleased
+
+**New**
+
+- The greeting above the dashboard can be large, small or hidden (Settings → Dashboard → Greeting); the status
+  chips stay either way.
+
 ## 0.1.10 — 2026-11-01
 
 **New**

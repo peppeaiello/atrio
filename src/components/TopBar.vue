@@ -4,6 +4,7 @@ import PushAlerts from '@/components/settings/PushAlerts.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
+import { greeting as greetingPrefs, setGreetingSize } from '@/plugins/greeting'
 import AccountPanel from './account/AccountPanel.vue'
 import ConsolePanel from './logsAndTerminal/ConsolePanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -31,6 +32,7 @@ export default {
   data() {
     return {
       timer: 0,
+      greetingPrefs,
       // Atrio settings and account panels
       settingsOpen: false,
       accountOpen: false,
@@ -174,6 +176,7 @@ export default {
     window.removeEventListener('keydown', this.onSettingsKey)
   },
   methods: {
+    setGreetingSize,
     /*************************************************
 		 * PART 0  Common
 		 **************************************************/
@@ -653,6 +656,15 @@ export default {
 
               <section class="atrio-settings-section">
                 <h3>{{ $t('Dashboard') }}</h3>
+                <div class="atrio-setting-row">
+                  <b-icon icon="format-size" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Greeting') }}</span>
+                  <b-select :model-value="greetingPrefs.size" class="set-select" size="is-small" @update:model-value="setGreetingSize">
+                    <option value="large">{{ $t('Large') }}</option>
+                    <option value="small">{{ $t('Small') }}</option>
+                    <option value="hidden">{{ $t('Hidden') }}</option>
+                  </b-select>
+                </div>
                 <div class="atrio-setting-row">
                   <b-icon icon="display-applications-outline" pack="casa" size="is-20" />
                   <span class="atrio-setting-label">{{ $t('Show Recommended Apps') }}</span>
