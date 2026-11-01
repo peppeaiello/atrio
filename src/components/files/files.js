@@ -218,20 +218,76 @@ export async function listLocations() {
         label: part.label || part.name || baseName(part.mount_point),
         path: part.mount_point,
         icon: disk.type === 'usb' ? 'usb' : 'hdd',
+        kind: disk.type === 'usb' ? 'usb' : 'disk',
         size: part.size,
         avail: part.avail,
       })
     })
   })
   ;(shares || []).forEach((share) => {
-    storage.push({ name: share.host, label: share.host, path: share.mount_point, icon: 'network' })
+    storage.push({ name: share.host, label: share.host, path: share.mount_point, icon: 'network', kind: 'network', id: share.id })
   })
   ;(clouds || []).forEach((cloud) => {
-    storage.push({ name: cloud.name, label: cloud.name, path: cloud.mount_point, icon: 'cloud' })
+    storage.push({ name: cloud.name, label: cloud.name, path: cloud.mount_point, icon: 'cloud', kind: 'cloud' })
   })
   storage.push({ name: 'system', label: null, path: '/', icon: 'server' })
 
   return { places, storage }
+}
+
+/* ------------------------------------------------------------------ remote storage */
+
+// Accepts "smb://nas.local", "192.168.1.10" or "smb://192.168.1.10/share/"; returns the bare host, or ''
+// when the text is not a host name or address. CasaOS mounts every folder the server shares, so any
+// path after the host is dropped.
+export function parseSmbHost(input) {
+  const host = input.trim().replace(/^smb:\/\//i, '').replace(/^\/\//, '').split('/')[0]
+  return /^[\w.-]+$/.test(host) ? host : ''
+}
+
+// A guest login uses the same guest/guest pair as the classic CasaOS dialog.
+export async function connectNetworkFolder({ host, username, password, guest }) {
+  const credentials = guest ? { username: 'guest', password: 'guest' } : { username, password }
+  return unwrap(await api.samba.createConnection({ host, ...credentials }))
+}
+
+// Network folders, cloud drives and USB disks can be disconnected from the sidebar.
+export function canDisconnect(location) {
+  return ['network', 'cloud', 'usb'].includes(location.kind)
+}
+
+export async function disconnect(location) {
+  if (location.kind === 'network')
+    return unwrap(await api.samba.deleteConnection(location.id))
+  if (location.kind === 'cloud')
+    return unwrap(await api.cloud.umount({ mount_point: location.path }))
+  if (location.kind === 'usb')
+    return unwrap(await api.disks.umountUsb({ mount_point: location.path }))
+}
+
+// Cloud services CasaOS can mount (Google Drive, Dropbox, OneDrive), each signed in through OAuth.
+export async function listCloudServices() {
+  const services = unwrap(await api.driver.getDriverList()) || []
+  return services.map(service => ({
+    name: service.name,
+    icon: (service.icon || '').replace(/^\.\//, '/'),
+    authUrl: service.auth_url,
+  }))
+}
+
+// Opens the provider's sign-in page in its own window, the way the classic dialog does: CasaOS puts
+// ${HOST} in the URL for the address the sign-in returns to. Returns false when the browser blocks it.
+export function openCloudSignIn(service, origin) {
+  const url = service.authUrl
+    // eslint-disable-next-line no-template-curly-in-string -- CasaOS's placeholder, not a template
+    .replace('${HOST}', encodeURI(origin))
+    .replace('redirect_uri=http%', 'redirect_uri=https%')
+  const width = 1280
+  const height = 700
+  const top = Math.max(0, (window.screen.height - 30 - height) / 2)
+  const left = Math.max(0, (window.screen.width - 10 - width) / 2)
+  const popup = window.open(url, service.name, `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,location=no,status=no`)
+  return !!popup
 }
 
 /* ------------------------------------------------------------------ activity: uploads and tasks */

@@ -6,7 +6,7 @@ const props = defineProps({
   x: { type: Number, required: true },
   y: { type: Number, required: true },
   title: { type: String, default: '' },
-  // [{ id, label, icon, danger?, disabled?, divider? }]
+  // [{ id, label, icon or image, danger?, disabled?, divider? }]
   actions: { type: Array, required: true },
 })
 const emit = defineEmits(['pick', 'close'])
@@ -57,7 +57,8 @@ function onKeydown(e) {
           v-else :class="{ 'is-danger': action.danger }" :disabled="action.disabled" class="menu__item" role="menuitem" type="button"
           @click="emit('pick', action.id)"
         >
-          <FilesIcon :name="action.icon" :size="17" />
+          <img v-if="action.image" :src="action.image" alt="" class="menu__image">
+          <FilesIcon v-else :name="action.icon" :size="17" />
           <span>{{ action.label }}</span>
           <kbd v-if="action.shortcut">{{ action.shortcut }}</kbd>
         </button>
@@ -114,6 +115,12 @@ function onKeydown(e) {
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+}
+
+.menu__image {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
 }
 
 .menu__item span {

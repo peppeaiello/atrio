@@ -6,6 +6,10 @@ What changes in each Atrio release. The section for a version is also the text o
 
 **New**
 
+- **Add storage from the file manager**, as in the classic CasaOS panel: a + next to Storage connects a
+  network folder (SMB, with a name and password or as a guest), Google Drive, Dropbox or OneDrive, or opens
+  the storage manager for a local disk. Network folders, cloud drives and USB disks get a button to
+  disconnect or eject them.
 - The greeting above the dashboard can be large, small or hidden (Settings → Dashboard → Greeting); the status
   chips stay either way.
 
