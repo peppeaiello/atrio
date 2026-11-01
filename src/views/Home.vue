@@ -13,6 +13,7 @@ import NotificationCenter from '@/components/home/NotificationCenter.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
+import { greeting as greetingPrefs } from '@/plugins/greeting'
 import events from '@/events/events'
 
 const wallpaperConfig = 'wallpaper'
@@ -43,6 +44,7 @@ export default {
       isLoading: true,
       // Drives the date, time and greeting above the dashboard
       now: new Date(),
+      greetingPrefs,
       // Status chips next to the greeting
       systemLoad: null,
       appsSummary: { running: 0, total: 0 },
@@ -307,8 +309,8 @@ export default {
     <div class="contents contextmenu-canvas" @contextmenu.prevent="openHomeContaxtMenu">
       <div class="container">
         <!-- Greeting Start -->
-        <section class="atrio-greeting">
-          <div>
+        <section :class="`is-${greetingPrefs.size}`" class="atrio-greeting">
+          <div v-if="greetingPrefs.size !== 'hidden'">
             <p class="atrio-greeting-date">{{ today }}</p>
             <h1 class="atrio-greeting-title">{{ greeting }}</h1>
           </div>
@@ -409,6 +411,20 @@ export default {
         .atrio-greeting-title {
             font-size: 1.75rem;
         }
+    }
+
+    &.is-small {
+        padding: 1.25rem 0.25rem 1rem;
+
+        .atrio-greeting-title {
+            font-size: 1.375rem;
+            letter-spacing: -0.02em;
+        }
+    }
+
+    // Only the status chips are left
+    &.is-hidden {
+        padding: 1rem 0.25rem 0.75rem;
     }
 }
 
