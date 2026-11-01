@@ -675,5 +675,8 @@
   "Large": "Grande",
   "Small": "Piccolo",
   "Hidden": "Nascosto",
-  "Pinned to this exact build": "Fissata a questa build esatta"
+  "Pinned to this exact build": "Fissata a questa build esatta",
+  "In use": "In uso",
+  "Usage per core": "Uso per core",
+  "Core": "Core"
 }
