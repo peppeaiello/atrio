@@ -30,6 +30,8 @@ What changes in each Atrio release. The section for a version is also the text o
 **Fixed**
 
 - A failed app update no longer causes an error in the app grid.
+- On CasaOS forks that only send live data to a signed-in user, such as ReCasaOS, the dashboard stayed frozen:
+  graphs, install progress and notifications now arrive there too.
 
 ## 0.1.10 — 2026-11-01
 

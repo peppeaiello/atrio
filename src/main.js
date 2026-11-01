@@ -36,10 +36,25 @@ const localhostName = document.location.hostname
 const baseIp = isDev ? `${devIp}` : `${localhostName}`
 const baseURL = isDev ? `${devIp}:${devPort}` : `${localhost}`
 
+// The message bus of CasaOS forks such as ReCasaOS only answers a signed-in user. A browser cannot
+// set a header on a WebSocket, so the token goes in the `token` query, which CasaOS ignores.
+const busToken = () => store.state.access_token || localStorage.getItem('access_token') || ''
 const socket = io( {
 	transports: ['websocket', 'polling'],
 	path: '/v2/message_bus/socket.io/',
+	query: { token: busToken() },
 });
+// A reconnection would otherwise reuse the token the socket first opened with
+socket.io.on('reconnect_attempt', () => {
+	socket.io.opts.query = { token: busToken() }
+})
+// Signing in (or a refreshed token) while the bus refused us: connect again with the new token
+store.watch(state => state.access_token, (token) => {
+	if (!token || socket.connected) return
+	socket.io.opts.query = { token }
+	socket.close()
+	socket.open()
+})
 
 // Vue 3 behaviour where nothing in the app relies on Vue 2's, so Vue 3 libraries
 // (Buefy 3, vuedraggable, ...) work; the rest stays in compat mode while code is migrated.
