@@ -35,3 +35,7 @@ unused-files.json
 .turbo
 
 /packages/icewhale*
+
+# Planning notes stay local; only the README screenshots are published
+/docs/*
+!/docs/screenshots/

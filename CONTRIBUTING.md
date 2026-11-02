@@ -24,12 +24,11 @@ the same: Atrio only replaces the interface, so those problems usually belong to
 ## Suggesting an idea
 
 Open an issue with the **Idea** template. Say what you are trying to do and why the current screens make it hard;
-a sketch or a screenshot of another app that does it well helps a lot. The [roadmap](docs/ROADMAP.md) shows what is
-already planned.
+a sketch or a screenshot of another app that does it well helps a lot.
 
 ## Contributing code
 
-1. Read [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) to run Atrio against your CasaOS server and build it.
+1. Read [DEVELOPMENT.md](DEVELOPMENT.md) to run Atrio against your CasaOS server and build it.
 2. For anything larger than a small fix, open an issue first so we can agree on the approach.
 3. Fork [peppeaiello/atrio](https://github.com/peppeaiello/atrio), work on a branch and open a pull request against
    its `main` branch.
