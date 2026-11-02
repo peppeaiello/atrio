@@ -13,7 +13,7 @@ import NotificationCenter from '@/components/home/NotificationCenter.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
-import { greeting as greetingPrefs } from '@/plugins/greeting'
+import { greeting as greetingPrefs, greetingRem } from '@/plugins/greeting'
 import events from '@/events/events'
 
 const wallpaperConfig = 'wallpaper'
@@ -121,6 +121,7 @@ export default {
     },
   },
   methods: {
+    greetingRem,
     setAppsSummary(summary) {
       this.appsSummary = summary
     },
@@ -309,8 +310,11 @@ export default {
     <div class="contents contextmenu-canvas" @contextmenu.prevent="openHomeContaxtMenu">
       <div class="container">
         <!-- Greeting Start -->
-        <section :class="`is-${greetingPrefs.size}`" class="atrio-greeting">
-          <div v-if="greetingPrefs.size !== 'hidden'">
+        <section
+          :class="{ 'is-hidden': !greetingPrefs.visible, 'is-small': greetingPrefs.visible && greetingRem(greetingPrefs.size) < 1.75 }"
+          :style="{ '--atrio-greeting-size': `${greetingRem(greetingPrefs.size)}rem` }" class="atrio-greeting"
+        >
+          <div v-if="greetingPrefs.visible">
             <p class="atrio-greeting-date">{{ today }}</p>
             <h1 class="atrio-greeting-title">{{ greeting }}</h1>
           </div>
@@ -401,7 +405,7 @@ export default {
 
     .atrio-greeting-title {
         margin-top: 0.25rem;
-        font-size: 2.5rem;
+        font-size: var(--atrio-greeting-size, 2.5rem);
         font-weight: 700;
         line-height: 1.1;
         letter-spacing: -0.03em;
@@ -409,7 +413,7 @@ export default {
 
     @include mobile {
         .atrio-greeting-title {
-            font-size: 1.75rem;
+            font-size: calc(var(--atrio-greeting-size, 2.5rem) * 0.7);
         }
     }
 
@@ -417,7 +421,6 @@ export default {
         padding: 1.25rem 0.25rem 1rem;
 
         .atrio-greeting-title {
-            font-size: 1.375rem;
             letter-spacing: -0.02em;
         }
     }

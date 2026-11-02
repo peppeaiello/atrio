@@ -220,10 +220,11 @@ button.atrio-metric-note {
 	letter-spacing: -0.01em;
 }
 
-// Settings → Dashboard → Width: on large screens the top bar and the dashboard use most of the window
+// Settings → Dashboard → Width: on large screens the top bar and the dashboard grow up to most of the window
 @media screen and (min-width: 1216px) {
+	// --atrio-wide goes from 0 (the usual 1344px) to 1 (the whole window less the margins)
 	html.atrio-wide .out-container .container {
-		max-width: calc(100% - 4rem);
+		max-width: min(100% - 4rem, 1344px + (100% - 1344px) * var(--atrio-wide, 0));
 	}
 
 	// More apps per row instead of larger tiles: about the tile sizes of the normal width

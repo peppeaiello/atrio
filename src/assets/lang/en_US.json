@@ -672,14 +672,11 @@
   "The server did not answer": "The server did not answer",
   "Size not reported by CasaOS": "Size not reported by CasaOS",
   "Greeting": "Greeting",
-  "Large": "Large",
-  "Small": "Small",
-  "Hidden": "Hidden",
   "Pinned to this exact build": "Pinned to this exact build",
   "In use": "In use",
   "Usage per core": "Usage per core",
   "Core": "Core",
   "Width": "Width",
   "On large screens": "On large screens",
-  "Wide": "Wide"
+  "Greeting size": "Greeting size"
 }

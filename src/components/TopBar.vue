@@ -4,7 +4,7 @@ import PushAlerts from '@/components/settings/PushAlerts.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
-import { greeting as greetingPrefs, setGreetingSize } from '@/plugins/greeting'
+import { GREETING_DEFAULT, greeting as greetingPrefs, setGreetingSize, setGreetingVisible } from '@/plugins/greeting'
 import { layout as layoutPrefs, setLayoutWidth } from '@/plugins/layoutWidth'
 import AccountPanel from './account/AccountPanel.vue'
 import ConsolePanel from './logsAndTerminal/ConsolePanel.vue'
@@ -34,6 +34,7 @@ export default {
     return {
       timer: 0,
       greetingPrefs,
+      greetingDefault: GREETING_DEFAULT,
       layoutPrefs,
       // Atrio settings and account panels
       settingsOpen: false,
@@ -179,6 +180,7 @@ export default {
   },
   methods: {
     setGreetingSize,
+    setGreetingVisible,
     setLayoutWidth,
     /*************************************************
 		 * PART 0  Common
@@ -662,11 +664,15 @@ export default {
                 <div class="atrio-setting-row">
                   <b-icon icon="format-size" pack="mdi" size="is-20" />
                   <span class="atrio-setting-label">{{ $t('Greeting') }}</span>
-                  <b-select :model-value="greetingPrefs.size" class="set-select" size="is-small" @update:model-value="setGreetingSize">
-                    <option value="large">{{ $t('Large') }}</option>
-                    <option value="small">{{ $t('Small') }}</option>
-                    <option value="hidden">{{ $t('Hidden') }}</option>
-                  </b-select>
+                  <b-switch :model-value="greetingPrefs.visible" class="mr-0" @update:model-value="setGreetingVisible" />
+                </div>
+                <div v-if="greetingPrefs.visible" class="atrio-setting-row atrio-setting-slider">
+                  <span aria-hidden="true" class="atrio-slider-end is-small-a">a</span>
+                  <input
+                    :aria-label="$t('Greeting size')" :value="greetingPrefs.size" max="100" min="0" step="1" type="range"
+                    @dblclick="setGreetingSize(greetingDefault)" @input="setGreetingSize($event.target.value)"
+                  >
+                  <span aria-hidden="true" class="atrio-slider-end is-large-a">A</span>
                 </div>
                 <div class="atrio-setting-row is-hidden-touch">
                   <b-icon icon="arrow-expand-horizontal" pack="mdi" size="is-20" />
@@ -674,10 +680,14 @@ export default {
                     {{ $t('Width') }}
                     <small class="atrio-setting-note">{{ $t('On large screens') }}</small>
                   </span>
-                  <b-select :model-value="layoutPrefs.width" class="set-select" size="is-small" @update:model-value="setLayoutWidth">
-                    <option value="normal">{{ $t('Normal') }}</option>
-                    <option value="wide">{{ $t('Wide') }}</option>
-                  </b-select>
+                </div>
+                <div class="atrio-setting-row atrio-setting-slider is-hidden-touch">
+                  <b-icon aria-hidden="true" class="atrio-slider-end" icon="arrow-collapse-horizontal" pack="mdi" size="is-16" />
+                  <input
+                    :aria-label="$t('Width')" :value="layoutPrefs.width" max="100" min="0" step="1" type="range"
+                    @dblclick="setLayoutWidth(0)" @input="setLayoutWidth($event.target.value)"
+                  >
+                  <b-icon aria-hidden="true" class="atrio-slider-end" icon="arrow-expand-horizontal" pack="mdi" size="is-20" />
                 </div>
                 <div class="atrio-setting-row">
                   <b-icon icon="display-applications-outline" pack="casa" size="is-20" />
@@ -1368,6 +1378,37 @@ export default {
 			color: #0b1120;
 			font-weight: 700;
 		}
+	}
+}
+
+.atrio-setting-slider {
+	min-height: 2.25rem;
+	padding-top: 0;
+	padding-left: 2.75rem;
+
+	input[type='range'] {
+		flex: 1;
+		min-width: 0;
+		accent-color: var(--atrio-accent);
+		cursor: pointer;
+	}
+
+	.atrio-slider-end {
+		display: grid;
+		flex-shrink: 0;
+		place-items: center;
+		width: 1.25rem;
+		color: var(--atrio-text-soft);
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.is-small-a {
+		font-size: 0.75rem;
+	}
+
+	.is-large-a {
+		font-size: 1.25rem;
 	}
 }
 

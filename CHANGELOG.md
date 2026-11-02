@@ -6,8 +6,11 @@ What changes in each Atrio release. The section for a version is also the text o
 
 **New**
 
-- **Wide layout.** Settings → Dashboard → Width: on large screens the top bar and the dashboard can use most of
-  the window. The widget column gets wider and the app grid fits more apps per row.
+- **Wider layout.** Settings → Dashboard → Width is a slider: on large screens the top bar and the dashboard grow
+  from the usual width up to most of the window. The widget column gets wider and the app grid fits more apps per
+  row instead of larger tiles.
+- The greeting has a switch to show or hide it and a size slider, from small to larger than before. Double click
+  a slider to reset it.
 
 ## 0.1.12 — 2026-11-01
 
