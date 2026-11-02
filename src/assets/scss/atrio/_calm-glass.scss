@@ -219,3 +219,19 @@ button.atrio-metric-note {
 	font-weight: 700 !important;
 	letter-spacing: -0.01em;
 }
+
+// Settings → Dashboard → Width: on large screens the top bar and the dashboard use most of the window
+@media screen and (min-width: 1216px) {
+	html.atrio-wide .out-container .container {
+		max-width: calc(100% - 4rem);
+	}
+
+	// More apps per row instead of larger tiles: about the tile sizes of the normal width
+	html.atrio-wide .app-list {
+		grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+
+		&.is-compact {
+			grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+		}
+	}
+}

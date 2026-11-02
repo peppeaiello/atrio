@@ -678,5 +678,8 @@
   "Pinned to this exact build": "Pinned to this exact build",
   "In use": "In use",
   "Usage per core": "Usage per core",
-  "Core": "Core"
+  "Core": "Core",
+  "Width": "Width",
+  "On large screens": "On large screens",
+  "Wide": "Wide"
 }

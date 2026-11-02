@@ -5,6 +5,7 @@ import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plug
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
 import { greeting as greetingPrefs, setGreetingSize } from '@/plugins/greeting'
+import { layout as layoutPrefs, setLayoutWidth } from '@/plugins/layoutWidth'
 import AccountPanel from './account/AccountPanel.vue'
 import ConsolePanel from './logsAndTerminal/ConsolePanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -33,6 +34,7 @@ export default {
     return {
       timer: 0,
       greetingPrefs,
+      layoutPrefs,
       // Atrio settings and account panels
       settingsOpen: false,
       accountOpen: false,
@@ -177,6 +179,7 @@ export default {
   },
   methods: {
     setGreetingSize,
+    setLayoutWidth,
     /*************************************************
 		 * PART 0  Common
 		 **************************************************/
@@ -663,6 +666,17 @@ export default {
                     <option value="large">{{ $t('Large') }}</option>
                     <option value="small">{{ $t('Small') }}</option>
                     <option value="hidden">{{ $t('Hidden') }}</option>
+                  </b-select>
+                </div>
+                <div class="atrio-setting-row is-hidden-touch">
+                  <b-icon icon="arrow-expand-horizontal" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">
+                    {{ $t('Width') }}
+                    <small class="atrio-setting-note">{{ $t('On large screens') }}</small>
+                  </span>
+                  <b-select :model-value="layoutPrefs.width" class="set-select" size="is-small" @update:model-value="setLayoutWidth">
+                    <option value="normal">{{ $t('Normal') }}</option>
+                    <option value="wide">{{ $t('Wide') }}</option>
                   </b-select>
                 </div>
                 <div class="atrio-setting-row">

@@ -2,6 +2,13 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.13 — unreleased
+
+**New**
+
+- **Wide layout.** Settings → Dashboard → Width: on large screens the top bar and the dashboard can use most of
+  the window. The widget column gets wider and the app grid fits more apps per row.
+
 ## 0.1.12 — 2026-11-01
 
 **New**
