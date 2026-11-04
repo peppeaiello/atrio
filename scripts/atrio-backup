@@ -211,14 +211,43 @@ folder_size() {
 	printf '%s' "${size:--1}"
 }
 
-# Only an app's own folders are suggested: anything else may be shared with other apps
-suggested() {
-	local path="$1" size="$2"
-	[ "$size" -ge 0 ] && [ "$size" -le "$BIG" ] || return 1
-	case "$path" in
+# Folders the containers of other apps use, read once per run
+OTHERS_READ=0
+OTHERS=""
+other_folders() {
+	if [ "$OTHERS_READ" = 0 ]; then
+		OTHERS_READ=1
+		local ids
+		ids=$(comm -23 <(docker ps -aq 2>/dev/null | sort) <(container_ids | sort))
+		# shellcheck disable=SC2086
+		[ -n "$ids" ] && OTHERS=$(docker inspect -f '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' $ids 2>/dev/null | grep -v '^$' | sort -u)
+	fi
+	return 0
+}
+
+# Used by another app too, or inside or around a folder it uses: restoring would change that app's data
+is_shared() {
+	local other
+	other_folders
+	while IFS= read -r other; do
+		[ -n "$other" ] || continue
+		case "$1/" in "$other"/*) return 0 ;; esac
+		case "$other/" in "$1"/*) return 0 ;; esac
+	done <<< "$OTHERS"
+	return 1
+}
+
+own_folder() {
+	is_shared "$1" && return 1
+	case "$1" in
 		"$APPDATA"/*|/var/lib/docker/volumes/*) return 0 ;;
 	esac
 	return 1
+}
+
+# Suggested: the app's own folders that are not huge
+suggested() {
+	[ "$2" -ge 0 ] && [ "$2" -le "$BIG" ] && own_folder "$1"
 }
 
 info_value() {
@@ -252,7 +281,7 @@ write_index() {
 				[ "$first" = 1 ] || printf ','
 				first=0
 				printf '{"path":"%s","size":%s,"selected":%s,"own":%s}' "$(json "$path")" "$size" "$selected" \
-					"$(suggested "$path" 0 && echo true || echo false)"
+					"$(own_folder "$path" && echo true || echo false)"
 			fi
 		done < <(mounted_folders)
 		printf '],"backups":['
@@ -464,6 +493,7 @@ do_restore() {
 do_delete() {
 	[ -n "$ID" ] && [ -f "$DEST/$APP/$ID.tar.gz" ] || fail "Unknown backup"
 	rm -f "$DEST/$APP/$ID.tar.gz" "$DEST/$APP/$ID.info"
+	rmdir "$DEST/$APP" 2>/dev/null
 	write_index
 	write_status done "" ""
 }

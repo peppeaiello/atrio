@@ -705,7 +705,6 @@
   "What to save": "What to save",
   "This app uses no folders of its own: only its settings are saved.": "This app uses no folders of its own: only its settings are saved.",
   "Size unknown": "Size unknown",
-  "Outside the app's data: other apps may use it, and restoring replaces it for them too.": "Outside the app's data: other apps may use it, and restoring replaces it for them too.",
   "Selected: {size}": "Selected: {size}",
   "Saved backups": "Saved backups",
   "No backups yet": "No backups yet",
@@ -739,5 +738,6 @@
   "The files are back, but the app is not running properly: check its logs": "The files are back, but the app is not running properly: check its logs",
   "Docker is not available": "Docker is not available",
   "Docker Compose is not available": "Docker Compose is not available",
-  "Unknown request": "Unknown request"
+  "Unknown request": "Unknown request",
+  "Outside the app's data, or used by other apps too: restoring replaces it for them as well.": "Outside the app's data, or used by other apps too: restoring replaces it for them as well."
 }

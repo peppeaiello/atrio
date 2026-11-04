@@ -185,7 +185,7 @@ export default {
 						<span class="is-mono">{{ folder.path }}</span>
 						<small>{{ folder.size >= 0 ? renderSize(folder.size) : $t('Size unknown') }}</small>
 					</label>
-					<small v-if="!folder.own" class="atrio-backups-note">{{ $t('Outside the app\'s data: other apps may use it, and restoring replaces it for them too.') }}</small>
+					<small v-if="!folder.own" class="atrio-backups-note">{{ $t('Outside the app\'s data, or used by other apps too: restoring replaces it for them as well.') }}</small>
 				</li>
 			</ul>
 			<p v-if="folders.length" class="atrio-backups-total">{{ $t('Selected: {size}', { size: renderSize(chosenSize) }) }}</p>

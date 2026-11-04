@@ -152,6 +152,8 @@ UNIT
 	cat > /etc/systemd/system/atrio-backup.service <<'UNIT'
 [Unit]
 Description=Back up or restore an app for Atrio
+# Several operations in a row are normal here: no limit on starts
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
@@ -162,6 +164,7 @@ UNIT
 	cat > /etc/systemd/system/atrio-backup.path <<'UNIT'
 [Unit]
 Description=Watch for backup requests from Atrio
+StartLimitIntervalSec=0
 
 [Path]
 PathExists=/var/lib/casaos/atrio/backup-request
@@ -171,6 +174,7 @@ WantedBy=multi-user.target
 UNIT
 
 	systemctl daemon-reload
+	systemctl reset-failed atrio-backup.path atrio-backup.service 2>/dev/null || true
 	systemctl enable --now atrio-update.path >/dev/null
 	systemctl enable --now atrio-restore.path >/dev/null
 	systemctl enable --now atrio-alerts.timer >/dev/null

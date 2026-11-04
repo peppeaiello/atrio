@@ -126,7 +126,9 @@ function askToGoBack(vm, name, title, id) {
 function watchUpdate(vm, name, title, backupId) {
 	const started = Date.now()
 	let upSince = 0
+	let badLooks = 0
 	let image = ''
+	let imageChanged = false
 	const check = async () => {
 		if (Date.now() - started > WATCH_MS) return
 		let status = ''
@@ -142,17 +144,20 @@ function watchUpdate(vm, name, title, backupId) {
 			// The app is being recreated, or the server is busy: look again
 		}
 		if (status.startsWith('restarting') || status.startsWith('exited') || status.startsWith('dead')) {
-			// Two looks apart, so that a normal restart is not taken for a crash
-			if (upSince === -1) {
+			// A crashing app alternates between restarting and running, so only staying up clears this.
+			// Two looks, so that a normal restart is not taken for a crash.
+			upSince = 0
+			if (++badLooks >= 2) {
 				askToGoBack(vm, name, title, backupId)
 				return
 			}
-			upSince = -1
 		}
 		else if (status.startsWith('running')) {
-			if (upSince <= 0 || changed) upSince = Date.now()
-			// The old version keeps running until its image is downloaded: wait for the whole window on no change
-			else if (image && Date.now() - upSince > WATCH_STEADY_MS && Date.now() - started > 3 * WATCH_STEADY_MS) return
+			if (!upSince || changed) upSince = Date.now()
+			else if (Date.now() - upSince > WATCH_STEADY_MS) badLooks = 0
+			// The old version keeps running until the new image is downloaded: fine only some time after a change
+			imageChanged = imageChanged || changed
+			if (imageChanged && Date.now() - upSince > WATCH_STEADY_MS) return
 		}
 		setTimeout(check, WATCH_POLL_MS)
 	}
