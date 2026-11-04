@@ -58,6 +58,7 @@ main() {
 	# Push alerts: checks the server every 5 minutes and sends warnings to ntfy or Gotify,
 	# as set in Atrio's settings ($STATE/alerts.conf)
 	install_script atrio-alerts
+	install_script atrio-backup
 
 	cat > /etc/systemd/system/atrio-update.service <<'UNIT'
 [Unit]
@@ -147,13 +148,38 @@ PathExists=/var/lib/casaos/atrio/alerts-test
 WantedBy=multi-user.target
 UNIT
 
+	# App backups: Atrio writes $STATE/backup-request, the same way as the updater
+	cat > /etc/systemd/system/atrio-backup.service <<'UNIT'
+[Unit]
+Description=Back up or restore an app for Atrio
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-backup
+TimeoutStartSec=infinity
+UNIT
+
+	cat > /etc/systemd/system/atrio-backup.path <<'UNIT'
+[Unit]
+Description=Watch for backup requests from Atrio
+
+[Path]
+PathExists=/var/lib/casaos/atrio/backup-request
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
 	systemctl daemon-reload
 	systemctl enable --now atrio-update.path >/dev/null
 	systemctl enable --now atrio-restore.path >/dev/null
 	systemctl enable --now atrio-alerts.timer >/dev/null
 	systemctl enable --now atrio-alerts-test.path >/dev/null
+	systemctl enable --now atrio-backup.path >/dev/null
 	# A first run writes the status the settings read (alerts stay off until set up there)
 	/usr/local/bin/atrio-alerts || true
+	# Tells the web UI that backups are available
+	/usr/local/bin/atrio-backup --init || true
 
 	/usr/local/bin/atrio-update --force
 

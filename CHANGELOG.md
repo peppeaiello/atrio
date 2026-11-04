@@ -4,6 +4,15 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.14 — unreleased
 
+**New**
+
+- **Backups for each app**, in a new Backup tab of the app panel: its settings and the folders you choose, with their
+  size, to a folder you pick. Going back takes one click, and saves the current state first so that it can be
+  undone too. Large folders and folders outside the app's own data are left out unless you choose them. Needs the
+  small service added by running the install command once more.
+- **Safer app updates.** When the service is there, an update saves a backup first, keeping the last 3 made this way.
+  If the app does not come back up while Atrio is open, it offers to go back to that backup.
+
 **Fixed**
 
 - **Updating an app could take it back to an older version.** The App Store pins each app to one version, and

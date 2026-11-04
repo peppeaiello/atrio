@@ -9,7 +9,7 @@ import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_LinkApp from '@/mixins/app/Business_LinkApp'
 import tipEditorModal from '@/components/Apps/TipEditorModal.vue'
 import commonI18n, { ice_i18n } from '@/mixins/base/common-i18n'
-import { findDowngrade } from '@/plugins/appVersions'
+import { backupRun, updateApp } from '@/plugins/appBackup'
 
 // The update ring, the same size as the install one
 const PULL_RADIUS = 30
@@ -89,7 +89,11 @@ export default {
     pullOffset() {
       return PULL_CIRCUMFERENCE * (1 - Math.min(100, Math.max(0, this.pullProgress || 0)) / 100)
     },
+    backingUp() {
+      return backupRun.app === this.item.name && backupRun.action !== 'scan'
+    },
     statusPill() {
+      if (this.backingUp) return backupRun.action === 'restore' ? this.$t('Restoring') : this.$t('Backing up')
       if (this.isPulling) return this.pullProgress < 100 ? `${this.$t('Downloading')} ${this.pullProgress}%` : this.$t('Updating')
       if (this.item.app_type === 'system' || !this.item.status) return ''
       if (this.isStopped) return this.$t('Stopped')
@@ -97,7 +101,7 @@ export default {
       return ''
     },
     statusClass() {
-      if (this.isPulling) return 'is-busy is-pill'
+      if (this.backingUp || this.isPulling) return 'is-busy is-pill'
       if (this.item.app_type === 'system' || !this.item.status) return 'is-invisible'
       if (this.isStopped) return 'is-stopped is-pill'
       if (this.updateAvailable) return 'is-update is-pill'
@@ -604,43 +608,16 @@ export default {
 
     async checkAppVersion(name) {
       this.isCheckThenUpdate = true
-      const older = await findDowngrade(this.$openAPI, name)
-      if (older) {
-        this.$buefy.toast.open({
-          message: this.$t('{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.', { title: this.title, ...older }),
-          type: 'is-warning',
-          duration: 10000,
-        })
-        this.$refs.dro.isActive = false
-        this.isCheckThenUpdate = false
-        return
-      }
-      this.$openAPI.appManagement.compose.updateComposeApp(name).then((resp) => {
-        // 200:
-        if (resp.status === 200) {
+      try {
+        if (await updateApp(this, name, this.title) === 'started') {
           // messageBus :: apps_checkThenUpdate
           this.$messageBus('apps_checkupdate', this.item.name.toString())
-          this.$buefy.toast.open({
-            // value is `In the process of asynchronous updating.` or `compose app `app Name` is up to date`
-            message: resp.data.message,
-            type: 'is-success',
-          })
         }
-        else {
-          this.$buefy.toast.open({
-            message: this.$t(`No updates are currently available for the application.`),
-            type: 'is-success',
-          })
-        }
-      }).catch(() => {
-        this.$buefy.toast.open({
-          message: this.$t(`Unable to update at the moment!`),
-          type: 'is-danger',
-        })
-      }).finally(() => {
+      }
+      finally {
         this.$refs.dro.isActive = false
         this.isCheckThenUpdate = false
-      })
+      }
     },
     /**
      * @description: Format Dot Class

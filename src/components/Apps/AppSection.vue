@@ -203,6 +203,7 @@ import isEqual from 'lodash/isEqual'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import YAML from 'yamljs'
 import { findDowngrade } from '@/plugins/appVersions'
+import { updateApp } from '@/plugins/appBackup'
 
 const SYNCTHING_STORE_ID = 74
 
@@ -453,30 +454,33 @@ export default {
 		},
 		async runBulk (action) {
 			// Only the selected apps the current filter shows
-			let names = this.visibleSelected
+			const names = this.visibleSelected
 			if (!names.length) return
 			this.bulkBusy = action
 			const compose = this.$openAPI.appManagement.compose
+			const title = name => this.appTitle(this.appList.find(item => item.name === name) || { name })
+			let results
+			let kept = []
 			if (action === 'update') {
-				const older = await Promise.all(names.map(name => findDowngrade(this.$openAPI, name)))
-				const kept = names.filter((name, index) => older[index])
+				// One at a time: each app gets its backup first, and the server makes one at a time
+				const outcomes = []
+				for (const name of names) outcomes.push(await updateApp(this, name, title(name), { quiet: true }))
+				kept = names.filter((name, index) => outcomes[index] === 'kept')
+				results = outcomes.map(outcome => ({ status: outcome === 'failed' ? 'rejected' : 'fulfilled' }))
 				if (kept.length) {
 					this.$buefy.toast.open({
-						message: this.$t('Not updated, the App Store only offers an older version: {names}', {
-							names: kept.map(name => this.appTitle(this.appList.find(item => item.name === name) || { name })).join(', '),
-						}),
+						message: this.$t('Not updated, the App Store only offers an older version: {names}', { names: kept.map(title).join(', ') }),
 						type: 'is-warning',
 						duration: 10000,
 					})
 				}
-				names = names.filter(name => !kept.includes(name))
 			}
-			const results = await Promise.allSettled(names.map(name => action === 'update'
-				? compose.updateComposeApp(name)
-				: compose.setComposeAppStatus(name, action)))
+			else {
+				results = await Promise.allSettled(names.map(name => compose.setComposeAppStatus(name, action)))
+			}
 			const failed = names.filter((name, index) => results[index].status === 'rejected')
 			this.bulkBusy = ''
-			const done = names.length - failed.length
+			const done = names.length - failed.length - kept.length
 			const messages = {
 				start: '{count} apps are starting',
 				stop: '{count} apps are stopping',

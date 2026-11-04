@@ -8,14 +8,15 @@ import { ice_i18n } from '@/mixins/base/common-i18n'
 import { mixin } from '@/mixins/mixin'
 import Sparkline from '@/components/widgets/Sparkline.vue'
 import TerminalCard from '@/components/logsAndTerminal/TerminalCard.vue'
-import { findDowngrade } from '@/plugins/appVersions'
+import AppBackups from '@/components/home/AppBackups.vue'
+import { updateApp } from '@/plugins/appBackup'
 
 const POLL_MS = 3000
 const HISTORY = 40
 const LOG_LINES = 200
 // The Logs tab shows more history than the overview
 const LOG_LINES_FULL = 1000
-const TABS = ['overview', 'logs', 'terminal', 'config']
+const TABS = ['overview', 'logs', 'terminal', 'config', 'backup']
 // Terminal colour codes in container logs
 const ANSI = /\x1B\[[0-9;]*[A-Za-z]/g
 
@@ -38,7 +39,7 @@ function memoryBytes(item) {
 export default {
 	name: 'AppDetailsPanel',
 	compatConfig: { MODE: 3 },
-	components: { Sparkline, TerminalCard },
+	components: { AppBackups, Sparkline, TerminalCard },
 	mixins: [mixin, business_ShowNewAppTag, business_OpenThirdApp],
 	data() {
 		return {
@@ -92,6 +93,7 @@ export default {
 				// The shell needs a running container
 				{ id: 'terminal', label: this.$t('Terminal'), disabled: !this.running || !this.mainContainer },
 				{ id: 'config', label: this.$t('Settings') },
+				{ id: 'backup', label: this.$t('Backup') },
 			]
 		},
 		terminalUrl() {
@@ -291,19 +293,7 @@ export default {
 		async update() {
 			this.busy = 'update'
 			try {
-				const older = await findDowngrade(this.$openAPI, this.app.name, this.compose)
-				if (older) {
-					this.$buefy.toast.open({
-						message: this.$t('{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.', { title: this.title || this.app.name, ...older }),
-						type: 'is-warning',
-						duration: 10000,
-					})
-					return
-				}
-				const res = await this.$openAPI.appManagement.compose.updateComposeApp(this.app.name)
-				this.$buefy.toast.open({ message: res.data.message || this.$t('No updates are currently available for the application.'), type: 'is-success' })
-			} catch (e) {
-				this.$buefy.toast.open({ message: this.$t('Unable to update at the moment!'), type: 'is-danger' })
+				await updateApp(this, this.app.name, this.title || this.app.name)
 			} finally {
 				this.busy = ''
 			}
@@ -420,6 +410,8 @@ export default {
 						<!-- A new container (after an update) gets a new terminal -->
 						<TerminalCard v-if="terminalUrl" :key="terminalUrl" :init-ws-url="terminalUrl" />
 					</section>
+
+					<AppBackups v-else-if="tab === 'backup'" :app="app.name" :title="title || app.name" @changed="$EventBus.$emit('atrio:refresh-apps')" />
 
 					<section v-else id="atrio-tabpanel-config" aria-labelledby="atrio-tab-config" class="atrio-sheet-config" role="tabpanel">
 						<div class="atrio-config-head">

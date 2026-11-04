@@ -1,0 +1,493 @@
+#!/bin/bash
+# Backs up and restores one app at a time: its compose folder and the folders its containers use.
+# Run by atrio-backup.path when Atrio writes a request through the CasaOS file API. Requests are
+# "KEY=value" lines: only the known keys are read, their values are checked and never executed,
+# and folders must be ones the app's containers really use.
+set -uo pipefail
+
+STATE="${ATRIO_STATE:-/var/lib/casaos/atrio}"
+APPS="${ATRIO_APPS:-/var/lib/casaos/apps}"
+APPDATA="${ATRIO_APPDATA:-/DATA/AppData}"
+DEFAULT_DEST="${ATRIO_BACKUP_DEST:-$APPDATA/.atrio-backups}"
+REQUEST="$STATE/backup-request"
+STATUS="$STATE/backup-status.json"
+CONF="$STATE/backup.conf"
+INDEX="$STATE/backups"
+# Larger folders are left out unless chosen by hand
+BIG="${ATRIO_BACKUP_BIG:-5368709120}"
+# Backups made automatically, kept per app; the ones made by hand stay until deleted
+KEEP_AUTO=3
+HEALTH_WAIT="${ATRIO_HEALTH_WAIT:-60}"
+HEALTH_STEADY="${ATRIO_HEALTH_STEADY:-20}"
+
+ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST"
+CHOSEN=()
+STOPPED=()
+RUNNING_BEFORE=0
+TMP_ARCHIVE=""
+
+mkdir -p "$STATE" "$INDEX"
+chmod 755 "$INDEX"
+
+# One run at a time
+exec 9>"$STATE/backup.lock"
+flock -n 9 || exit 0
+
+json() {
+	printf '%s' "$1" | tr -d '\000-\037' | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+# The web UI follows the operation through this file
+write_status() {
+	printf '{"state":"%s","action":"%s","app":"%s","id":"%s","step":"%s","message":"%s","token":"%s","time":"%s"}\n' \
+		"$1" "$ACTION" "$APP" "$ID" "$2" "$(json "${3:-}")" "$TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
+	mv "$STATUS.tmp" "$STATUS"
+}
+
+fail() {
+	write_status error "" "$1"
+	echo "$1" >&2
+	exit 1
+}
+
+# --- Checks -----------------------------------------------------------------------------------
+
+valid_path() {
+	case "$1" in
+		/*) ;;
+		*) return 1 ;;
+	esac
+	case "$1" in
+		*/../*|*/..|*/./*|*//*) return 1 ;;
+	esac
+	[ "$(printf '%s' "$1" | tr -d '\000-\037')" = "$1" ]
+}
+
+# Never touched: the system itself and folders that hold far more than one app
+allowed_folder() {
+	valid_path "$1" || return 1
+	case "$1" in
+		/proc|/proc/*|/sys|/sys/*|/dev|/dev/*|/run|/run/*|/var/run|/var/run/*|/etc|/etc/*) return 1 ;;
+		/usr|/usr/*|/bin|/bin/*|/sbin|/sbin/*|/lib|/lib/*|/lib64|/lib64/*|/boot|/boot/*) return 1 ;;
+		/var|/var/lib|/var/lib/docker|/var/lib/casaos|/home|/root|/media|/mnt|/opt|/srv) return 1 ;;
+		"$APPDATA"|"$DEFAULT_DEST"|"$DEFAULT_DEST"/*) return 1 ;;
+	esac
+	# Top-level folders like /DATA
+	[ "$(dirname "$1")" != "/" ]
+}
+
+read_request() {
+	[ -f "$REQUEST" ] || exit 0
+	local line key value
+	while IFS= read -r line || [ -n "$line" ]; do
+		line="${line%$'\r'}"
+		key="${line%%=*}"
+		value="${line#*=}"
+		case "$key" in
+			ACTION) ACTION="$value" ;;
+			APP) APP="$value" ;;
+			ID) ID="$value" ;;
+			REASON) REASON="$value" ;;
+			TOKEN) TOKEN=$(printf '%s' "$value" | head -c 64 | tr -cd 'A-Za-z0-9-') ;;
+			FOLDER) CHOSEN+=("$value") ;;
+		esac
+	done < "$REQUEST"
+	rm -f "$REQUEST"
+	case "$ACTION" in
+		scan|backup|restore|delete) ;;
+		*) ACTION=""; APP=""; ID=""; fail "Unknown request" ;;
+	esac
+	if ! [[ "$APP" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
+		APP=""
+		fail "Unknown app"
+	fi
+	if [ -n "$ID" ] && ! [[ "$ID" =~ ^[0-9]{8}-[0-9]{6}(-[0-9])?$ ]]; then
+		ID=""
+		fail "Unknown backup"
+	fi
+	case "$REASON" in
+		manual|before-update|before-restore) ;;
+		*) REASON=manual ;;
+	esac
+}
+
+read_conf() {
+	[ -f "$CONF" ] || return 0
+	local value
+	value=$(sed -n 's/^DEST=//p' "$CONF" | head -n 1)
+	[ -n "$value" ] || return 0
+	if ! valid_path "$value" || [ "$(dirname "$value")" = "/" ]; then
+		fail "The backup folder is not valid"
+	fi
+	case "$value" in
+		/proc*|/sys*|/dev*|/run*|/etc*|/usr*|/bin*|/sbin*|/lib*|/boot*) fail "The backup folder is not valid" ;;
+	esac
+	DEST="$value"
+}
+
+# --- Containers -------------------------------------------------------------------------------
+
+container_ids() {
+	docker ps -aq --filter "label=com.docker.compose.project=$APP" 2>/dev/null
+}
+
+running_ids() {
+	docker ps -q --filter "label=com.docker.compose.project=$APP" 2>/dev/null
+}
+
+compose() {
+	docker compose -p "$APP" --project-directory "$APPS/$APP" -f "$APPS/$APP/docker-compose.yml" "$@"
+}
+
+# Every host folder the containers use; docker knows them for bind mounts and named volumes alike
+mounted_folders() {
+	local ids
+	ids=$(container_ids)
+	[ -n "$ids" ] || return 0
+	# shellcheck disable=SC2086
+	docker inspect -f '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' $ids 2>/dev/null | grep -v '^$' | sort -u
+}
+
+stop_app() {
+	mapfile -t STOPPED < <(running_ids)
+	[ "${#STOPPED[@]}" -gt 0 ] || return 0
+	RUNNING_BEFORE=1
+	write_status running stopping
+	docker stop -t 60 "${STOPPED[@]}" >/dev/null || fail "Could not stop the app"
+}
+
+# Whatever happens, an app that was running does not stay stopped
+start_again() {
+	[ "${#STOPPED[@]}" -gt 0 ] || return 0
+	write_status running starting
+	compose start >/dev/null 2>&1 || docker start "${STOPPED[@]}" >/dev/null 2>&1
+	STOPPED=()
+}
+
+on_exit() {
+	local code=$?
+	[ -n "$TMP_ARCHIVE" ] && rm -f "$TMP_ARCHIVE" "$TMP_ARCHIVE.info"
+	if [ "${#STOPPED[@]}" -gt 0 ]; then
+		compose start >/dev/null 2>&1 || docker start "${STOPPED[@]}" >/dev/null 2>&1
+	fi
+	exit "$code"
+}
+trap on_exit EXIT
+
+# running, or the reason it is not: the app has to stay up for HEALTH_STEADY seconds
+app_health() {
+	local waited=0 steady=0 ids line bad
+	while [ "$waited" -lt "$HEALTH_WAIT" ]; do
+		ids=$(container_ids)
+		bad=""
+		if [ -z "$ids" ]; then
+			bad="no containers"
+		else
+			# shellcheck disable=SC2086
+			while read -r line; do
+				case "$line" in
+					"running 0 "*|"exited 0 "*) ;;
+					*) bad="$line" ;;
+				esac
+			done < <(docker inspect -f '{{.State.Status}} {{.State.ExitCode}} {{.RestartCount}}' $ids 2>/dev/null)
+		fi
+		if [ -z "$bad" ]; then
+			steady=$((steady + 2))
+			[ "$steady" -ge "$HEALTH_STEADY" ] && return 0
+		else
+			steady=0
+		fi
+		sleep 2
+		waited=$((waited + 2))
+	done
+	return 1
+}
+
+# --- Listing ----------------------------------------------------------------------------------
+
+folder_size() {
+	local size
+	size=$(timeout 120 du -sb "$1" 2>/dev/null | cut -f1)
+	printf '%s' "${size:--1}"
+}
+
+# Only an app's own folders are suggested: anything else may be shared with other apps
+suggested() {
+	local path="$1" size="$2"
+	[ "$size" -ge 0 ] && [ "$size" -le "$BIG" ] || return 1
+	case "$path" in
+		"$APPDATA"/*|/var/lib/docker/volumes/*) return 0 ;;
+	esac
+	return 1
+}
+
+info_value() {
+	sed -n "s/^$2=//p" "$1" | head -n 1
+}
+
+# Ids sort by time; without the extension, one made in the same second ("…-1") sorts after the first
+backups_newest_first() {
+	ls -1 "$DEST/$APP"/*.info 2>/dev/null | sed 's/\.info$//' | sort -r | sed 's/$/.info/'
+}
+
+write_index() {
+	local out="$INDEX/$APP.json" first=1 path size selected remembered info same_disk free
+	mkdir -p "$DEST" 2>/dev/null
+	free=$(df -B1 --output=avail "$DEST" 2>/dev/null | tail -n 1 | tr -d ' ')
+	same_disk=false
+	[ "$(df --output=source "$DEST" 2>/dev/null | tail -n 1)" = "$(df --output=source "$APPS" 2>/dev/null | tail -n 1)" ] && same_disk=true
+	remembered="$INDEX/$APP.folders"
+	{
+		printf '{"app":"%s","dest":"%s","same_disk":%s,"free":%s,"running":%s,"folders":[' \
+			"$APP" "$(json "$DEST")" "$same_disk" "${free:-0}" "$([ -n "$(running_ids)" ] && echo true || echo false)"
+		while IFS= read -r path; do
+			[ -n "$path" ] || continue
+			if allowed_folder "$path" && [ -e "$path" ]; then
+				size=$(folder_size "$path")
+				if [ -f "$remembered" ]; then
+					grep -Fxq -- "$path" "$remembered" && selected=true || selected=false
+				else
+					suggested "$path" "$size" && selected=true || selected=false
+				fi
+				[ "$first" = 1 ] || printf ','
+				first=0
+				printf '{"path":"%s","size":%s,"selected":%s,"own":%s}' "$(json "$path")" "$size" "$selected" \
+					"$(suggested "$path" 0 && echo true || echo false)"
+			fi
+		done < <(mounted_folders)
+		printf '],"backups":['
+		first=1
+		# Newest first
+		for info in $(backups_newest_first); do
+			[ -f "${info%.info}.tar.gz" ] || continue
+			[ "$first" = 1 ] || printf ','
+			first=0
+			printf '{"id":"%s","time":"%s","reason":"%s","size":%s,"bytes":%s,"images":"%s","folders":[' \
+				"$(basename "${info%.info}")" "$(info_value "$info" TIME)" "$(info_value "$info" REASON)" \
+				"$(stat -c %s "${info%.info}.tar.gz")" "$(info_value "$info" BYTES)" "$(json "$(info_value "$info" IMAGES)")"
+			local inner=1
+			while IFS= read -r path; do
+				[ "$inner" = 1 ] || printf ','
+				inner=0
+				printf '"%s"' "$(json "$path")"
+			done < <(sed -n 's/^FOLDER=//p' "$info")
+			printf ']}'
+		done
+		printf ']}\n'
+	} > "$out.tmp"
+	chmod 644 "$out.tmp"
+	mv "$out.tmp" "$out"
+}
+
+# --- Backup -----------------------------------------------------------------------------------
+
+new_id() {
+	local base id n=1
+	base=$(date +%Y%m%d-%H%M%S)
+	id="$base"
+	while [ -e "$DEST/$APP/$id.tar.gz" ]; do
+		id="$base-$n"
+		n=$((n + 1))
+	done
+	printf '%s' "$id"
+}
+
+# Folders for this backup: those chosen and really used by the app, or the remembered or suggested ones
+backup_folders() {
+	local path size mounted
+	mounted=$(mounted_folders)
+	if [ "$REASON" = "manual" ]; then
+		for path in ${CHOSEN[@]+"${CHOSEN[@]}"}; do
+			if printf '%s\n' "$mounted" | grep -Fxq -- "$path" && allowed_folder "$path" && [ -e "$path" ]; then
+				printf '%s\n' "$path"
+			fi
+		done
+		return 0
+	fi
+	while IFS= read -r path; do
+		[ -n "$path" ] && allowed_folder "$path" && [ -e "$path" ] || continue
+		if [ -f "$INDEX/$APP.folders" ]; then
+			grep -Fxq -- "$path" "$INDEX/$APP.folders" && printf '%s\n' "$path"
+		else
+			size=$(folder_size "$path")
+			suggested "$path" "$size" && printf '%s\n' "$path"
+		fi
+	done <<< "$mounted"
+}
+
+prune_auto() {
+	local info count=0
+	for info in $(backups_newest_first); do
+		[ "$(info_value "$info" REASON)" = "manual" ] && continue
+		count=$((count + 1))
+		[ "$count" -gt "$KEEP_AUTO" ] && rm -f "$info" "${info%.info}.tar.gz"
+	done
+}
+
+# Writes one backup of the app, stopped; start_again is up to the caller.
+# $1: reason, then the folders
+make_archive() {
+	local reason="$1" total=0 size path id archive images ids free folder code
+	shift
+	mkdir -p "$DEST/$APP" || fail "Could not create the backup folder"
+	chmod 700 "$DEST" "$DEST/$APP" 2>/dev/null
+
+	total=$(folder_size "$APPS/$APP")
+	for path in "$@"; do
+		size=$(folder_size "$path")
+		[ "$size" -gt 0 ] && total=$((total + size))
+	done
+	free=$(df -B1 --output=avail "$DEST" | tail -n 1 | tr -d ' ')
+	[ "${free:-0}" -gt "$total" ] || fail "Not enough free space in the backup folder"
+
+	id=$(new_id)
+	archive="$DEST/$APP/$id.tar.gz"
+	TMP_ARCHIVE="$archive.tmp"
+	ids=$(container_ids)
+	images=""
+	# shellcheck disable=SC2086
+	[ -n "$ids" ] && images=$(docker inspect -f '{{.Config.Image}}' $ids 2>/dev/null | sort -u | paste -sd ' ')
+
+	stop_app
+
+	write_status running archiving
+	local members=("${APPS#/}/$APP")
+	for folder in "$@"; do
+		members+=("${folder#/}")
+	done
+	tar --numeric-owner --xattrs --exclude="${DEST#/}" -czf "$TMP_ARCHIVE" -C / -- "${members[@]}" 2>/dev/null
+	code=$?
+	# 1: a file changed while reading, which a stopped app does not do to its own data
+	[ "$code" -le 1 ] || fail "The backup could not be written: is there enough space?"
+
+	{
+		printf 'TIME=%s\nREASON=%s\nBYTES=%s\nIMAGES=%s\nRUNNING=%s\nSHA256=%s\n' \
+			"$(date -Iseconds)" "$reason" "$total" "$images" "$RUNNING_BEFORE" "$(sha256sum "$TMP_ARCHIVE" | cut -d' ' -f1)"
+		for folder in "$APPS/$APP" "$@"; do
+			printf 'FOLDER=%s\n' "$folder"
+		done
+	} > "$TMP_ARCHIVE.info" || fail "The backup could not be written: is there enough space?"
+	chmod 600 "$TMP_ARCHIVE" "$TMP_ARCHIVE.info"
+	mv "$TMP_ARCHIVE.info" "$archive.info.tmp"
+	mv "$TMP_ARCHIVE" "$archive"
+	mv "$archive.info.tmp" "$DEST/$APP/$id.info"
+	TMP_ARCHIVE=""
+	LAST_ID="$id"
+}
+
+do_backup() {
+	local folders=()
+	[ -f "$APPS/$APP/docker-compose.yml" ] || fail "Unknown app"
+	mapfile -t folders < <(backup_folders)
+	# What was chosen by hand is what automatic backups of this app will save too
+	if [ "$REASON" = "manual" ]; then
+		printf '%s\n' ${folders[@]+"${folders[@]}"} > "$INDEX/$APP.folders"
+	fi
+	make_archive "$REASON" ${folders[@]+"${folders[@]}"}
+	ID="$LAST_ID"
+	start_again
+	prune_auto
+	write_index
+	write_status done "" ""
+}
+
+# --- Restore ----------------------------------------------------------------------------------
+
+do_restore() {
+	local info="$DEST/$APP/$ID.info" archive="$DEST/$APP/$ID.tar.gz" folders=() path current=() swapped=() compose_dir="$APPS/$APP"
+	[ -n "$ID" ] && [ -f "$info" ] && [ -f "$archive" ] || fail "Unknown backup"
+	write_status running checking
+	[ "$(sha256sum "$archive" | cut -d' ' -f1)" = "$(info_value "$info" SHA256)" ] || fail "This backup is damaged and was not restored"
+
+	mapfile -t folders < <(sed -n 's/^FOLDER=//p' "$info")
+	for path in "${folders[@]}"; do
+		[ "$path" = "$compose_dir" ] && continue
+		allowed_folder "$path" || fail "This backup contains a folder Atrio does not restore"
+		# Swapping that folder would take the backups with it
+		case "$DEST/" in
+			"$path"/*) fail "The backup folder is inside a folder of this app: choose another one" ;;
+		esac
+		current+=("$path")
+	done
+
+	local free
+	free=$(df -B1 --output=avail "$APPS" | tail -n 1 | tr -d ' ')
+	[ "${free:-0}" -gt "$(info_value "$info" BYTES)" ] || fail "Not enough free space to restore this backup"
+
+	# The current state first, so that this restore can be undone too
+	if [ -f "$compose_dir/docker-compose.yml" ]; then
+		make_archive before-restore ${current[@]+"${current[@]}"}
+	fi
+
+	write_status running restoring
+	local suffix=".atrio-old-$ID"
+	undo_swap() {
+		local item
+		for item in ${swapped[@]+"${swapped[@]}"}; do
+			rm -rf "$item"
+			mv "$item$suffix" "$item"
+		done
+	}
+	for path in "${folders[@]}"; do
+		if [ -e "$path" ]; then
+			rm -rf "$path$suffix"
+			if ! mv "$path" "$path$suffix"; then
+				undo_swap
+				fail "The backup could not be restored, nothing was changed"
+			fi
+			swapped+=("$path")
+		fi
+	done
+	local code=0
+	tar --numeric-owner --xattrs -xzpf "$archive" -C / 2>/dev/null || code=$?
+	if [ "$code" -gt 1 ]; then
+		undo_swap
+		fail "The backup could not be restored, nothing was changed"
+	fi
+	for path in ${swapped[@]+"${swapped[@]}"}; do
+		rm -rf "$path$suffix"
+	done
+
+	# With the restored compose file: its image may be another version
+	STOPPED=()
+	write_status running starting
+	if [ "$RUNNING_BEFORE" = 1 ] || [ "$(info_value "$info" RUNNING)" = 1 ]; then
+		compose up -d >/dev/null 2>&1 || fail "The files are back, but the app did not start: check it in its panel"
+		write_status running checking
+		app_health || fail "The files are back, but the app is not running properly: check its logs"
+	fi
+	prune_auto
+	write_index
+	write_status done "" ""
+}
+
+do_delete() {
+	[ -n "$ID" ] && [ -f "$DEST/$APP/$ID.tar.gz" ] || fail "Unknown backup"
+	rm -f "$DEST/$APP/$ID.tar.gz" "$DEST/$APP/$ID.info"
+	write_index
+	write_status done "" ""
+}
+
+# --- Main -------------------------------------------------------------------------------------
+
+# install.sh runs this once: the status file is how the web UI knows the service is there
+if [ "${1:-}" = "--init" ]; then
+	[ -f "$STATUS" ] || write_status idle "" ""
+	exit 0
+fi
+
+read_request
+read_conf
+command -v docker >/dev/null || fail "Docker is not available"
+docker compose version >/dev/null 2>&1 || fail "Docker Compose is not available"
+
+case "$ACTION" in
+	scan)
+		write_status running scanning
+		write_index
+		write_status done "" ""
+		;;
+	backup) write_status running preparing; do_backup ;;
+	restore) do_restore ;;
+	delete) do_delete ;;
+esac

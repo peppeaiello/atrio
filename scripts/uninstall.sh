@@ -20,7 +20,7 @@ main() {
 	fi
 
 	# The restore watcher would otherwise put Atrio straight back
-	systemctl disable --now atrio-update.path atrio-restore.path atrio-alerts.timer atrio-alerts-test.path >/dev/null 2>&1 || true
+	systemctl disable --now atrio-update.path atrio-restore.path atrio-alerts.timer atrio-alerts-test.path atrio-backup.path >/dev/null 2>&1 || true
 	systemctl stop atrio-restore.service >/dev/null 2>&1 || true
 
 	# Stage the CasaOS UI next to the live folder, then swap with a rollback
@@ -46,7 +46,8 @@ main() {
 	rm -f /etc/systemd/system/atrio-update.path /etc/systemd/system/atrio-update.service \
 		/etc/systemd/system/atrio-restore.path /etc/systemd/system/atrio-restore.service /usr/local/bin/atrio-update \
 		/etc/systemd/system/atrio-alerts.service /etc/systemd/system/atrio-alerts.timer \
-		/etc/systemd/system/atrio-alerts-test.service /etc/systemd/system/atrio-alerts-test.path /usr/local/bin/atrio-alerts
+		/etc/systemd/system/atrio-alerts-test.service /etc/systemd/system/atrio-alerts-test.path /usr/local/bin/atrio-alerts \
+		/etc/systemd/system/atrio-backup.service /etc/systemd/system/atrio-backup.path /usr/local/bin/atrio-backup
 	systemctl daemon-reload
 	rm -rf "$STATE"
 	echo "CasaOS UI restored. Reload the page in your browser (Ctrl+F5)."
