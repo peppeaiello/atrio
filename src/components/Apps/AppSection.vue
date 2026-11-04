@@ -202,6 +202,7 @@ import business_LinkApp from '@/mixins/app/Business_LinkApp'
 import isEqual from 'lodash/isEqual'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import YAML from 'yamljs'
+import { findDowngrade } from '@/plugins/appVersions'
 
 const SYNCTHING_STORE_ID = 74
 
@@ -452,10 +453,24 @@ export default {
 		},
 		async runBulk (action) {
 			// Only the selected apps the current filter shows
-			const names = this.visibleSelected
+			let names = this.visibleSelected
 			if (!names.length) return
 			this.bulkBusy = action
 			const compose = this.$openAPI.appManagement.compose
+			if (action === 'update') {
+				const older = await Promise.all(names.map(name => findDowngrade(this.$openAPI, name)))
+				const kept = names.filter((name, index) => older[index])
+				if (kept.length) {
+					this.$buefy.toast.open({
+						message: this.$t('Not updated, the App Store only offers an older version: {names}', {
+							names: kept.map(name => this.appTitle(this.appList.find(item => item.name === name) || { name })).join(', '),
+						}),
+						type: 'is-warning',
+						duration: 10000,
+					})
+				}
+				names = names.filter(name => !kept.includes(name))
+			}
 			const results = await Promise.allSettled(names.map(name => action === 'update'
 				? compose.updateComposeApp(name)
 				: compose.setComposeAppStatus(name, action)))
@@ -520,8 +535,11 @@ export default {
 		async loadUpdates () {
 			try {
 				const res = await this.$openAPI.appManagement.compose.myComposeAppList()
-				const apps = res.data.data || {}
-				this.updates = Object.fromEntries(Object.entries(apps).map(([name, app]) => [name, Boolean(app.update_available)]))
+				const apps = Object.entries(res.data.data || {})
+				this.updates = Object.fromEntries(await Promise.all(apps.map(async ([name, app]) => [
+					name,
+					Boolean(app.update_available) && !(await findDowngrade(this.$openAPI, name, app.compose)),
+				])))
 			} catch (e) {
 				// Kept as it was: checked again in a minute
 			}

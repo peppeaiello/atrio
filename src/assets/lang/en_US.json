@@ -678,5 +678,7 @@
   "Core": "Core",
   "Width": "Width",
   "On large screens": "On large screens",
-  "Greeting size": "Greeting size"
+  "Greeting size": "Greeting size",
+  "{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.": "{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.",
+  "Not updated, the App Store only offers an older version: {names}": "Not updated, the App Store only offers an older version: {names}"
 }

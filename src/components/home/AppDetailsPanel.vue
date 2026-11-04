@@ -8,6 +8,7 @@ import { ice_i18n } from '@/mixins/base/common-i18n'
 import { mixin } from '@/mixins/mixin'
 import Sparkline from '@/components/widgets/Sparkline.vue'
 import TerminalCard from '@/components/logsAndTerminal/TerminalCard.vue'
+import { findDowngrade } from '@/plugins/appVersions'
 
 const POLL_MS = 3000
 const HISTORY = 40
@@ -290,6 +291,15 @@ export default {
 		async update() {
 			this.busy = 'update'
 			try {
+				const older = await findDowngrade(this.$openAPI, this.app.name, this.compose)
+				if (older) {
+					this.$buefy.toast.open({
+						message: this.$t('{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.', { title: this.title || this.app.name, ...older }),
+						type: 'is-warning',
+						duration: 10000,
+					})
+					return
+				}
 				const res = await this.$openAPI.appManagement.compose.updateComposeApp(this.app.name)
 				this.$buefy.toast.open({ message: res.data.message || this.$t('No updates are currently available for the application.'), type: 'is-success' })
 			} catch (e) {

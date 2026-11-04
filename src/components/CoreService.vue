@@ -528,24 +528,19 @@ export default {
       })
     },
 
-    'app:update-begin': function (res) {
-      this.transformAppInstallationProgress({
-        finished: false,
-        name: res.Properties.name,
-        id: res.Properties.cid,
-        icon: '',
-      })
-    },
     'app:update-end': function (res) {
       this.transformAppInstallationProgress({
         finished: true,
-        name: res.Properties.name,
+        name: res.Properties['app:name'] || res.Properties.name,
         id: res.Properties.cid,
         icon: '',
         isNewTag: res.Properties['docker:image:updated'] === 'true',
       })
     },
     'app:install-progress': function (res) {
+      // Updates report their download with this event too, and show it on the app's tile:
+      // only an install, opened by app:install-begin, has a card here
+      if (!this.noticesData[res.Properties['app:name']]) return
       const title = ice_i18n(JSON.parse(res.Properties['app:title']))
       this.transformAppInstallationProgress({
         finished: false,

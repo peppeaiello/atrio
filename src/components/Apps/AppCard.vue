@@ -9,6 +9,7 @@ import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_LinkApp from '@/mixins/app/Business_LinkApp'
 import tipEditorModal from '@/components/Apps/TipEditorModal.vue'
 import commonI18n, { ice_i18n } from '@/mixins/base/common-i18n'
+import { findDowngrade } from '@/plugins/appVersions'
 
 // The update ring, the same size as the install one
 const PULL_RADIUS = 30
@@ -601,8 +602,19 @@ export default {
       this.$refs.dro.isActive = false
     },
 
-    checkAppVersion(name) {
+    async checkAppVersion(name) {
       this.isCheckThenUpdate = true
+      const older = await findDowngrade(this.$openAPI, name)
+      if (older) {
+        this.$buefy.toast.open({
+          message: this.$t('{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.', { title: this.title, ...older }),
+          type: 'is-warning',
+          duration: 10000,
+        })
+        this.$refs.dro.isActive = false
+        this.isCheckThenUpdate = false
+        return
+      }
       this.$openAPI.appManagement.compose.updateComposeApp(name).then((resp) => {
         // 200:
         if (resp.status === 200) {

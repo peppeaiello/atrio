@@ -2,6 +2,18 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.14 — unreleased
+
+**Fixed**
+
+- **Updating an app could take it back to an older version.** The App Store pins each app to one version, and
+  CasaOS offers it as an update whenever the installed tag differs, even when it is older or the app runs
+  `latest`. An older image can refuse the data of a newer one and stop starting. Atrio now checks the direction:
+  no Update available label in that case, and Update, also from the details panel and for several apps at once,
+  leaves the app as it is and says why.
+- A card saying "Installing" with a progress bar at 0 could stay on the dashboard after updating an app, until the
+  page was reloaded. Updates show their progress only on the app's tile.
+
 ## 0.1.13 — 2026-11-02
 
 **New**
