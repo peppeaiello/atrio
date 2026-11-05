@@ -13,6 +13,13 @@ REQUEST="$STATE/backup-request"
 STATUS="$STATE/backup-status.json"
 CONF="$STATE/backup.conf"
 INDEX="$STATE/backups"
+# Folders used before: their backups stay listed, also while a disk is not connected
+KNOWN="$STATE/backup-folders"
+CACHE="$INDEX/.cache"
+# Slow destinations get their archive from here, so that the app is not down during the transfer
+STAGE="$DEFAULT_DEST/.staging"
+# What a chosen folder gets inside it: its other files and its permissions stay as they are
+SUBFOLDER="atrio-backups"
 # Larger folders are left out unless chosen by hand
 BIG="${ATRIO_BACKUP_BIG:-5368709120}"
 # Backups made automatically, kept per app; the ones made by hand stay until deleted
@@ -20,7 +27,12 @@ KEEP_AUTO=3
 HEALTH_WAIT="${ATRIO_HEALTH_WAIT:-60}"
 HEALTH_STEADY="${ATRIO_HEALTH_STEADY:-20}"
 
-ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST"
+ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST" DEST_MOUNT="" NEW_DEST="" FROM=""
+# The folder new backups go to; DEST can be an older one for a restore or a delete
+CONF_DEST="$DEFAULT_DEST"
+CONF_MOUNT=""
+STAGED=""
+UPLOAD_TMP=""
 CHOSEN=()
 STOPPED=()
 RUNNING_BEFORE=0
@@ -90,11 +102,13 @@ read_request() {
 			REASON) REASON="$value" ;;
 			TOKEN) TOKEN=$(printf '%s' "$value" | head -c 64 | tr -cd 'A-Za-z0-9-') ;;
 			FOLDER) CHOSEN+=("$value") ;;
+			DEST) NEW_DEST="$value" ;;
+			FROM) FROM="$value" ;;
 		esac
 	done < "$REQUEST"
 	rm -f "$REQUEST"
 	case "$ACTION" in
-		scan|backup|restore|delete) ;;
+		scan|backup|restore|delete|destination|forget) ;;
 		*) ACTION=""; APP=""; ID=""; fail "Unknown request" ;;
 	esac
 	if ! [[ "$APP" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
@@ -111,18 +125,99 @@ read_request() {
 	esac
 }
 
+allowed_dest() {
+	valid_path "$1" && [ "$(dirname "$1")" != "/" ] || return 1
+	case "$1" in
+		/proc|/proc/*|/sys|/sys/*|/dev|/dev/*|/run|/run/*|/etc|/etc/*|/usr|/usr/*|/bin|/bin/*|/sbin|/sbin/*) return 1 ;;
+		/lib|/lib/*|/lib64|/lib64/*|/boot|/boot/*|/tmp|/tmp/*|/root|/root/*) return 1 ;;
+		/var/run|/var/run/*|/var/lib/docker|/var/lib/docker/*|/var/lib/casaos|/var/lib/casaos/*) return 1 ;;
+		"$APPS"|"$APPS"/*|"$STATE"|"$STATE"/*) return 1 ;;
+	esac
+}
+
 read_conf() {
 	[ -f "$CONF" ] || return 0
 	local value
 	value=$(sed -n 's/^DEST=//p' "$CONF" | head -n 1)
 	[ -n "$value" ] || return 0
-	if ! valid_path "$value" || [ "$(dirname "$value")" = "/" ]; then
-		fail "The backup folder is not valid"
-	fi
-	case "$value" in
-		/proc*|/sys*|/dev*|/run*|/etc*|/usr*|/bin*|/sbin*|/lib*|/boot*) fail "The backup folder is not valid" ;;
-	esac
+	DEST_MOUNT=$(sed -n 's/^MOUNT=//p' "$CONF" | head -n 1)
+	allowed_dest "$value" || fail "The backup folder is not valid"
 	DEST="$value"
+	CONF_DEST="$DEST"
+	CONF_MOUNT="$DEST_MOUNT"
+}
+
+# "folder<tab>its disk", the default and the current one first
+known_folders() {
+	{
+		printf '%s\t\n' "$DEFAULT_DEST"
+		printf '%s\t%s\n' "$CONF_DEST" "$CONF_MOUNT"
+		[ -f "$KNOWN" ] && cat "$KNOWN"
+	} | awk -F'\t' '!seen[$1]++'
+}
+
+remember_folder() {
+	[ "$1" = "$DEFAULT_DEST" ] && return 0
+	printf '%s\t%s\n' "$1" "$2" >> "$KNOWN"
+	awk -F'\t' '!seen[$1]++' "$KNOWN" > "$KNOWN.tmp" && mv "$KNOWN.tmp" "$KNOWN"
+}
+
+# A restore or a delete works where that backup is, and so does the copy saved before a restore
+use_folder() {
+	local path mount
+	while IFS=$'\t' read -r path mount; do
+		if [ "$path" = "$1" ]; then
+			DEST="$path"
+			DEST_MOUNT="$mount"
+			return 0
+		fi
+	done < <(known_folders)
+	return 1
+}
+
+mount_of() {
+	timeout 20 findmnt -n -o TARGET --target "$1" 2>/dev/null | head -n 1
+}
+
+# A disk that is not plugged in leaves an ordinary empty folder behind: writing there would fill the
+# main disk with backups that look safe, so the folder must still be on the disk it was chosen on.
+dest_connected() {
+	if [ -n "$DEST_MOUNT" ] && [ "$(mount_of "$DEST")" != "$DEST_MOUNT" ]; then
+		return 1
+	fi
+	timeout 20 mkdir -p "$DEST" 2>/dev/null
+}
+
+require_dest() {
+	dest_connected || fail "The backup folder is not connected: plug in the disk or reconnect the folder, or choose another one"
+}
+
+# Network folders and cloud drives; mergerfs is the local disks merged
+dest_is_remote() {
+	local type
+	type=$(timeout 20 findmnt -n -o FSTYPE --target "$DEST" 2>/dev/null | head -n 1)
+	case "$type" in
+		fuse.mergerfs) return 1 ;;
+		cifs|smb3|smbfs|nfs|nfs4|9p|fuse.*|fuse) return 0 ;;
+	esac
+	return 1
+}
+
+# Like dest_connected, for reading: an older folder is not created again
+dest_present() {
+	if [ -n "$DEST_MOUNT" ] && [ "$(mount_of "$DEST")" != "$DEST_MOUNT" ]; then
+		return 1
+	fi
+	timeout 20 test -d "$DEST"
+}
+
+free_bytes() {
+	timeout 20 df -B1 --output=avail "$1" 2>/dev/null | tail -n 1 | tr -d ' '
+}
+
+make_stage() {
+	mkdir -p "$STAGE" || fail "Could not create the backup folder"
+	chmod 700 "$DEFAULT_DEST" "$STAGE" 2>/dev/null
 }
 
 # --- Containers -------------------------------------------------------------------------------
@@ -167,6 +262,8 @@ start_again() {
 on_exit() {
 	local code=$?
 	[ -n "$TMP_ARCHIVE" ] && rm -f "$TMP_ARCHIVE" "$TMP_ARCHIVE.info"
+	[ -n "$UPLOAD_TMP" ] && timeout 60 rm -f "$UPLOAD_TMP"
+	rm -rf "$STAGE"
 	if [ "${#STOPPED[@]}" -gt 0 ]; then
 		compose start >/dev/null 2>&1 || docker start "${STOPPED[@]}" >/dev/null 2>&1
 	fi
@@ -259,16 +356,65 @@ backups_newest_first() {
 	ls -1 "$DEST/$APP"/*.info 2>/dev/null | sed 's/\.info$//' | sort -r | sed 's/$/.info/'
 }
 
+cache_file() {
+	printf '%s/%s/%s' "$CACHE" "$APP" "$(printf '%s' "$1" | md5sum | cut -d' ' -f1)"
+}
+
+# One line per backup in DEST: "id<tab>the rest of its json"
+list_folder() {
+	local info path inner
+	while IFS= read -r info; do
+		[ -n "$info" ] && [ -f "${info%.info}.tar.gz" ] || continue
+		printf '%s\t"time":"%s","reason":"%s","size":%s,"bytes":%s,"images":"%s","folders":[' \
+			"$(basename "${info%.info}")" "$(info_value "$info" TIME)" "$(info_value "$info" REASON)" \
+			"$(stat -c %s "${info%.info}.tar.gz")" "$(info_value "$info" BYTES)" "$(json "$(info_value "$info" IMAGES)")"
+		inner=1
+		while IFS= read -r path; do
+			[ "$inner" = 1 ] || printf ','
+			inner=0
+			printf '"%s"' "$(json "$path")"
+		done < <(sed -n 's/^FOLDER=//p' "$info")
+		printf ']}\n'
+	done < <(backups_newest_first)
+}
+
+# The backups of this app in every known folder, newest first. A folder that is not connected
+# shows what it held the last time it was seen.
+all_backups() {
+	local path mount cache available id rest
+	while IFS=$'\t' read -r path mount; do
+		DEST="$path"
+		DEST_MOUNT="$mount"
+		cache=$(cache_file "$path")
+		available=false
+		if dest_present; then
+			available=true
+			mkdir -p "$(dirname "$cache")"
+			list_folder > "$cache.tmp" && mv "$cache.tmp" "$cache"
+		fi
+		[ -f "$cache" ] || continue
+		while IFS=$'\t' read -r id rest; do
+			[ -n "$id" ] && printf '%s\t{"id":"%s","dest":"%s","available":%s,%s\n' "$id" "$id" "$(json "$path")" "$available" "$rest"
+		done < "$cache"
+	done < <(known_folders)
+	DEST="$CONF_DEST"
+	DEST_MOUNT="$CONF_MOUNT"
+}
+
 write_index() {
-	local out="$INDEX/$APP.json" first=1 path size selected remembered info same_disk free
-	mkdir -p "$DEST" 2>/dev/null
-	free=$(df -B1 --output=avail "$DEST" 2>/dev/null | tail -n 1 | tr -d ' ')
-	same_disk=false
-	[ "$(df --output=source "$DEST" 2>/dev/null | tail -n 1)" = "$(df --output=source "$APPS" 2>/dev/null | tail -n 1)" ] && same_disk=true
+	local out="$INDEX/$APP.json" first=1 path size selected remembered same_disk=false free=0 connected=false remote=false line
+	DEST="$CONF_DEST"
+	DEST_MOUNT="$CONF_MOUNT"
+	if dest_connected; then
+		connected=true
+		free=$(free_bytes "$DEST")
+		[ "$(df --output=source "$DEST" 2>/dev/null | tail -n 1)" = "$(df --output=source "$APPS" 2>/dev/null | tail -n 1)" ] && same_disk=true
+		dest_is_remote && remote=true
+	fi
 	remembered="$INDEX/$APP.folders"
 	{
-		printf '{"app":"%s","dest":"%s","same_disk":%s,"free":%s,"running":%s,"folders":[' \
-			"$APP" "$(json "$DEST")" "$same_disk" "${free:-0}" "$([ -n "$(running_ids)" ] && echo true || echo false)"
+		printf '{"app":"%s","dest":"%s","default_dest":"%s","connected":%s,"remote":%s,"same_disk":%s,"free":%s,"running":%s,"folders":[' \
+			"$APP" "$(json "$DEST")" "$(json "$DEFAULT_DEST")" "$connected" "$remote" "$same_disk" "${free:-0}" "$([ -n "$(running_ids)" ] && echo true || echo false)"
 		while IFS= read -r path; do
 			[ -n "$path" ] || continue
 			if allowed_folder "$path" && [ -e "$path" ]; then
@@ -286,22 +432,12 @@ write_index() {
 		done < <(mounted_folders)
 		printf '],"backups":['
 		first=1
-		# Newest first
-		for info in $(backups_newest_first); do
-			[ -f "${info%.info}.tar.gz" ] || continue
+		while IFS= read -r line; do
+			[ -n "$line" ] || continue
 			[ "$first" = 1 ] || printf ','
 			first=0
-			printf '{"id":"%s","time":"%s","reason":"%s","size":%s,"bytes":%s,"images":"%s","folders":[' \
-				"$(basename "${info%.info}")" "$(info_value "$info" TIME)" "$(info_value "$info" REASON)" \
-				"$(stat -c %s "${info%.info}.tar.gz")" "$(info_value "$info" BYTES)" "$(json "$(info_value "$info" IMAGES)")"
-			local inner=1
-			while IFS= read -r path; do
-				[ "$inner" = 1 ] || printf ','
-				inner=0
-				printf '"%s"' "$(json "$path")"
-			done < <(sed -n 's/^FOLDER=//p' "$info")
-			printf ']}'
-		done
+			printf '%s' "$line"
+		done < <(all_backups | LC_ALL=C sort -r -t $'\t' -k1,1 | cut -f2-)
 		printf ']}\n'
 	} > "$out.tmp"
 	chmod 644 "$out.tmp"
@@ -346,17 +482,18 @@ backup_folders() {
 
 prune_auto() {
 	local info count=0
-	for info in $(backups_newest_first); do
+	while IFS= read -r info; do
+		[ -n "$info" ] || continue
 		[ "$(info_value "$info" REASON)" = "manual" ] && continue
 		count=$((count + 1))
 		[ "$count" -gt "$KEEP_AUTO" ] && rm -f "$info" "${info%.info}.tar.gz"
-	done
+	done < <(backups_newest_first)
 }
 
-# Writes one backup of the app, stopped; start_again is up to the caller.
+# Writes one backup of the app, stopped; start_again is up to the caller, then publish_archive.
 # $1: reason, then the folders
 make_archive() {
-	local reason="$1" total=0 size path id archive images ids free folder code
+	local reason="$1" total=0 size path id archive work images ids free folder code
 	shift
 	mkdir -p "$DEST/$APP" || fail "Could not create the backup folder"
 	chmod 700 "$DEST" "$DEST/$APP" 2>/dev/null
@@ -366,11 +503,17 @@ make_archive() {
 		size=$(folder_size "$path")
 		[ "$size" -gt 0 ] && total=$((total + size))
 	done
-	free=$(df -B1 --output=avail "$DEST" | tail -n 1 | tr -d ' ')
+
+	work="$DEST/$APP"
+	if dest_is_remote; then
+		make_stage
+		work="$STAGE"
+	fi
+	free=$(free_bytes "$work")
 	[ "${free:-0}" -gt "$total" ] || fail "Not enough free space in the backup folder"
 
 	id=$(new_id)
-	archive="$DEST/$APP/$id.tar.gz"
+	archive="$work/$id.tar.gz"
 	TMP_ARCHIVE="$archive.tmp"
 	ids=$(container_ids)
 	images=""
@@ -399,14 +542,44 @@ make_archive() {
 	chmod 600 "$TMP_ARCHIVE" "$TMP_ARCHIVE.info"
 	mv "$TMP_ARCHIVE.info" "$archive.info.tmp"
 	mv "$TMP_ARCHIVE" "$archive"
-	mv "$archive.info.tmp" "$DEST/$APP/$id.info"
 	TMP_ARCHIVE=""
 	LAST_ID="$id"
+	if [ "$work" = "$STAGE" ]; then
+		STAGED="$archive"
+	else
+		mv "$archive.info.tmp" "$work/$id.info"
+	fi
+}
+
+# A slow destination gets the archive now; it only counts once the copy there reads back the same.
+publish_archive() {
+	[ -n "$STAGED" ] || return 0
+	local id free size final="$DEST/$APP" info="$STAGED.info.tmp"
+	id=$(basename "$STAGED" .tar.gz)
+	write_status running uploading
+	size=$(stat -c %s "$STAGED")
+	free=$(free_bytes "$DEST")
+	# Some cloud drives do not tell: then the copy itself finds out
+	if [ "${free:-0}" -gt 0 ] && [ "$free" -le "$size" ]; then
+		fail "Not enough free space in the backup folder"
+	fi
+	UPLOAD_TMP="$final/$id.tar.gz.tmp"
+	cp --no-preserve=all "$STAGED" "$UPLOAD_TMP" || fail "The backup could not be copied to the backup folder"
+	[ "$(sha256sum "$UPLOAD_TMP" | cut -d' ' -f1)" = "$(sha256sum "$STAGED" | cut -d' ' -f1)" ] \
+		|| fail "The backup could not be copied to the backup folder"
+	mv "$UPLOAD_TMP" "$final/$id.tar.gz" || fail "The backup could not be copied to the backup folder"
+	UPLOAD_TMP="$final/$id.info.tmp"
+	cp --no-preserve=all "$info" "$UPLOAD_TMP" && mv "$UPLOAD_TMP" "$final/$id.info" \
+		|| fail "The backup could not be copied to the backup folder"
+	UPLOAD_TMP=""
+	rm -f "$STAGED" "$info"
+	STAGED=""
 }
 
 do_backup() {
 	local folders=()
 	[ -f "$APPS/$APP/docker-compose.yml" ] || fail "Unknown app"
+	require_dest
 	mapfile -t folders < <(backup_folders)
 	# What was chosen by hand is what automatic backups of this app will save too
 	if [ "$REASON" = "manual" ]; then
@@ -415,6 +588,7 @@ do_backup() {
 	make_archive "$REASON" ${folders[@]+"${folders[@]}"}
 	ID="$LAST_ID"
 	start_again
+	publish_archive
 	prune_auto
 	write_index
 	write_status done "" ""
@@ -424,7 +598,16 @@ do_backup() {
 
 do_restore() {
 	local info="$DEST/$APP/$ID.info" archive="$DEST/$APP/$ID.tar.gz" folders=() path current=() swapped=() compose_dir="$APPS/$APP"
+	require_dest
 	[ -n "$ID" ] && [ -f "$info" ] && [ -f "$archive" ] || fail "Unknown backup"
+	# Read over the network only once, with the app still running
+	if dest_is_remote; then
+		write_status running downloading
+		make_stage
+		[ "$(free_bytes "$STAGE")" -gt "$(stat -c %s "$archive")" ] || fail "Not enough free space to restore this backup"
+		cp --no-preserve=all "$archive" "$STAGE/restore-$ID.tar.gz" || fail "The backup could not be read from the backup folder"
+		archive="$STAGE/restore-$ID.tar.gz"
+	fi
 	write_status running checking
 	[ "$(sha256sum "$archive" | cut -d' ' -f1)" = "$(info_value "$info" SHA256)" ] || fail "This backup is damaged and was not restored"
 
@@ -446,6 +629,8 @@ do_restore() {
 	# The current state first, so that this restore can be undone too
 	if [ -f "$compose_dir/docker-compose.yml" ]; then
 		make_archive before-restore ${current[@]+"${current[@]}"}
+		# Nothing changes until the copy to go back to is safe where it belongs
+		publish_archive
 	fi
 
 	write_status running restoring
@@ -491,9 +676,60 @@ do_restore() {
 }
 
 do_delete() {
+	require_dest
 	[ -n "$ID" ] && [ -f "$DEST/$APP/$ID.tar.gz" ] || fail "Unknown backup"
 	rm -f "$DEST/$APP/$ID.tar.gz" "$DEST/$APP/$ID.info"
 	rmdir "$DEST/$APP" 2>/dev/null
+	write_index
+	write_status done "" ""
+}
+
+# --- Destination ------------------------------------------------------------------------------
+
+# Empty means back to the default. Checked for real before anything is saved.
+do_destination() {
+	local chosen="$NEW_DEST" mount
+	if [ -z "$chosen" ]; then
+		remember_folder "$CONF_DEST" "$CONF_MOUNT"
+		rm -f "$CONF"
+		CONF_DEST="$DEFAULT_DEST"
+		CONF_MOUNT=""
+		write_index
+		write_status done "" ""
+		return 0
+	fi
+	chosen="${chosen%/}"
+	[ -n "$chosen" ] || chosen="/"
+	if [ "$chosen" != "$DEFAULT_DEST" ] && [ "$(basename "$chosen")" != "$SUBFOLDER" ]; then
+		chosen="${chosen%/}/$SUBFOLDER"
+	fi
+	allowed_dest "$chosen" || fail "This folder cannot hold backups: choose another one"
+	timeout 60 mkdir -p "$chosen" 2>/dev/null || fail "Atrio cannot write in this folder: choose another one"
+	if ! { timeout 60 touch "$chosen/.atrio-write-test" 2>/dev/null && timeout 60 rm -f "$chosen/.atrio-write-test"; }; then
+		fail "Atrio cannot write in this folder: choose another one"
+	fi
+	mount=$(mount_of "$chosen")
+	[ -n "$mount" ] || fail "Atrio cannot write in this folder: choose another one"
+	remember_folder "$CONF_DEST" "$CONF_MOUNT"
+	printf 'DEST=%s\nMOUNT=%s\n' "$chosen" "$mount" > "$CONF.tmp"
+	mv "$CONF.tmp" "$CONF"
+	CONF_DEST="$chosen"
+	CONF_MOUNT="$mount"
+	write_index
+	write_status done "" ""
+}
+
+# Takes an old folder off the list, for a disk that is gone. Nothing on it is deleted.
+do_forget() {
+	local name
+	if [ -z "$FROM" ] || [ "$FROM" = "$DEFAULT_DEST" ] || [ "$FROM" = "$CONF_DEST" ] || ! use_folder "$FROM"; then
+		fail "Unknown folder"
+	fi
+	if [ -f "$KNOWN" ]; then
+		awk -F'\t' -v path="$(printf '%s' "$FROM" | sed 's/\\/\\\\/g')" '$1 != path' "$KNOWN" > "$KNOWN.tmp" && mv "$KNOWN.tmp" "$KNOWN"
+	fi
+	name=$(basename "$(cache_file "$FROM")")
+	rm -f "$CACHE"/*/"$name"
 	write_index
 	write_status done "" ""
 }
@@ -508,6 +744,14 @@ fi
 
 read_request
 read_conf
+rm -rf "$STAGE"
+case "$ACTION" in
+	restore|delete)
+		if [ -n "$FROM" ]; then
+			use_folder "$FROM" || fail "Unknown backup"
+		fi
+		;;
+esac
 command -v docker >/dev/null || fail "Docker is not available"
 docker compose version >/dev/null 2>&1 || fail "Docker Compose is not available"
 
@@ -520,4 +764,6 @@ case "$ACTION" in
 	backup) write_status running preparing; do_backup ;;
 	restore) do_restore ;;
 	delete) do_delete ;;
+	destination) do_destination ;;
+	forget) do_forget ;;
 esac

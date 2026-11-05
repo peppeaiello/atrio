@@ -8,7 +8,6 @@ import { findDowngrade } from '@/plugins/appVersions'
 const STATE = '/var/lib/casaos/atrio'
 const REQUEST = `${STATE}/backup-request`
 const STATUS = `${STATE}/backup-status.json`
-const CONF = `${STATE}/backup.conf`
 const POLL_MS = 1500
 // The service has to pick up a request by then; once running, a large app can take hours
 const PICKUP_MS = 30 * 1000
@@ -87,14 +86,13 @@ async function run(fields) {
 
 export const scanApp = (app) => run({ ACTION: 'scan', APP: app })
 export const backupApp = (app, folders, reason = 'manual') => run({ ACTION: 'backup', APP: app, REASON: reason, FOLDER: folders || [] })
-export const restoreApp = (app, id) => run({ ACTION: 'restore', APP: app, ID: id })
-export const deleteBackup = (app, id) => run({ ACTION: 'delete', APP: app, ID: id })
+// `from`: the folder that holds the backup, when it is not the current one
+export const restoreApp = (app, id, from) => run({ ACTION: 'restore', APP: app, ID: id, ...(from ? { FROM: from } : {}) })
+export const deleteBackup = (app, id, from) => run({ ACTION: 'delete', APP: app, ID: id, ...(from ? { FROM: from } : {}) })
+export const forgetFolder = (app, from) => run({ ACTION: 'forget', APP: app, FROM: from })
 
-export async function saveDestination(path) {
-	if ((await read(CONF)) === null) await api.file.create(CONF)
-	const res = await api.file.update(CONF, `DEST=${path.replace(/[\r\n]/g, '')}\n`)
-	if (res.data.success !== 200) throw new Error('Could not save the backup folder')
-}
+// The service checks the folder and creates a subfolder in it; empty means back to the default
+export const saveDestination = (app, path) => run({ ACTION: 'destination', APP: app, DEST: path })
 
 // Dialog messages are HTML, and app names come from compose files
 export function escapeHtml(text) {

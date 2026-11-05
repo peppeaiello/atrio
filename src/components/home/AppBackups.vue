@@ -2,7 +2,10 @@
 // The Backup tab of the app panel: choose what to save, make a backup, go back to one.
 // The work runs on the server, see plugins/appBackup.js.
 import { renderSize } from '@/mixins/file_utils'
-import { backupApp, backupRun, backupsInstalled, deleteBackup, escapeHtml, loadIndex, restoreApp, saveDestination, scanApp } from '@/plugins/appBackup'
+import FilesIcon from '@/components/files/FilesIcon.vue'
+import { errorMessage, listFolder, listLocations, parentPath } from '@/components/files/files.js'
+import '@/components/files/messages.js'
+import { backupApp, backupRun, backupsInstalled, deleteBackup, escapeHtml, forgetFolder, loadIndex, restoreApp, saveDestination, scanApp } from '@/plugins/appBackup'
 
 const INSTALL = 'curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/install.sh | sudo bash'
 const STEPS = {
@@ -11,6 +14,8 @@ const STEPS = {
 	checking: 'Checking…',
 	stopping: 'Stopping the app…',
 	archiving: 'Saving the files…',
+	uploading: 'Sending the backup to its folder…',
+	downloading: 'Getting the backup from its folder…',
 	restoring: 'Putting the files back…',
 	starting: 'Starting the app…',
 }
@@ -18,6 +23,7 @@ const STEPS = {
 export default {
 	name: 'AppBackups',
 	compatConfig: { MODE: 3 },
+	components: { FilesIcon },
 	props: {
 		app: { type: String, required: true },
 		title: { type: String, default: '' },
@@ -28,8 +34,13 @@ export default {
 			installed: null,
 			index: null,
 			selected: [],
-			dest: '',
 			error: '',
+			picking: false,
+			pickDir: '',
+			pickFolders: [],
+			pickLoading: false,
+			pickError: '',
+			places: [],
 			install: INSTALL,
 			run: backupRun,
 		}
@@ -53,8 +64,11 @@ export default {
 		chosenSize() {
 			return this.folders.filter((folder) => this.selected.includes(folder.path) && folder.size > 0).reduce((sum, folder) => sum + folder.size, 0)
 		},
-		destChanged() {
-			return Boolean(this.index) && this.dest.trim() !== '' && this.dest.trim() !== this.index.dest
+		isDefaultDest() {
+			return this.index?.dest === this.index?.default_dest
+		},
+		connected() {
+			return this.index?.connected !== false
 		},
 	},
 	watch: {
@@ -71,7 +85,6 @@ export default {
 			this.index = index
 			if (!index) return
 			this.selected = index.folders.filter((folder) => folder.selected).map((folder) => folder.path)
-			this.dest = index.dest
 		},
 		async load() {
 			const app = this.app
@@ -117,7 +130,7 @@ export default {
 				cancelText: this.$t('Cancel'),
 				type: 'is-danger',
 				onConfirm: async () => {
-					if (await this.act(() => restoreApp(this.app, backup.id))) {
+					if (await this.act(() => restoreApp(this.app, backup.id, backup.dest))) {
 						this.$buefy.toast.open({ message: this.$t('{title} is back to the backup of {time}', { title: this.title, time: this.when(backup.time) }), type: 'is-success', duration: 6000 })
 					}
 				},
@@ -130,14 +143,62 @@ export default {
 				confirmText: this.$t('Delete'),
 				cancelText: this.$t('Cancel'),
 				type: 'is-danger',
-				onConfirm: () => this.act(() => deleteBackup(this.app, backup.id)),
+				onConfirm: () => this.act(() => deleteBackup(this.app, backup.id, backup.dest)),
 			})
 		},
-		async changeDest() {
-			await this.act(async () => {
-				await saveDestination(this.dest.trim())
-				await scanApp(this.app)
+		forget(backup) {
+			this.$buefy.dialog.confirm({
+				title: this.$t('Take this folder off the list?'),
+				message: this.$t('{folder} is not connected. Its backups leave this list, for every app. Nothing on it is deleted, and choosing the folder again brings them back.', { folder: escapeHtml(backup.dest) }),
+				confirmText: this.$t('Remove from list'),
+				cancelText: this.$t('Cancel'),
+				onConfirm: () => this.act(() => forgetFolder(this.app, backup.dest)),
 			})
+		},
+		elsewhere(backup) {
+			return Boolean(backup.dest) && backup.dest !== this.index?.dest
+		},
+		isAvailable(backup) {
+			return backup.available !== false
+		},
+		cancelPicker() {
+			this.picking = false
+			this.error = ''
+		},
+		async openPicker() {
+			this.picking = true
+			this.error = ''
+			this.pickError = ''
+			this.goTo(this.connected && !this.isDefaultDest ? this.index.dest : '/DATA')
+			const { places, storage } = await listLocations()
+			this.places = [...places.slice(0, 1), ...storage.filter((place) => place.kind)]
+		},
+		async goTo(dir) {
+			this.pickDir = dir
+			this.pickLoading = true
+			this.pickError = ''
+			try {
+				const items = await listFolder(dir)
+				if (dir !== this.pickDir) return
+				this.pickFolders = items.filter((item) => item.is_dir && !item.name.startsWith('.')).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+			}
+			catch (e) {
+				this.pickFolders = []
+				this.pickError = errorMessage(e)
+			}
+			finally {
+				this.pickLoading = false
+			}
+		},
+		placeName(place) {
+			return place.label || this.$t(`files.${place.name}`)
+		},
+		parentPath,
+		async setDest(path) {
+			if (await this.act(() => saveDestination(this.app, path))) {
+				this.picking = false
+				this.$buefy.toast.open({ message: this.$t('From now on, backups go to the new folder. The ones already saved stay where they are, and stay on this list.'), type: 'is-success', duration: 8000 })
+			}
 		},
 		when(time) {
 			const date = new Date(time)
@@ -170,7 +231,7 @@ export default {
 
 			<div class="atrio-config-head">
 				<p>{{ $t('Saves the settings of this app and the folders chosen below. The app stops while it runs.') }}</p>
-				<button :disabled="busy || !index" class="atrio-button is-small" type="button" @click="create">{{ $t('Create backup') }}</button>
+				<button :disabled="busy || !index || !connected" class="atrio-button is-small" type="button" @click="create">{{ $t('Create backup') }}</button>
 			</div>
 			<p v-if="mine" aria-live="polite" class="atrio-backups-step">{{ stepText }}</p>
 			<p v-else-if="busy" class="atrio-backups-step">{{ $t('Another backup is in progress') }}</p>
@@ -193,12 +254,17 @@ export default {
 			<h4>{{ $t('Saved backups') }}</h4>
 			<p v-if="index && !backups.length" class="atrio-config-empty">{{ $t('No backups yet') }}</p>
 			<ul v-else class="atrio-backups-list">
-				<li v-for="backup in backups" :key="backup.id">
+				<li v-for="backup in backups" :key="`${backup.dest}/${backup.id}`" :class="{ 'is-unavailable': !isAvailable(backup) }">
 					<div>
 						<strong>{{ when(backup.time) }}</strong>
 						<small>{{ [reason(backup), renderSize(backup.size), backup.images].filter(Boolean).join(' · ') }}</small>
+						<small v-if="elsewhere(backup)" class="is-mono">{{ $t('In {folder}', { folder: backup.dest }) }}</small>
+						<small v-if="!isAvailable(backup)" class="atrio-backups-offline">{{ $t('Not connected: connect it to restore this backup') }}</small>
 					</div>
-					<div class="atrio-backups-actions">
+					<div v-if="!isAvailable(backup)" class="atrio-backups-actions">
+						<button v-if="elsewhere(backup)" :disabled="busy" class="atrio-button is-small" type="button" @click="forget(backup)">{{ $t('Remove from list') }}</button>
+					</div>
+					<div v-else class="atrio-backups-actions">
 						<button :disabled="busy" class="atrio-button is-small" type="button" @click="restore(backup)">{{ $t('Restore') }}</button>
 						<button :aria-label="$t('Delete')" :disabled="busy" class="atrio-button is-small" type="button" @click="remove(backup)">
 							<b-icon icon="trash-outline" pack="casa" size="is-16" />
@@ -209,11 +275,36 @@ export default {
 
 			<h4>{{ $t('Backup folder') }}</h4>
 			<div class="atrio-backups-dest">
-				<input v-model="dest" :aria-label="$t('Backup folder')" :disabled="busy" class="is-mono" spellcheck="false" type="text">
-				<button :disabled="busy || !destChanged" class="atrio-button is-small" type="button" @click="changeDest">{{ $t('Save') }}</button>
+				<span class="is-mono">{{ index?.dest }}</span>
+				<button v-if="!picking" :disabled="busy || !index" class="atrio-button is-small" type="button" @click="openPicker">{{ $t('Change') }}</button>
+				<button v-if="!picking && index && !isDefaultDest" :disabled="busy" class="atrio-button is-small" type="button" @click="setDest('')">{{ $t('Use the default') }}</button>
 			</div>
+			<p v-if="index && !connected" class="atrio-backups-error" role="alert">{{ $t('This folder is not connected right now: plug in the disk or reconnect the folder, or choose another one. Backups before updates cannot run until then.') }}</p>
+
+			<div v-if="picking" class="atrio-backups-picker">
+				<p class="atrio-backups-note">{{ $t('Disks, USB drives, network folders and cloud drives connected in Files appear here. To add one, connect it in Files first.') }}</p>
+				<div class="atrio-backups-places">
+					<button v-for="place in places" :key="place.path" :class="{ 'is-active': pickDir === place.path }" type="button" @click="goTo(place.path)">
+						<FilesIcon :name="place.icon" :size="15" />{{ placeName(place) }}
+					</button>
+				</div>
+				<strong class="is-mono">{{ pickDir }}</strong>
+				<div class="atrio-backups-pick-list">
+					<button v-if="pickDir !== '/'" type="button" @click="goTo(parentPath(pickDir))"><FilesIcon :size="16" name="arrowUp" />..</button>
+					<p v-if="pickLoading" class="atrio-config-empty">{{ $t('Loading…') }}</p>
+					<p v-else-if="pickError" class="atrio-backups-note" role="alert">{{ pickError }}</p>
+					<button v-for="folder in pickFolders" v-else :key="folder.path" type="button" @click="goTo(folder.path)"><FilesIcon :size="16" name="folder" />{{ folder.name }}</button>
+				</div>
+				<p class="atrio-backups-note">{{ $t('Atrio creates a folder called atrio-backups in here.') }}</p>
+				<div class="atrio-backups-actions">
+					<button :disabled="busy || !!pickError" class="atrio-button is-small" type="button" @click="setDest(pickDir)">{{ $t('Use this folder') }}</button>
+					<button :disabled="busy" class="atrio-button is-small" type="button" @click="cancelPicker">{{ $t('Cancel') }}</button>
+				</div>
+			</div>
+
 			<p v-if="index?.same_disk" class="atrio-backups-note">{{ $t('This folder is on the same disk as your apps: backups protect from mistakes and bad updates, not from a broken disk. Use a folder on another disk to be safe.') }}</p>
-			<p v-if="index" class="atrio-backups-note">{{ $t('Free space: {size}', { size: renderSize(index.free) }) }}</p>
+			<p v-if="index?.remote" class="atrio-backups-note">{{ $t('Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while. Backups are not encrypted, and they contain the app\'s data and passwords: anyone with access to this folder can read them.') }}</p>
+			<p v-if="index && connected" class="atrio-backups-note">{{ $t('Free space: {size}', { size: renderSize(index.free) }) }}</p>
 		</template>
 	</section>
 </template>
@@ -313,6 +404,14 @@ export default {
 	}
 }
 
+.atrio-backups-list li.is-unavailable strong {
+	opacity: 0.6;
+}
+
+.atrio-backups .atrio-backups-offline {
+	color: #fcd34d;
+}
+
 .atrio-backups-actions {
 	display: flex;
 	flex: none;
@@ -321,16 +420,84 @@ export default {
 
 .atrio-backups-dest {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 0.5rem;
+	align-items: center;
 
-	input {
-		flex: 1;
+	.is-mono {
+		flex: 1 1 12rem;
 		min-width: 0;
-		padding: 0.375rem 0.625rem;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 0.5rem;
-		background: rgba(255, 255, 255, 0.06);
+	}
+}
+
+.atrio-backups-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin: 0.75rem 0;
+	padding: 0.75rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 0.75rem;
+
+	strong {
 		color: inherit;
+	}
+
+	button {
+		color: inherit;
+		font: inherit;
+		cursor: pointer;
+	}
+}
+
+.atrio-backups-places {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+
+	button {
+		display: flex;
+		gap: 0.375rem;
+		align-items: center;
+		min-height: 2rem;
+		padding: 0 0.75rem;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.06);
+		font-size: 0.8125rem;
+
+		&.is-active {
+			background: rgba(255, 255, 255, 0.18);
+		}
+	}
+}
+
+.atrio-backups-pick-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	height: 12rem;
+	padding: 0.25rem;
+	overflow-y: auto;
+	border-radius: 0.5rem;
+	background: rgba(0, 0, 0, 0.25);
+
+	button {
+		display: flex;
+		flex: none;
+		gap: 0.5rem;
+		align-items: center;
+		min-height: 2.25rem;
+		padding: 0 0.5rem;
+		border: 0;
+		border-radius: 0.375rem;
+		background: transparent;
+		font-size: 0.875rem;
+		text-align: left;
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.1);
+		}
 	}
 }
 

@@ -10,6 +10,11 @@ What changes in each Atrio release. The section for a version is also the text o
   size, to a folder you pick. Going back takes one click, and saves the current state first so that it can be
   undone too. Large folders and folders outside the app's own data are left out unless you choose them. Needs the
   small service added by running the install command once more.
+- **Backups can go to another disk, a USB drive, a network folder or a cloud drive**: pick any location connected in
+  Files, such as Google Drive, Dropbox, OneDrive or an SMB share. If it is not connected at that moment, the backup
+  stops and says so instead of filling the main disk. For network and cloud locations the app restarts first and the
+  backup is sent afterwards, then read back to check it. Backups are not encrypted yet. The list of an app keeps the
+  backups in every folder used so far, with date and time; those on a disk that is not connected show as unavailable.
 - **Safer app updates.** When the service is there, an update saves a backup first, keeping the last 3 made this way.
   If the app does not come back up while Atrio is open, it offers to go back to that backup.
 
