@@ -199,14 +199,25 @@ export default {
     document.removeEventListener('pointerdown', this.onOutsideConfirm, true)
   },
   methods: {
-    handleDorpdownPosition(event) {
-      this.$nextTick(() => {
-        const rightOffset = window.innerWidth - event.clientX - 160
-        const horizontalPos = rightOffset > 0 ? 'right' : 'left'
-        const bottomOffset = window.innerHeight - event.clientY - 212
-        const verticalPos = bottomOffset > 0 ? 'bottom' : 'top'
-        this.dropdownPosition = `is-${verticalPos}-${horizontalPos}`
-      })
+    // Atrio: open the menu where it fits, measured once it is shown: above the button near the
+    // bottom of the screen, to its left near the right edge
+    fitDropdown() {
+      this.$nextTick(() => requestAnimationFrame(() => {
+        const dropdown = this.$refs.dro
+        const menu = dropdown?.$refs.dropdownMenu
+        const trigger = dropdown?.$refs.trigger
+        if (!menu || !trigger)
+          return
+        const rect = trigger.getBoundingClientRect()
+        const below = window.innerHeight - rect.bottom
+        const up = below < menu.offsetHeight + 8 && rect.top > below
+        const left = window.innerWidth - rect.left < menu.offsetWidth + 8
+        const position = `is-${up ? 'top' : 'bottom'}-${left ? 'left' : 'right'}`
+        if (position === this.dropdownPosition)
+          return
+        this.dropdownPosition = position
+        this.$nextTick(() => dropdown.updateAppendToBody())
+      }))
     },
     // Atrio: the tile link opens the app in a new tab by itself; keep CasaOS's bookkeeping
     onTileLink() {
@@ -290,6 +301,8 @@ export default {
      */
     setDropState(e) {
       this.dropState = e
+      if (e)
+        this.fitDropdown()
     },
 
     /**
@@ -816,7 +829,7 @@ export default {
         @active-change="setDropState"
       >
         <template #trigger>
-          <button :aria-label="$t('Actions for {name}', { name: title })" class="atrio-card-menu" type="button" @click="handleDorpdownPosition">
+          <button :aria-label="$t('Actions for {name}', { name: title })" class="atrio-card-menu" type="button">
             <b-icon icon="dots-vertical-outline" pack="casa" />
           </button>
         </template>
