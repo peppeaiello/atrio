@@ -2,7 +2,7 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
-## 0.1.14 — unreleased
+## 0.1.14 — 2026-11-05
 
 **New**
 
@@ -15,6 +15,8 @@ What changes in each Atrio release. The section for a version is also the text o
   stops and says so instead of filling the main disk. For network and cloud locations the app restarts first and the
   backup is sent afterwards, then read back to check it. Backups are not encrypted yet. The list of an app keeps the
   backups in every folder used so far, with date and time; those on a disk that is not connected show as unavailable.
+  Tried on a USB drive so far: network and cloud locations should work the same way, but have only been tested with a
+  local stand-in, so check your first backup there.
 - **Safer app updates.** When the service is there, an update saves a backup first, keeping the last 3 made this way.
   If the app does not come back up while Atrio is open, it offers to go back to that backup.
 - **A push alert when an app has been updated**, so you can start an update and leave the page (#6). It comes within
@@ -28,6 +30,8 @@ What changes in each Atrio release. The section for a version is also the text o
   `latest`. An older image can refuse the data of a newer one and stop starting. Atrio now checks the direction:
   no Update available label in that case, and Update, also from the details panel and for several apps at once,
   leaves the app as it is and says why.
+- Update on an app that announces a new version the App Store does not have yet seemed to do nothing. It now says the
+  app is already on the version the App Store offers.
 - A card saying "Installing" with a progress bar at 0 could stay on the dashboard after updating an app, until the
   page was reloaded. Updates show their progress only on the app's tile.
 
