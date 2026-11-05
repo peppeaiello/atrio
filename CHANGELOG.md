@@ -2,6 +2,13 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.15 — unreleased
+
+**Fixed**
+
+- On phones the widgets panel covered the top bar, so the only way out was reloading the page. It now opens below
+  the top bar, whose button closes it, and the greeting and apps no longer show or react behind it.
+
 ## 0.1.14 — 2026-11-05
 
 **New**

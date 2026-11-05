@@ -199,6 +199,8 @@ export default {
 
     @include until(480px) {
         position: fixed;
+        // Below the top bar, whose button closes the panel
+        top: 5.25rem;
         z-index: 20;
         left: 0rem;
         width: auto;

@@ -311,7 +311,7 @@ export default {
       <div class="container">
         <!-- Greeting Start -->
         <section
-          :class="{ 'is-hidden': !greetingPrefs.visible, 'is-small': greetingPrefs.visible && greetingRem(greetingPrefs.size) < 1.75 }"
+          :class="{ 'is-hidden': !greetingPrefs.visible, 'is-small': greetingPrefs.visible && greetingRem(greetingPrefs.size) < 1.75, 'is-covered': sidebarOpen }"
           :style="{ '--atrio-greeting-size': `${greetingRem(greetingPrefs.size)}rem` }" class="atrio-greeting"
         >
           <div v-if="greetingPrefs.visible">
@@ -507,7 +507,13 @@ export default {
         &.open {
             transform: scale(0.9);
             opacity: 0;
+            pointer-events: none;
         }
+    }
+
+    // The widgets panel is see-through and has gaps: nothing should show or be tapped behind it
+    .atrio-greeting.is-covered {
+        visibility: hidden;
     }
 }
 
