@@ -760,5 +760,6 @@
   "In {folder}": "In {folder}",
   "Not connected: connect it to restore this backup": "Not connected: connect it to restore this backup",
   "Unknown folder": "Unknown folder",
-  "The files are back, but the app started without them: open its settings and save them to start it again": "The files are back, but the app started without them: open its settings and save them to start it again"
+  "The files are back, but the app started without them: open its settings and save them to start it again": "The files are back, but the app started without them: open its settings and save them to start it again",
+  "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.": "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it."
 }

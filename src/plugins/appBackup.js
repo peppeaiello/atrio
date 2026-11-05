@@ -164,7 +164,7 @@ function watchUpdate(vm, name, title, backupId) {
 
 /**
  * Updates one app, safely: not when it would go back to an older version, and with a backup first.
- * `vm` is the calling component. Resolves with 'kept', 'failed' or 'started'.
+ * `vm` is the calling component. Resolves with 'kept' (would go back), 'current' (nothing newer), 'failed' or 'started'.
  * With `quiet`, nothing is asked or shown, for bulk actions.
  */
 export async function updateApp(vm, name, title, { quiet = false } = {}) {
@@ -208,6 +208,11 @@ export async function updateApp(vm, name, title, { quiet = false } = {}) {
 
 	try {
 		const res = await compose.updateComposeApp(name)
+		if (/up to date/i.test(res.data.message || '')) {
+			// CasaOS does nothing here: the App Store has no newer version yet, even if the app itself announces one
+			if (!quiet) vm.$buefy.toast.open({ message: vm.$t('{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.', { title }), type: 'is-info', duration: 8000 })
+			return 'current'
+		}
 		if (!quiet) vm.$buefy.toast.open({ message: res.data.message || vm.$t('No updates are currently available for the application.'), type: 'is-success' })
 	}
 	catch (e) {
