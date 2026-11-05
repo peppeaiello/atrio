@@ -759,5 +759,6 @@
   "Remove from list": "Togli dall'elenco",
   "In {folder}": "In {folder}",
   "Not connected: connect it to restore this backup": "Non collegata: collegala per ripristinare questo backup",
-  "Unknown folder": "Cartella sconosciuta"
+  "Unknown folder": "Cartella sconosciuta",
+  "The files are back, but the app started without them: open its settings and save them to start it again": "I file sono tornati, ma l'app è partita senza usarli: apri le sue impostazioni e salvale per farla ripartire"
 }

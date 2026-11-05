@@ -8,6 +8,7 @@ set -uo pipefail
 STATE="${ATRIO_STATE:-/var/lib/casaos/atrio}"
 APPS="${ATRIO_APPS:-/var/lib/casaos/apps}"
 APPDATA="${ATRIO_APPDATA:-/DATA/AppData}"
+CASAOS_ENV="${ATRIO_CASAOS_ENV:-/etc/casaos/env}"
 DEFAULT_DEST="${ATRIO_BACKUP_DEST:-$APPDATA/.atrio-backups}"
 REQUEST="$STATE/backup-request"
 STATUS="$STATE/backup-status.json"
@@ -230,8 +231,22 @@ running_ids() {
 	docker ps -q --filter "label=com.docker.compose.project=$APP" 2>/dev/null
 }
 
+# CasaOS fills these in when it reads a compose file; most App Store apps have
+# /DATA/AppData/$AppID/... as their folders, and without them they would start on an empty path.
+compose_env() {
+	local line zone
+	zone=$(cat /etc/timezone 2>/dev/null)
+	printf '%s\n' "AppID=$APP" "PUID=${PUID:-1000}" "PGID=${PGID:-1000}" "TZ=${zone:-UTC}"
+	[ -f "$CASAOS_ENV" ] || return 0
+	while IFS= read -r line; do
+		[[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] && printf '%s\n' "$line"
+	done < "$CASAOS_ENV"
+}
+
 compose() {
-	docker compose -p "$APP" --project-directory "$APPS/$APP" -f "$APPS/$APP/docker-compose.yml" "$@"
+	local vars=()
+	mapfile -t vars < <(compose_env)
+	env "${vars[@]}" docker compose -p "$APP" --project-directory "$APPS/$APP" -f "$APPS/$APP/docker-compose.yml" "$@"
 }
 
 # Every host folder the containers use; docker knows them for bind mounts and named volumes alike
@@ -667,6 +682,12 @@ do_restore() {
 	write_status running starting
 	if [ "$RUNNING_BEFORE" = 1 ] || [ "$(info_value "$info" RUNNING)" = 1 ]; then
 		compose up -d >/dev/null 2>&1 || fail "The files are back, but the app did not start: check it in its panel"
+		# An app can run fine on a wrong, empty folder: it must be using the ones just restored
+		local mounted
+		mounted=$(mounted_folders)
+		for path in ${current[@]+"${current[@]}"}; do
+			printf '%s\n' "$mounted" | grep -Fxq -- "$path" || fail "The files are back, but the app started without them: open its settings and save them to start it again"
+		done
 		write_status running checking
 		app_health || fail "The files are back, but the app is not running properly: check its logs"
 	fi
