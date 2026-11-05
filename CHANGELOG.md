@@ -17,6 +17,9 @@ What changes in each Atrio release. The section for a version is also the text o
   backups in every folder used so far, with date and time; those on a disk that is not connected show as unavailable.
 - **Safer app updates.** When the service is there, an update saves a backup first, keeping the last 3 made this way.
   If the app does not come back up while Atrio is open, it offers to go back to that backup.
+- **A push alert when an app has been updated**, so you can start an update and leave the page (#6). It comes within
+  5 minutes of the app running its new version, and has its own switch in Settings → Push notifications. Existing
+  installs get it by running the install command once more.
 
 **Fixed**
 

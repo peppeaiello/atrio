@@ -18,6 +18,7 @@ const DEFAULTS = {
 	HEALTH: '1',
 	TEMP: '1',
 	APPS: '1',
+	APP_UPDATES: '1',
 	UPDATES: '1',
 }
 
@@ -73,6 +74,7 @@ export default {
 				{ key: 'HEALTH', label: this.$t('Disk health problems') },
 				{ key: 'TEMP', label: this.$t('Processor running hot') },
 				{ key: 'APPS', label: this.$t('Apps installed or removed') },
+				{ key: 'APP_UPDATES', label: this.$t('Apps updated') },
 				{ key: 'UPDATES', label: this.$t('New Atrio versions') },
 			]
 		},

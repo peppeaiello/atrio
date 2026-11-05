@@ -25,7 +25,7 @@ flock -w 30 9 || exit 0
 # --- Settings ---------------------------------------------------------------------------------
 
 ENABLED=0 SERVICE=ntfy URL="https://ntfy.sh" TOPIC="" TOKEN="" LANGUAGE=en
-DISK=1 HEALTH=1 TEMP=1 APPS_CHANGES=1 UPDATES=1 DISK_LIMIT=90 TEMP_LIMIT=85
+DISK=1 HEALTH=1 TEMP=1 APPS_CHANGES=1 APP_UPDATES=1 UPDATES=1 DISK_LIMIT=90 TEMP_LIMIT=85
 
 read_conf() {
 	[ -f "$CONF" ] || return 0
@@ -33,7 +33,7 @@ read_conf() {
 	while IFS='=' read -r key value; do
 		value="${value%$'\r'}"
 		case "$key" in
-			ENABLED | DISK | HEALTH | TEMP | APPS | UPDATES)
+			ENABLED | DISK | HEALTH | TEMP | APPS | APP_UPDATES | UPDATES)
 				[[ "$value" =~ ^[01]$ ]] || continue
 				[ "$key" = APPS ] && key=APPS_CHANGES
 				printf -v "$key" '%s' "$value" ;;
@@ -77,6 +77,8 @@ text() {
 			installed_body) echo "$1 è installata." ;;
 			removed_title) echo "App rimossa" ;;
 			removed_body) echo "$1 è stata rimossa." ;;
+			app_updated_title) echo "App aggiornata" ;;
+			app_updated_body) echo "$1 è stata aggiornata." ;;
 			update_title) echo "Nuova versione di Atrio" ;;
 			update_body) echo "È disponibile Atrio $1. Apri le impostazioni di Atrio per aggiornare." ;;
 		esac
@@ -94,6 +96,8 @@ text() {
 			installed_body) echo "$1 is installed." ;;
 			removed_title) echo "App removed" ;;
 			removed_body) echo "$1 was removed." ;;
+			app_updated_title) echo "App updated" ;;
+			app_updated_body) echo "$1 was updated." ;;
 			update_title) echo "New Atrio version" ;;
 			update_body) echo "Atrio $1 is available. Open Atrio's settings to update." ;;
 		esac
@@ -209,6 +213,46 @@ check_apps() {
 	done
 }
 
+# One service=image id for each running container of an app
+app_images() {
+	local ids
+	ids=$(timeout 20 docker ps -q --filter "label=com.docker.compose.project=$1" 2>/dev/null)
+	[ -n "$ids" ] || return 0
+	timeout 20 docker inspect -f '{{index .Config.Labels "com.docker.compose.service"}}={{.Image}}' $ids 2>/dev/null |
+		sort | tr '\n' ' '
+}
+
+# Whether a service in both lists runs another image: the tag alone says nothing for "latest"
+images_changed() {
+	local old new
+	for new in $2; do
+		for old in $1; do
+			[ "${old%%=*}" = "${new%%=*}" ] && [ "$old" != "$new" ] && return 0
+		done
+	done
+	return 1
+}
+
+check_app_updates() {
+	command -v docker >/dev/null && [ -d "$APPS" ] || return 0
+	local name now before
+	for name in $(sed -n 's/^image_\([^=]*\)=.*/\1/p' "$MEMORY" 2>/dev/null); do
+		# A removed app that comes back is an install, not an update
+		[ -d "$APPS/$name" ] || sed -i "/^image_$name=/d" "$MEMORY"
+	done
+	for name in $(find "$APPS" -mindepth 1 -maxdepth 1 -type d -printf '%f\n'); do
+		[[ "$name" =~ ^[A-Za-z0-9_-]+$ ]] || continue
+		# A stopped app keeps what it ran before: an update made meanwhile shows when it starts
+		now=$(app_images "$name")
+		[ -n "$now" ] || continue
+		before=$(memory_get "image_$name")
+		if [ "${SEND_APPS:-1}" = 1 ] && images_changed "$before" "$now"; then
+			send "$(text app_updated_title)" "$(text app_updated_body "$(app_title "$name")")" 3 "arrow_up" || continue
+		fi
+		memory_set "image_$name" "$now"
+	done
+}
+
 check_updates() {
 	# GitHub is asked every 6 hours at most
 	local last now latest installed
@@ -266,8 +310,9 @@ if [ "$MODE" = "--test" ]; then
 fi
 
 if [ "$ENABLED" != 1 ] || ! configured; then
-	# Keep the app list current, so turning alerts on later does not announce every app
+	# Keep the app list current, so turning alerts on later does not announce every app or update
 	SEND_APPS=0 check_apps
+	SEND_APPS=0 check_app_updates
 	write_status disabled ""
 	exit 0
 fi
@@ -276,6 +321,7 @@ fi
 [ "$HEALTH" = 1 ] && check_health
 [ "$TEMP" = 1 ] && check_temperature
 if [ "$APPS_CHANGES" = 1 ]; then check_apps; else SEND_APPS=0 check_apps; fi
+if [ "$APP_UPDATES" = 1 ]; then check_app_updates; else SEND_APPS=0 check_app_updates; fi
 [ "$UPDATES" = 1 ] && check_updates
 
 if [ -n "$LAST_ERROR" ]; then
