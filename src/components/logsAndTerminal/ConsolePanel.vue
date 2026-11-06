@@ -2,6 +2,7 @@
 // One console for the server and every app: pick a source on the left, then its logs (filter,
 // follow, download) or its terminal. Opened from the terminal icon in the header.
 import { ice_i18n } from '@/mixins/base/common-i18n'
+import { consolePrefs } from '@/plugins/consoleView'
 import { trapTab } from '@/plugins/focusTrap'
 import TerminalCard from './TerminalCard.vue'
 
@@ -21,7 +22,8 @@ export default {
 			apps: [],
 			appFilter: '',
 			current: SERVER,
-			view: 'logs',
+			// The server's terminal is always there (it asks for an SSH sign-in), so the choice applies as is
+			view: consolePrefs.view,
 			logs: '',
 			logFilter: '',
 			follow: true,
@@ -60,7 +62,7 @@ export default {
 	},
 	mounted() {
 		this.loadApps()
-		this.loadLogs()
+		if (this.view === 'logs') this.loadLogs()
 		this.timer = setInterval(() => {
 			if (this.view === 'logs') this.loadLogs()
 		}, POLL_MS)

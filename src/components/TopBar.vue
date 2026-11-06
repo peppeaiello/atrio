@@ -6,6 +6,7 @@ import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
 import { GREETING_DEFAULT, greeting as greetingPrefs, setGreetingSize, setGreetingVisible } from '@/plugins/greeting'
 import { layout as layoutPrefs, setLayoutWidth } from '@/plugins/layoutWidth'
+import { consolePrefs, setConsoleView } from '@/plugins/consoleView'
 import AccountPanel from './account/AccountPanel.vue'
 import ConsolePanel from './logsAndTerminal/ConsolePanel.vue'
 import PortPanel from './settings/PortPanel.vue'
@@ -36,6 +37,7 @@ export default {
       greetingPrefs,
       greetingDefault: GREETING_DEFAULT,
       layoutPrefs,
+      consolePrefs,
       // Atrio settings and account panels
       settingsOpen: false,
       accountOpen: false,
@@ -182,6 +184,7 @@ export default {
     setGreetingSize,
     setGreetingVisible,
     setLayoutWidth,
+    setConsoleView,
     /*************************************************
 		 * PART 0  Common
 		 **************************************************/
@@ -688,6 +691,14 @@ export default {
                     @dblclick="setLayoutWidth(0)" @input="setLayoutWidth($event.target.value)"
                   >
                   <b-icon aria-hidden="true" class="atrio-slider-end" icon="arrow-expand-horizontal" pack="mdi" size="is-20" />
+                </div>
+                <div class="atrio-setting-row">
+                  <b-icon icon="console" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">{{ $t('Terminal icon opens') }}</span>
+                  <b-select :model-value="consolePrefs.view" class="set-select" size="is-small" @update:model-value="setConsoleView">
+                    <option value="logs">{{ $t('Logs') }}</option>
+                    <option value="terminal">{{ $t('Terminal') }}</option>
+                  </b-select>
                 </div>
                 <div class="atrio-setting-row">
                   <b-icon icon="display-applications-outline" pack="casa" size="is-20" />

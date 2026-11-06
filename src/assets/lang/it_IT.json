@@ -70,6 +70,7 @@
   "Terminal & Logs": "Terminale e log",
   "Terminal": "Terminale",
   "Logs": "Log",
+  "Terminal icon opens": "L'icona del terminale apre",
   "Please check if the username and port are correct, and make sure that ssh server is installed.": "Controlla che nome utente e porta siano corretti, e assicurati che il server SSH sia installato.",
   "Widgets Settings": "Impostazioni widget",
   "Time": "Orario",

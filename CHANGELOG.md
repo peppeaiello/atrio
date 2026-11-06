@@ -4,6 +4,11 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.15 — unreleased
 
+**New**
+
+- Settings → Dashboard → "Terminal icon opens" chooses whether the terminal icon in the top bar opens the logs or
+  goes straight to the terminal.
+
 **Fixed**
 
 - On phones the widgets panel covered the top bar, so the only way out was reloading the page. It now opens below
