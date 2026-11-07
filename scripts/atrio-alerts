@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sends Atrio's warnings to a phone through ntfy or Gotify, even when no browser has Atrio open.
+# Sends Atrio's warnings to a phone through ntfy, Gotify or Apprise, even when no browser has Atrio open.
 # Run every 5 minutes by atrio-alerts.timer, and with --test by atrio-alerts-test.path when the
 # settings ask for a test message. The settings are in alerts.conf, written by Atrio through the
 # CasaOS file API: only the known keys are read, and their values are checked, never executed.
@@ -37,7 +37,7 @@ read_conf() {
 				[[ "$value" =~ ^[01]$ ]] || continue
 				[ "$key" = APPS ] && key=APPS_CHANGES
 				printf -v "$key" '%s' "$value" ;;
-			SERVICE) [[ "$value" =~ ^(ntfy|gotify)$ ]] && SERVICE="$value" ;;
+			SERVICE) [[ "$value" =~ ^(ntfy|gotify|apprise)$ ]] && SERVICE="$value" ;;
 			URL) [[ "$value" =~ ^https?://[A-Za-z0-9.:/_~%-]+$ ]] && URL="${value%/}" ;;
 			TOPIC) [[ "$value" =~ ^[A-Za-z0-9_-]{1,64}$ ]] && TOPIC="$value" ;;
 			TOKEN) [[ "$value" =~ ^[A-Za-z0-9._-]{0,128}$ ]] && TOKEN="$value" ;;
@@ -115,6 +115,13 @@ send() {
 	if [ "$SERVICE" = gotify ]; then
 		result=$("${curl[@]}" -F "title=$title" -F "message=$message" -F "priority=$priority" \
 			"$URL/message?token=$TOKEN" 2>&1 >/dev/null)
+	elif [ "$SERVICE" = apprise ]; then
+		# Apprise API: the key names a saved configuration, whose services all get the message
+		local type=info
+		[ "$priority" -ge 4 ] && type=warning
+		[ "$priority" -ge 5 ] && type=failure
+		result=$("${curl[@]}" --data-urlencode "title=$title" --data-urlencode "body=$message" \
+			--data-urlencode "type=$type" "$URL/notify/$TOPIC" 2>&1 >/dev/null)
 	else
 		local auth=()
 		[ -n "$TOKEN" ] && auth=(-H "Authorization: Bearer $TOKEN")

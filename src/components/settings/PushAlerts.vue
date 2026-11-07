@@ -1,7 +1,7 @@
 <script>
 // Push alerts settings, in the settings panel. Atrio writes alerts.conf through the CasaOS file
 // API; atrio-alerts (installed by scripts/install.sh) reads it every 5 minutes and sends the
-// warnings to ntfy or Gotify. "Send a test" goes through the server, like the real alerts.
+// warnings to ntfy, Gotify or Apprise. "Send a test" goes through the server, like the real alerts.
 const STATE = '/var/lib/casaos/atrio'
 const CONF = `${STATE}/alerts.conf`
 const STATUS = `${STATE}/alerts-status.json`
@@ -41,6 +41,7 @@ export default {
 			testResult: null,
 			saved: false,
 			install: INSTALL,
+			services: [{ id: 'ntfy', name: 'ntfy' }, { id: 'gotify', name: 'Gotify' }, { id: 'apprise', name: 'Apprise' }],
 		}
 	},
 	computed: {
@@ -56,6 +57,14 @@ export default {
 		isGotify() {
 			return this.conf.SERVICE === 'gotify'
 		},
+		isApprise() {
+			return this.conf.SERVICE === 'apprise'
+		},
+		urlPlaceholder() {
+			if (this.isGotify) return 'https://gotify.example.home'
+			if (this.isApprise) return 'http://apprise.example.home:8000'
+			return 'https://ntfy.sh'
+		},
 		urlValid() {
 			return /^https?:\/\/[A-Za-z0-9.:/_~%-]+$/.test(this.conf.URL)
 		},
@@ -63,6 +72,8 @@ export default {
 			return this.isGotify || /^[A-Za-z0-9_-]{1,64}$/.test(this.conf.TOPIC)
 		},
 		tokenValid() {
+			// Apprise has no token: whatever an earlier service left in the field is not used
+			if (this.isApprise) return true
 			return /^[A-Za-z0-9._-]{0,128}$/.test(this.conf.TOKEN) && (!this.isGotify || this.conf.TOKEN !== '')
 		},
 		ready() {
@@ -123,9 +134,9 @@ export default {
 		setService(service) {
 			if (this.conf.SERVICE === service) return
 			this.conf.SERVICE = service
-			// ntfy works out of the box with its public server; Gotify is always self-hosted
+			// ntfy works out of the box with its public server; Gotify and Apprise are always self-hosted
 			if (service === 'ntfy' && !this.conf.URL) this.conf.URL = DEFAULTS.URL
-			if (service === 'gotify' && this.conf.URL === DEFAULTS.URL) this.conf.URL = ''
+			if (service !== 'ntfy' && this.conf.URL === DEFAULTS.URL) this.conf.URL = ''
 		},
 		newTopic() {
 			this.conf.TOPIC = randomTopic()
@@ -220,24 +231,35 @@ export default {
 				<b-icon icon="bell-ring-outline" pack="mdi" size="is-20" />
 				<span class="atrio-setting-label">
 					{{ $t('Send alerts to my phone') }}
-					<small class="atrio-setting-note">{{ $t('Even when Atrio is closed, through ntfy or Gotify') }}</small>
+					<small class="atrio-setting-note">{{ $t('Even when Atrio is closed, through ntfy, Gotify or Apprise') }}</small>
 				</span>
 				<b-switch v-model="enabled" :disabled="!ready && !enabled" class="mr-0" />
 			</div>
 
 			<div class="atrio-push-form">
 				<div class="atrio-segmented" role="radiogroup" :aria-label="$t('Service')">
-					<button :aria-checked="!isGotify" :class="{ 'is-active': !isGotify }" role="radio" type="button" @click="setService('ntfy')">ntfy</button>
-					<button :aria-checked="isGotify" :class="{ 'is-active': isGotify }" role="radio" type="button" @click="setService('gotify')">Gotify</button>
+					<button
+						v-for="service in services" :key="service.id" :aria-checked="conf.SERVICE === service.id" :class="{ 'is-active': conf.SERVICE === service.id }"
+						role="radio" type="button" @click="setService(service.id)"
+					>
+						{{ service.name }}
+					</button>
 				</div>
 
 				<label>
 					<span>{{ $t('Server') }}</span>
-					<input v-model.trim="conf.URL" :placeholder="isGotify ? 'https://gotify.example.home' : 'https://ntfy.sh'" class="atrio-push-input" type="url">
+					<input v-model.trim="conf.URL" :placeholder="urlPlaceholder" class="atrio-push-input" type="url">
 					<small v-if="conf.URL && !urlValid" class="atrio-push-error">{{ $t('Enter an address that starts with http:// or https://') }}</small>
 				</label>
 
-				<label v-if="!isGotify">
+				<label v-if="isApprise">
+					<span>{{ $t('Configuration key') }}</span>
+					<input v-model.trim="conf.TOPIC" class="atrio-push-input" placeholder="atrio" type="text">
+					<small class="atrio-push-hint">{{ $t('The key of a configuration saved on your Apprise API server: every service in it, such as Discord, Telegram or e-mail, gets the alerts.') }}</small>
+					<small v-if="conf.TOPIC && !topicValid" class="atrio-push-error">{{ $t('Use letters, numbers, - and _ (up to 64 characters).') }}</small>
+				</label>
+
+				<label v-else-if="!isGotify">
 					<span>{{ $t('Topic') }}</span>
 					<span class="atrio-push-inline">
 						<input v-model.trim="conf.TOPIC" class="atrio-push-input" placeholder="atrio-…" type="text">
@@ -247,7 +269,7 @@ export default {
 					<small v-if="conf.TOPIC && !topicValid" class="atrio-push-error">{{ $t('Use letters, numbers, - and _ (up to 64 characters).') }}</small>
 				</label>
 
-				<label>
+				<label v-if="!isApprise">
 					<span>{{ isGotify ? $t('Application token') : $t('Access token (optional)') }}</span>
 					<input v-model.trim="conf.TOKEN" autocomplete="off" class="atrio-push-input" type="password">
 					<small v-if="isGotify" class="atrio-push-hint">{{ $t('Create an application in Gotify and paste its token here.') }}</small>

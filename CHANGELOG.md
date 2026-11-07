@@ -6,6 +6,9 @@ What changes in each Atrio release. The section for a version is also the text o
 
 **New**
 
+- **Push alerts through Apprise**, next to ntfy and Gotify: give the address of your Apprise API server and the key
+  of a saved configuration, and the alerts reach every service in it, such as Discord, Telegram or e-mail. The
+  service on the server learns it when the install command is run once more.
 - Settings → Dashboard → "Terminal icon opens" chooses whether the terminal icon in the top bar opens the logs or
   goes straight to the terminal.
 

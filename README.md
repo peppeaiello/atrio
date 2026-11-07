@@ -42,7 +42,7 @@ its respective owners.
 - **Many apps at once**: select apps and start, stop, restart or update them together.
 - **Hardware details**: machine, BIOS, processor, memory and every sensor the machine reports.
 - **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor, also as push
-  alerts to your phone through ntfy or Gotify, even when Atrio is closed.
+  alerts to your phone through ntfy, Gotify or Apprise, even when Atrio is closed.
 - **A new file manager**: places in a sidebar, list and grid views, previews, upload by drag and drop.
 - **One console** for the logs and terminals of the server and every app.
 - **Widgets your way**: show, hide and reorder them, and add any web page of your network.

@@ -55,7 +55,7 @@ main() {
 	# Updater: Atrio writes $STATE/update-request through the CasaOS file API,
 	# the path unit sees it and runs atrio-update as root.
 	install_script atrio-update
-	# Push alerts: checks the server every 5 minutes and sends warnings to ntfy or Gotify,
+	# Push alerts: checks the server every 5 minutes and sends warnings to ntfy, Gotify or Apprise,
 	# as set in Atrio's settings ($STATE/alerts.conf)
 	install_script atrio-alerts
 	install_script atrio-backup
@@ -105,7 +105,7 @@ UNIT
 
 	cat > /etc/systemd/system/atrio-alerts.service <<'UNIT'
 [Unit]
-Description=Send Atrio's warnings to ntfy or Gotify
+Description=Send Atrio's warnings to ntfy, Gotify or Apprise
 After=network-online.target
 
 [Service]
