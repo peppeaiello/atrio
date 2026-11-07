@@ -22,7 +22,7 @@ main() {
 		exit 1
 	fi
 	local tool
-	for tool in curl tar sha256sum flock; do
+	for tool in curl tar sha256sum flock gpgv; do
 		command -v "$tool" >/dev/null || { echo "Missing command: $tool" >&2; exit 1; }
 	done
 
@@ -63,6 +63,17 @@ main() {
 		chmod 755 "/usr/local/bin/$1.tmp"
 		mv "/usr/local/bin/$1.tmp" "/usr/local/bin/$1"
 	}
+
+	# The public key that releases are signed with: the updater installs only what it signed
+	mkdir -p /usr/local/share/atrio
+	if [ -n "${ATRIO_SOURCE:-}" ]; then
+		cp "$ATRIO_SOURCE/atrio-release-key.gpg" /usr/local/share/atrio/release-key.gpg.tmp
+	else
+		curl -fsSL --connect-timeout 20 --max-time 120 -o /usr/local/share/atrio/release-key.gpg.tmp \
+			"https://raw.githubusercontent.com/$REPO/$TAG/scripts/atrio-release-key.gpg"
+	fi
+	chmod 644 /usr/local/share/atrio/release-key.gpg.tmp
+	mv /usr/local/share/atrio/release-key.gpg.tmp /usr/local/share/atrio/release-key.gpg
 
 	# Updater: Atrio writes $STATE/update-request through the CasaOS file API,
 	# the path unit sees it and runs atrio-update as root.

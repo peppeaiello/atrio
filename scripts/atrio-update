@@ -13,7 +13,10 @@ REQUEST="$STATE/update-request"
 BACKUP="$STATE/casaos-ui-original"
 # The last installed release, used to restore Atrio when GitHub cannot be reached
 LOCAL="$STATE/release"
-DOWNLOAD="https://github.com/$REPO/releases/latest/download"
+DOWNLOAD="${ATRIO_DOWNLOAD:-https://github.com/$REPO/releases/latest/download}"
+# Releases are signed on the maintainer's machine, with a key GitHub never sees: a release that
+# someone else uploaded, even with access to the GitHub account, is not installed
+KEYRING="${ATRIO_RELEASE_KEY:-/usr/local/share/atrio/release-key.gpg}"
 MODE="${1:-}"
 
 mkdir -p "$STATE"
@@ -74,19 +77,48 @@ fi
 download() {
 	local CURL=(curl -fsSL --connect-timeout 20 --max-time 300 --retry 2)
 	"${CURL[@]}" -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz" &&
-		"${CURL[@]}" -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256"
+		"${CURL[@]}" -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256" || return 1
+	# A release without a signature is refused below, with its own message
+	if [ -f "$KEYRING" ]; then
+		"${CURL[@]}" -o "$TMP/atrio.tar.gz.sig" "$DOWNLOAD/atrio.tar.gz.sig" 2>/dev/null || rm -f "$TMP/atrio.tar.gz.sig"
+	fi
+}
+
+# Installs without the key (set up before signed releases) keep checking the SHA-256 only
+signed() {
+	[ -f "$KEYRING" ] || return 0
+	command -v gpgv >/dev/null && [ -f "$1/atrio.tar.gz.sig" ] &&
+		gpgv --keyring "$KEYRING" "$1/atrio.tar.gz.sig" "$1/atrio.tar.gz" >/dev/null 2>&1
+}
+
+use_local_copy() {
+	rm -f "$TMP/atrio.tar.gz" "$TMP/atrio.tar.gz.sha256" "$TMP/atrio.tar.gz.sig"
+	cp "$LOCAL/atrio.tar.gz" "$LOCAL/atrio.tar.gz.sha256" "$TMP/"
+	if [ -f "$LOCAL/atrio.tar.gz.sig" ]; then
+		cp "$LOCAL/atrio.tar.gz.sig" "$TMP/"
+	fi
 }
 
 write_status running "Downloading the latest release"
 if ! download; then
 	if [ "$MODE" = "--restore" ] && [ -f "$LOCAL/atrio.tar.gz" ]; then
 		echo "GitHub cannot be reached: restoring the last installed release"
-		cp "$LOCAL/atrio.tar.gz" "$LOCAL/atrio.tar.gz.sha256" "$TMP/"
+		use_local_copy
 	else
 		fail "Could not download the release from GitHub, Atrio was not changed"
 	fi
 fi
 (cd "$TMP" && sha256sum -c atrio.tar.gz.sha256 >/dev/null)
+if ! signed "$TMP"; then
+	# The copy kept here was checked when it was installed, and only root can write it
+	if [ "$MODE" = "--restore" ] && [ -f "$LOCAL/atrio.tar.gz" ]; then
+		echo "The release on GitHub is not signed by Atrio: restoring the last installed release"
+		use_local_copy
+		(cd "$TMP" && sha256sum -c atrio.tar.gz.sha256 >/dev/null)
+	else
+		fail "The release on GitHub is not signed by Atrio, so it was not installed"
+	fi
+fi
 
 mkdir "$TMP/www"
 tar -xzf "$TMP/atrio.tar.gz" -C "$TMP/www" --no-same-owner --no-same-permissions
@@ -133,7 +165,11 @@ fi
 rm -rf "$WWW.old"
 
 mkdir -p "$LOCAL"
+rm -f "$LOCAL/atrio.tar.gz.sig"
 cp "$TMP/atrio.tar.gz" "$TMP/atrio.tar.gz.sha256" "$LOCAL/"
+if [ -f "$TMP/atrio.tar.gz.sig" ]; then
+	cp "$TMP/atrio.tar.gz.sig" "$LOCAL/"
+fi
 
 # The gateway dates every file with its own start time, so browsers that revalidate their cached
 # index.html get 304 forever. A restart gives a new date and every browser loads the new version.

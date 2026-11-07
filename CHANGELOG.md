@@ -25,6 +25,9 @@ What changes in each Atrio release. The section for a version is also the text o
   0.1.14 can still be restored from the default backup folder. Run the install command once more to get it.
 - The settings of push alerts, with the token of the push service, could be read by every user of the server. Only
   root can read them now.
+- **Releases are signed** with a key that stays on the maintainer's machine, and Atrio installs an update only if
+  its signature matches. Even someone with access to the GitHub account cannot push an update to your server. This
+  starts with the next update after this one, once the install command has been run again.
 - The install command took the services on the server from the code in progress on GitHub, which could be ahead of
   the release it installs. It now takes them from the latest release.
 - On phones the widgets panel covered the top bar, so the only way out was reloading the page. It now opens below

@@ -777,5 +777,6 @@
   "The backup key could not be read": "Non è stato possibile leggere la chiave dei backup",
   "openssl is missing on the server: backups cannot be encrypted": "Sul server manca openssl: i backup non si possono cifrare",
   "openssl is missing on the server: this backup cannot be read": "Sul server manca openssl: questo backup non si può leggere",
-  "This backup was made by a newer Atrio: update Atrio to restore it": "Questo backup è stato creato da un Atrio più recente: aggiorna Atrio per ripristinarlo"
+  "This backup was made by a newer Atrio: update Atrio to restore it": "Questo backup è stato creato da un Atrio più recente: aggiorna Atrio per ripristinarlo",
+  "The release on GitHub is not signed by Atrio, so it was not installed": "La release su GitHub non è firmata da Atrio, quindi non è stata installata"
 }

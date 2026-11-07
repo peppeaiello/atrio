@@ -49,7 +49,7 @@ main() {
 		/etc/systemd/system/atrio-alerts-test.service /etc/systemd/system/atrio-alerts-test.path /usr/local/bin/atrio-alerts \
 		/etc/systemd/system/atrio-backup.service /etc/systemd/system/atrio-backup.path /usr/local/bin/atrio-backup
 	systemctl daemon-reload
-	rm -rf "$STATE"
+	rm -rf "$STATE" /usr/local/share/atrio
 	echo "CasaOS UI restored. Reload the page in your browser (Ctrl+F5)."
 }
 
