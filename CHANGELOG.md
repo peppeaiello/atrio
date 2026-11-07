@@ -2,7 +2,7 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
-## 0.1.15 — unreleased
+## 0.1.15 — 2026-11-07
 
 **New**
 
@@ -11,7 +11,6 @@ What changes in each Atrio release. The section for a version is also the text o
   service on the server learns it when the install command is run once more.
 - Settings → Dashboard → "Terminal icon opens" chooses whether the terminal icon in the top bar opens the logs or
   goes straight to the terminal.
-
 - **Backups are encrypted.** A backup holds the app's data and its passwords, and can sit on a share or a cloud
   drive: it is now encrypted with a key that stays on the server. The Backup tab shows the key, to keep a copy for a
   new machine. Backups made before stay as they are.
