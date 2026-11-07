@@ -764,5 +764,9 @@
   "Not connected: connect it to restore this backup": "Not connected: connect it to restore this backup",
   "Unknown folder": "Unknown folder",
   "The files are back, but the app started without them: open its settings and save them to start it again": "The files are back, but the app started without them: open its settings and save them to start it again",
-  "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.": "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it."
+  "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.": "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.",
+  "This backup was changed after it was made, or made on another server, and was not restored": "This backup was changed after it was made, or made on another server, and was not restored",
+  "This backup was made by an older Atrio: it can only be restored from the default backup folder": "This backup was made by an older Atrio: it can only be restored from the default backup folder",
+  "This backup contains files outside the folders of this app and was not restored": "This backup contains files outside the folders of this app and was not restored",
+  "Could not create the backup key": "Could not create the backup key"
 }

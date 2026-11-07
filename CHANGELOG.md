@@ -14,6 +14,11 @@ What changes in each Atrio release. The section for a version is also the text o
 
 **Fixed**
 
+- **Backups are signed, and a restore checks the archive before using it.** A backup folder on a network share, a
+  USB drive or a cloud drive can be written by others, and a changed backup could put files outside the app's
+  folders when restored as root. Each new backup now carries a signature made with a key that stays on the server,
+  and a backup changed after it was made, or with files outside the app's folders, is refused. Backups made with
+  0.1.14 can still be restored from the default backup folder. Run the install command once more to get it.
 - On phones the widgets panel covered the top bar, so the only way out was reloading the page. It now opens below
   the top bar, whose button closes it, and the greeting and apps no longer show or react behind it.
 - The menu of an app near the bottom of the screen was cut off. It now opens above the button when there is no room

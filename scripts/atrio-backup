@@ -13,6 +13,9 @@ DEFAULT_DEST="${ATRIO_BACKUP_DEST:-$APPDATA/.atrio-backups}"
 REQUEST="$STATE/backup-request"
 STATUS="$STATE/backup-status.json"
 CONF="$STATE/backup.conf"
+# Signs every backup made here: a backup folder on a share or a cloud can be written by others,
+# and a changed backup must never be restored as root
+KEY="$STATE/backup.key"
 INDEX="$STATE/backups"
 # Folders used before: their backups stay listed, also while a disk is not connected
 KNOWN="$STATE/backup-folders"
@@ -554,6 +557,7 @@ make_archive() {
 			printf 'FOLDER=%s\n' "$folder"
 		done
 	} > "$TMP_ARCHIVE.info" || fail "The backup could not be written: is there enough space?"
+	printf 'MAC=%s\n' "$(info_mac "$TMP_ARCHIVE.info")" >> "$TMP_ARCHIVE.info" || fail "The backup could not be written: is there enough space?"
 	chmod 600 "$TMP_ARCHIVE" "$TMP_ARCHIVE.info"
 	mv "$TMP_ARCHIVE.info" "$archive.info.tmp"
 	mv "$TMP_ARCHIVE" "$archive"
@@ -609,12 +613,82 @@ do_backup() {
 	write_status done "" ""
 }
 
+# --- Signatures and archive checks -----------------------------------------------------------
+
+backup_key() {
+	if ! [ -s "$KEY" ]; then
+		(umask 077 && head -c 32 /dev/urandom | sha256sum | cut -d' ' -f1 > "$KEY.tmp" && mv "$KEY.tmp" "$KEY") \
+			|| fail "Could not create the backup key"
+	fi
+	cat "$KEY"
+}
+
+# A keyed hash of the .info file, which holds the archive's SHA-256, the folders and the reason:
+# the key on both sides, so nothing can be appended to a signed file
+info_mac() {
+	local key
+	key=$(backup_key) || return 1
+	{ printf '%s\n' "$key"; grep -v '^MAC=' "$1"; printf '%s\n' "$key"; } | sha256sum | cut -d' ' -f1
+}
+
+# Every member of the archive must sit inside the folders of the backup: no absolute paths, no "..",
+# no device files, no hard link to a file elsewhere, nothing written through a symbolic link.
+# $1: archive, then the folders without their leading slash
+archive_is_safe() {
+	local archive="$1" list
+	shift
+	list=$(LC_ALL=C tar --quoting-style=literal -tvzf "$archive" 2>/dev/null) || return 1
+	printf '%s\n' "$list" | LC_ALL=C awk -v prefixes="$(printf '%s\n' "$@")" '
+		function inside(path,   i) {
+			if (path == "" || path ~ /^\// || path ~ /(^|\/)\.\.(\/|$)/) return 0
+			for (i = 1; i <= n; i++) if (p[i] != "" && (path == p[i] || index(path, p[i] "/") == 1)) return 1
+			return 0
+		}
+		BEGIN { n = split(prefixes, p, "\n"); bad = 0; links = 0; count = 0 }
+		{
+			# A line that is not a listing entry comes from a name with a line break in it
+			if ($0 !~ /^[-dlhp][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT]/) { bad = 1; next }
+			type = substr($0, 1, 1)
+			name = $0
+			sub(/^[^ ]+ +[^ ]+ +[^ ]+ +[^ ]+ +[^ ]+ /, "", name)
+			if (type == "l") {
+				at = index(name, " -> "); if (!at) { bad = 1; next }
+				name = substr(name, 1, at - 1)
+				links++; link[links] = name
+			}
+			if (type == "h") {
+				at = index(name, " link to "); if (!at) { bad = 1; next }
+				target = substr(name, at + 9); name = substr(name, 1, at - 1)
+				if (!inside(target)) bad = 1
+			}
+			sub(/\/$/, "", name)
+			if (!inside(name)) bad = 1
+			count++; member[count] = name
+		}
+		END {
+			for (i = 1; i <= count; i++) for (j = 1; j <= links; j++)
+				if (index(member[i], link[j] "/") == 1) bad = 1
+			exit bad
+		}'
+}
+
 # --- Restore ----------------------------------------------------------------------------------
 
 do_restore() {
 	local info="$DEST/$APP/$ID.info" archive="$DEST/$APP/$ID.tar.gz" folders=() path current=() swapped=() compose_dir="$APPS/$APP"
 	require_dest
 	[ -n "$ID" ] && [ -f "$info" ] && [ -f "$archive" ] || fail "Unknown backup"
+	# Everything is checked on a local copy, so that nothing can change between the check and its use
+	make_stage
+	cp --no-preserve=all "$info" "$STAGE/restore-$ID.info" || fail "The backup could not be read from the backup folder"
+	info="$STAGE/restore-$ID.info"
+	if [ -n "$(info_value "$info" MAC)" ]; then
+		[ "$(info_value "$info" MAC)" = "$(info_mac "$info")" ] \
+			|| fail "This backup was changed after it was made, or made on another server, and was not restored"
+	elif [ "$DEST" != "$DEFAULT_DEST" ]; then
+		# Made before backups were signed: only the default folder, which only root can write, is trusted
+		fail "This backup was made by an older Atrio: it can only be restored from the default backup folder"
+	fi
 	# Read over the network only once, with the app still running
 	if dest_is_remote; then
 		write_status running downloading
@@ -636,6 +710,11 @@ do_restore() {
 		esac
 		current+=("$path")
 	done
+	local prefixes=()
+	for path in "${folders[@]}"; do
+		prefixes+=("${path#/}")
+	done
+	archive_is_safe "$archive" "${prefixes[@]}" || fail "This backup contains files outside the folders of this app and was not restored"
 
 	local free
 	free=$(df -B1 --output=avail "$APPS" | tail -n 1 | tr -d ' ')

@@ -764,5 +764,9 @@
   "Not connected: connect it to restore this backup": "Non collegata: collegala per ripristinare questo backup",
   "Unknown folder": "Cartella sconosciuta",
   "The files are back, but the app started without them: open its settings and save them to start it again": "I file sono tornati, ma l'app è partita senza usarli: apri le sue impostazioni e salvale per farla ripartire",
-  "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.": "{title} è già alla versione offerta dall'App Store. L'app può annunciarne una più recente prima che arrivi nello Store."
+  "{title} is already on the version the App Store offers. The app may announce a newer one before the App Store has it.": "{title} è già alla versione offerta dall'App Store. L'app può annunciarne una più recente prima che arrivi nello Store.",
+  "This backup was changed after it was made, or made on another server, and was not restored": "Questo backup è stato modificato dopo essere stato creato, oppure viene da un altro server: non è stato ripristinato",
+  "This backup was made by an older Atrio: it can only be restored from the default backup folder": "Questo backup è stato creato da una versione precedente di Atrio: si può ripristinare solo dalla cartella dei backup predefinita",
+  "This backup contains files outside the folders of this app and was not restored": "Questo backup contiene file fuori dalle cartelle di quest'app: non è stato ripristinato",
+  "Could not create the backup key": "Non è stato possibile creare la chiave dei backup"
 }
