@@ -5,7 +5,7 @@ import { renderSize } from '@/mixins/file_utils'
 import FilesIcon from '@/components/files/FilesIcon.vue'
 import { errorMessage, listFolder, listLocations, parentPath } from '@/components/files/files.js'
 import '@/components/files/messages.js'
-import { backupApp, backupRun, backupsInstalled, deleteBackup, escapeHtml, forgetFolder, loadIndex, restoreApp, saveDestination, scanApp } from '@/plugins/appBackup'
+import { backupApp, backupKey, backupRun, backupsInstalled, deleteBackup, escapeHtml, forgetFolder, loadIndex, restoreApp, saveDestination, scanApp } from '@/plugins/appBackup'
 
 const INSTALL = 'curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/install.sh | sudo bash'
 const STEPS = {
@@ -35,6 +35,7 @@ export default {
 			index: null,
 			selected: [],
 			error: '',
+			key: '',
 			picking: false,
 			pickDir: '',
 			pickFolders: [],
@@ -207,6 +208,18 @@ export default {
 		reason(backup) {
 			return { 'before-update': this.$t('Before an update'), 'before-restore': this.$t('Before a restore') }[backup.reason] || ''
 		},
+		async toggleKey() {
+			if (this.key) {
+				this.key = ''
+				return
+			}
+			this.key = await backupKey() || ''
+			if (!this.key) this.error = this.$t('The backup key could not be read')
+		},
+		copyKey() {
+			navigator.clipboard?.writeText(this.key)
+			this.$buefy.toast.open({ message: this.$t('Key copied'), type: 'is-success' })
+		},
 		copyInstall() {
 			navigator.clipboard?.writeText(this.install)
 		},
@@ -303,8 +316,16 @@ export default {
 			</div>
 
 			<p v-if="index?.same_disk" class="atrio-backups-note">{{ $t('This folder is on the same disk as your apps: backups protect from mistakes and bad updates, not from a broken disk. Use a folder on another disk to be safe.') }}</p>
-			<p v-if="index?.remote" class="atrio-backups-note">{{ $t('Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while. Backups are not encrypted, and they contain the app\'s data and passwords: anyone with access to this folder can read them.') }}</p>
+			<p v-if="index?.remote" class="atrio-backups-note">{{ $t('Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while.') }}</p>
 			<p v-if="index && connected" class="atrio-backups-note">{{ $t('Free space: {size}', { size: renderSize(index.free) }) }}</p>
+
+			<h4>{{ $t('Backup key') }}</h4>
+			<p class="atrio-backups-note">{{ $t('Backups are encrypted and signed with a key that stays on this server: whoever can open the backup folder cannot read them or change them. To restore them on a new machine you will need this key too, so keep a copy in a safe place, such as a password manager.') }}</p>
+			<div class="atrio-backups-dest">
+				<span v-if="key" class="is-mono">{{ key }}</span>
+				<button class="atrio-button is-small" type="button" @click="toggleKey">{{ key ? $t('Hide') : $t('Show the key') }}</button>
+				<button v-if="key" class="atrio-button is-small" type="button" @click="copyKey">{{ $t('Copy') }}</button>
+			</div>
 		</template>
 	</section>
 </template>

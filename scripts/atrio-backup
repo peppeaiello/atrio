@@ -16,6 +16,9 @@ CONF="$STATE/backup.conf"
 # Signs every backup made here: a backup folder on a share or a cloud can be written by others,
 # and a changed backup must never be restored as root
 KEY="$STATE/backup.key"
+KDF_ITER=200000
+# How the archive being restored was stored: empty for the plain archives of 0.1.14
+ENC=""
 INDEX="$STATE/backups"
 # Folders used before: their backups stay listed, also while a disk is not connected
 KNOWN="$STATE/backup-folders"
@@ -538,6 +541,9 @@ make_archive() {
 	# shellcheck disable=SC2086
 	[ -n "$ids" ] && images=$(docker inspect -f '{{.Config.Image}}' $ids 2>/dev/null | sort -u | paste -sd ' ')
 
+	backup_key >/dev/null || fail "Could not create the backup key"
+	command -v openssl >/dev/null || fail "openssl is missing on the server: backups cannot be encrypted"
+
 	stop_app
 
 	write_status running archiving
@@ -545,13 +551,15 @@ make_archive() {
 	for folder in "$@"; do
 		members+=("${folder#/}")
 	done
-	tar --numeric-owner --xattrs --exclude="${DEST#/}" -czf "$TMP_ARCHIVE" -C / -- "${members[@]}" 2>/dev/null
-	code=$?
-	# 1: a file changed while reading, which a stopped app does not do to its own data
-	[ "$code" -le 1 ] || fail "The backup could not be written: is there enough space?"
+	# Encrypted with the server's key: a backup on a share or a cloud holds the app's data and passwords
+	tar --numeric-owner --xattrs --exclude="${DEST#/}" -czf - -C / -- "${members[@]}" 2>/dev/null \
+		| openssl enc -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -salt -pass "file:$KEY" -out "$TMP_ARCHIVE" 2>/dev/null
+	local codes=("${PIPESTATUS[@]}")
+	# tar 1: a file changed while reading, which a stopped app does not do to its own data
+	[ "${codes[0]}" -le 1 ] && [ "${codes[1]}" -eq 0 ] || fail "The backup could not be written: is there enough space?"
 
 	{
-		printf 'TIME=%s\nREASON=%s\nBYTES=%s\nIMAGES=%s\nRUNNING=%s\nSHA256=%s\n' \
+		printf 'TIME=%s\nREASON=%s\nBYTES=%s\nIMAGES=%s\nRUNNING=%s\nENCRYPTED=aes-256-cbc\nSHA256=%s\n' \
 			"$(date -Iseconds)" "$reason" "$total" "$images" "$RUNNING_BEFORE" "$(sha256sum "$TMP_ARCHIVE" | cut -d' ' -f1)"
 		for folder in "$APPS/$APP" "$@"; do
 			printf 'FOLDER=%s\n' "$folder"
@@ -631,13 +639,22 @@ info_mac() {
 	{ printf '%s\n' "$key"; grep -v '^MAC=' "$1"; printf '%s\n' "$key"; } | sha256sum | cut -d' ' -f1
 }
 
+# The archive as a plain tar.gz on standard output
+plain_archive() {
+	case "$ENC" in
+		"") cat "$1" ;;
+		aes-256-cbc) openssl enc -d -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -pass "file:$KEY" -in "$1" 2>/dev/null ;;
+		*) return 1 ;;
+	esac
+}
+
 # Every member of the archive must sit inside the folders of the backup: no absolute paths, no "..",
 # no device files, no hard link to a file elsewhere, nothing written through a symbolic link.
 # $1: archive, then the folders without their leading slash
 archive_is_safe() {
 	local archive="$1" list
 	shift
-	list=$(LC_ALL=C tar --quoting-style=literal -tvzf "$archive" 2>/dev/null) || return 1
+	list=$(plain_archive "$archive" | LC_ALL=C tar --quoting-style=literal -tvzf - 2>/dev/null) || return 1
 	printf '%s\n' "$list" | LC_ALL=C awk -v prefixes="$(printf '%s\n' "$@")" '
 		function inside(path,   i) {
 			if (path == "" || path ~ /^\// || path ~ /(^|\/)\.\.(\/|$)/) return 0
@@ -714,6 +731,12 @@ do_restore() {
 	for path in "${folders[@]}"; do
 		prefixes+=("${path#/}")
 	done
+	ENC=$(info_value "$info" ENCRYPTED)
+	case "$ENC" in
+		"") ;;
+		aes-256-cbc) command -v openssl >/dev/null || fail "openssl is missing on the server: this backup cannot be read" ;;
+		*) fail "This backup was made by a newer Atrio: update Atrio to restore it" ;;
+	esac
 	archive_is_safe "$archive" "${prefixes[@]}" || fail "This backup contains files outside the folders of this app and was not restored"
 
 	local free
@@ -746,9 +769,9 @@ do_restore() {
 			swapped+=("$path")
 		fi
 	done
-	local code=0
-	tar --numeric-owner --xattrs -xzpf "$archive" -C / 2>/dev/null || code=$?
-	if [ "$code" -gt 1 ]; then
+	plain_archive "$archive" | tar --numeric-owner --xattrs -xzpf - -C / 2>/dev/null
+	local codes=("${PIPESTATUS[@]}")
+	if [ "${codes[0]}" -ne 0 ] || [ "${codes[1]}" -gt 1 ]; then
 		undo_swap
 		fail "The backup could not be restored, nothing was changed"
 	fi

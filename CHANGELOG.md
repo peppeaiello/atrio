@@ -12,6 +12,10 @@ What changes in each Atrio release. The section for a version is also the text o
 - Settings → Dashboard → "Terminal icon opens" chooses whether the terminal icon in the top bar opens the logs or
   goes straight to the terminal.
 
+- **Backups are encrypted.** A backup holds the app's data and its passwords, and can sit on a share or a cloud
+  drive: it is now encrypted with a key that stays on the server. The Backup tab shows the key, to keep a copy for a
+  new machine. Backups made before stay as they are.
+
 **Fixed**
 
 - **Backups are signed, and a restore checks the archive before using it.** A backup folder on a network share, a
@@ -19,6 +23,10 @@ What changes in each Atrio release. The section for a version is also the text o
   folders when restored as root. Each new backup now carries a signature made with a key that stays on the server,
   and a backup changed after it was made, or with files outside the app's folders, is refused. Backups made with
   0.1.14 can still be restored from the default backup folder. Run the install command once more to get it.
+- The settings of push alerts, with the token of the push service, could be read by every user of the server. Only
+  root can read them now.
+- The install command took the services on the server from the code in progress on GitHub, which could be ahead of
+  the release it installs. It now takes them from the latest release.
 - On phones the widgets panel covered the top bar, so the only way out was reloading the page. It now opens below
   the top bar, whose button closes it, and the greeting and apps no longer show or react behind it.
 - The menu of an app near the bottom of the screen was cut off. It now opens above the button when there is no room

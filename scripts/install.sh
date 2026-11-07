@@ -40,13 +40,25 @@ main() {
 		echo "Original CasaOS UI saved in $BACKUP"
 	fi
 
-	# The helper scripts come from GitHub, or from a local folder when ATRIO_SOURCE points at
-	# a checkout's scripts/ (to try changes before they are published)
+	# The helper scripts come from the latest release on GitHub, the same code as the UI it installs,
+	# never from work in progress on main. ATRIO_SOURCE points at a checkout's scripts/ to try changes
+	# before they are published.
+	local TAG=""
+	if [ -z "${ATRIO_SOURCE:-}" ]; then
+		TAG=$(curl -fsSLI -o /dev/null -w '%{url_effective}' --connect-timeout 20 --max-time 60 \
+			"https://github.com/$REPO/releases/latest" | sed -n 's|.*/releases/tag/||p')
+		if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+			echo "Could not find the latest Atrio release on GitHub." >&2
+			exit 1
+		fi
+		echo "Installing Atrio $TAG"
+	fi
 	install_script() {
 		if [ -n "${ATRIO_SOURCE:-}" ]; then
 			cp "$ATRIO_SOURCE/$1" "/usr/local/bin/$1.tmp"
 		else
-			curl -fsSL --connect-timeout 20 --max-time 120 -o "/usr/local/bin/$1.tmp" "$RAW/scripts/$1"
+			curl -fsSL --connect-timeout 20 --max-time 120 -o "/usr/local/bin/$1.tmp" \
+				"https://raw.githubusercontent.com/$REPO/$TAG/scripts/$1"
 		fi
 		chmod 755 "/usr/local/bin/$1.tmp"
 		mv "/usr/local/bin/$1.tmp" "/usr/local/bin/$1"

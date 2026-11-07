@@ -750,7 +750,6 @@
   "This folder is not connected right now: plug in the disk or reconnect the folder, or choose another one. Backups before updates cannot run until then.": "This folder is not connected right now: plug in the disk or reconnect the folder, or choose another one. Backups before updates cannot run until then.",
   "Disks, USB drives, network folders and cloud drives connected in Files appear here. To add one, connect it in Files first.": "Disks, USB drives, network folders and cloud drives connected in Files appear here. To add one, connect it in Files first.",
   "Atrio creates a folder called atrio-backups in here.": "Atrio creates a folder called atrio-backups in here.",
-  "Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while. Backups are not encrypted, and they contain the app's data and passwords: anyone with access to this folder can read them.": "Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while. Backups are not encrypted, and they contain the app's data and passwords: anyone with access to this folder can read them.",
   "The backup folder is not connected: plug in the disk or reconnect the folder, or choose another one": "The backup folder is not connected: plug in the disk or reconnect the folder, or choose another one",
   "This folder cannot hold backups: choose another one": "This folder cannot hold backups: choose another one",
   "Atrio cannot write in this folder: choose another one": "Atrio cannot write in this folder: choose another one",
@@ -768,5 +767,15 @@
   "This backup was changed after it was made, or made on another server, and was not restored": "This backup was changed after it was made, or made on another server, and was not restored",
   "This backup was made by an older Atrio: it can only be restored from the default backup folder": "This backup was made by an older Atrio: it can only be restored from the default backup folder",
   "This backup contains files outside the folders of this app and was not restored": "This backup contains files outside the folders of this app and was not restored",
-  "Could not create the backup key": "Could not create the backup key"
+  "Could not create the backup key": "Could not create the backup key",
+  "Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while.": "Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while.",
+  "Backup key": "Backup key",
+  "Backups are encrypted and signed with a key that stays on this server: whoever can open the backup folder cannot read them or change them. To restore them on a new machine you will need this key too, so keep a copy in a safe place, such as a password manager.": "Backups are encrypted and signed with a key that stays on this server: whoever can open the backup folder cannot read them or change them. To restore them on a new machine you will need this key too, so keep a copy in a safe place, such as a password manager.",
+  "Show the key": "Show the key",
+  "Hide": "Hide",
+  "Key copied": "Key copied",
+  "The backup key could not be read": "The backup key could not be read",
+  "openssl is missing on the server: backups cannot be encrypted": "openssl is missing on the server: backups cannot be encrypted",
+  "openssl is missing on the server: this backup cannot be read": "openssl is missing on the server: this backup cannot be read",
+  "This backup was made by a newer Atrio: update Atrio to restore it": "This backup was made by a newer Atrio: update Atrio to restore it"
 }

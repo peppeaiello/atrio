@@ -38,7 +38,7 @@ its respective owners.
   settings forms in sections, with errors that say what to type.
 - **Backups for each app**: its settings and the folders you choose, to another disk, a USB drive, a network folder
   or a cloud drive connected in Files. Going back takes one click, and an update saves a backup first. Backups need
-  the install command run once more, and are not encrypted.
+  the install command run once more, and are encrypted and signed with a key that stays on the server.
 - **Many apps at once**: select apps and start, stop, restart or update them together.
 - **Hardware details**: machine, BIOS, processor, memory and every sensor the machine reports.
 - **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor, also as push

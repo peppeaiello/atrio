@@ -17,6 +17,8 @@ REPO="peppeaiello/atrio"
 MODE="${1:-}"
 
 mkdir -p "$STATE"
+# The settings hold the token of the push service: root only. Atrio reads and writes them as root too.
+[ -f "$CONF" ] && chmod 600 "$CONF"
 
 # One run at a time: the timer and a test could overlap
 exec 9>"$STATE/alerts.lock"

@@ -91,6 +91,11 @@ export const restoreApp = (app, id, from) => run({ ACTION: 'restore', APP: app, 
 export const deleteBackup = (app, id, from) => run({ ACTION: 'delete', APP: app, ID: id, ...(from ? { FROM: from } : {}) })
 export const forgetFolder = (app, from) => run({ ACTION: 'forget', APP: app, FROM: from })
 
+/** The key that encrypts and signs this server's backups, created with the first backup. */
+export async function backupKey() {
+	return ((await read(`${STATE}/backup.key`)) || '').trim()
+}
+
 // The service checks the folder and creates a subfolder in it; empty means back to the default
 export const saveDestination = (app, path) => run({ ACTION: 'destination', APP: app, DEST: path })
 

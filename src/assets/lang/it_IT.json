@@ -750,7 +750,6 @@
   "This folder is not connected right now: plug in the disk or reconnect the folder, or choose another one. Backups before updates cannot run until then.": "Questa cartella ora non è collegata: collega il disco, ricollega la cartella o scegline un'altra. Fino ad allora i backup prima degli aggiornamenti non possono partire.",
   "Disks, USB drives, network folders and cloud drives connected in Files appear here. To add one, connect it in Files first.": "Qui trovi dischi, chiavette, cartelle di rete e cloud collegati in Gestione file. Per aggiungerne uno, collegalo prima lì.",
   "Atrio creates a folder called atrio-backups in here.": "Atrio crea qui dentro una cartella chiamata atrio-backups.",
-  "Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while. Backups are not encrypted, and they contain the app's data and passwords: anyone with access to this folder can read them.": "Cartella di rete o cloud: l'app riparte prima e il backup viene inviato dopo, quindi per un po' serve lo stesso spazio libero su questo server. I backup non sono cifrati e contengono i dati e le password dell'app: chi ha accesso a questa cartella può leggerli.",
   "The backup folder is not connected: plug in the disk or reconnect the folder, or choose another one": "La cartella dei backup non è collegata: collega il disco, ricollega la cartella o scegline un'altra",
   "This folder cannot hold backups: choose another one": "Questa cartella non può contenere backup: scegline un'altra",
   "Atrio cannot write in this folder: choose another one": "Atrio non riesce a scrivere in questa cartella: scegline un'altra",
@@ -768,5 +767,15 @@
   "This backup was changed after it was made, or made on another server, and was not restored": "Questo backup è stato modificato dopo essere stato creato, oppure viene da un altro server: non è stato ripristinato",
   "This backup was made by an older Atrio: it can only be restored from the default backup folder": "Questo backup è stato creato da una versione precedente di Atrio: si può ripristinare solo dalla cartella dei backup predefinita",
   "This backup contains files outside the folders of this app and was not restored": "Questo backup contiene file fuori dalle cartelle di quest'app: non è stato ripristinato",
-  "Could not create the backup key": "Non è stato possibile creare la chiave dei backup"
+  "Could not create the backup key": "Non è stato possibile creare la chiave dei backup",
+  "Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while.": "Cartella di rete o cloud: l'app riparte prima e il backup viene inviato dopo, quindi per un po' serve lo stesso spazio libero su questo server.",
+  "Backup key": "Chiave dei backup",
+  "Backups are encrypted and signed with a key that stays on this server: whoever can open the backup folder cannot read them or change them. To restore them on a new machine you will need this key too, so keep a copy in a safe place, such as a password manager.": "I backup sono cifrati e firmati con una chiave che resta su questo server: chi può aprire la cartella dei backup non può leggerli né modificarli. Per ripristinarli su una macchina nuova servirà anche questa chiave, quindi tienine una copia in un posto sicuro, come un gestore di password.",
+  "Show the key": "Mostra la chiave",
+  "Hide": "Nascondi",
+  "Key copied": "Chiave copiata",
+  "The backup key could not be read": "Non è stato possibile leggere la chiave dei backup",
+  "openssl is missing on the server: backups cannot be encrypted": "Sul server manca openssl: i backup non si possono cifrare",
+  "openssl is missing on the server: this backup cannot be read": "Sul server manca openssl: questo backup non si può leggere",
+  "This backup was made by a newer Atrio: update Atrio to restore it": "Questo backup è stato creato da un Atrio più recente: aggiorna Atrio per ripristinarlo"
 }
