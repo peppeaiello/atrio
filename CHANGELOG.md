@@ -2,6 +2,12 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.16 — unreleased
+
+**Fixed**
+
+- Hovering an app no longer draws a dark shadow around its tile.
+
 ## 0.1.15 — 2026-11-07
 
 **New**

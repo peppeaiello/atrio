@@ -1142,6 +1142,11 @@ export default {
 
 // Atrio: the whole tile answers the click; the menu and the confirm sit above it
 .app-card {
+	// No inherited hover shadow: its corners do not follow the glass and it reads as a dark halo
+	&:hover {
+		box-shadow: none;
+	}
+
 	.atrio-tile-hit {
 		position: absolute;
 		inset: 0;
