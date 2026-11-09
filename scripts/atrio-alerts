@@ -111,25 +111,44 @@ text() {
 LAST_SENT="" LAST_ERROR=""
 
 # send TITLE MESSAGE PRIORITY(1-5) NTFY_TAGS
+# Runs curl on a request; on failure leaves in $result what went wrong, with the server's own
+# answer when there is one, so that a refusal reads as the reason instead of "error 400"
+post() {
+	local reply code
+	reply=$(mktemp) || { result="Could not create a temporary file"; return 1; }
+	code=$(curl -sS --connect-timeout 10 --max-time 20 -o "$reply" -w '%{http_code}' "$@" 2>"$reply.err")
+	local status=$?
+	if [ $status -eq 0 ] && [[ "$code" =~ ^2 ]]; then
+		rm -f "$reply" "$reply.err"
+		return 0
+	fi
+	if [ $status -ne 0 ]; then
+		result=$(head -c 300 "$reply.err")
+	else
+		# Plain text, JSON or an HTML error page: tags removed, kept to one short line
+		result="HTTP $code: $(head -c 4000 "$reply" | sed 's/<[^>]*>/ /g' | tr -s ' \t\r\n' ' ' | head -c 240)"
+	fi
+	rm -f "$reply" "$reply.err"
+	return 1
+}
+
 send() {
-	local title="$1" message="$2" priority="$3" tags="$4" result
-	local curl=(curl -fsS --connect-timeout 10 --max-time 20)
+	local title="$1" message="$2" priority="$3" tags="$4" result=""
 	if [ "$SERVICE" = gotify ]; then
-		result=$("${curl[@]}" -F "title=$title" -F "message=$message" -F "priority=$priority" \
-			"$URL/message?token=$TOKEN" 2>&1 >/dev/null)
+		post -F "title=$title" -F "message=$message" -F "priority=$priority" "$URL/message?token=$TOKEN"
 	elif [ "$SERVICE" = apprise ]; then
 		# Apprise API: the key names a saved configuration, whose services all get the message
 		local type=info
 		[ "$priority" -ge 4 ] && type=warning
 		[ "$priority" -ge 5 ] && type=failure
-		result=$("${curl[@]}" --data-urlencode "title=$title" --data-urlencode "body=$message" \
-			--data-urlencode "type=$type" "$URL/notify/$TOPIC" 2>&1 >/dev/null)
+		post -H "Accept: application/json" --data-urlencode "title=$title" --data-urlencode "body=$message" \
+			--data-urlencode "type=$type" "$URL/notify/$TOPIC"
 	else
 		local auth=()
 		[ -n "$TOKEN" ] && auth=(-H "Authorization: Bearer $TOKEN")
 		# ntfy reads the title from a header: RFC 2047 keeps accents intact
-		result=$("${curl[@]}" "${auth[@]}" -H "Title: =?UTF-8?B?$(printf '%s' "$title" | base64 -w0)?=" \
-			-H "Priority: $priority" -H "Tags: $tags" --data-binary "$message" "$URL/$TOPIC" 2>&1 >/dev/null)
+		post "${auth[@]}" -H "Title: =?UTF-8?B?$(printf '%s' "$title" | base64 -w0)?=" \
+			-H "Priority: $priority" -H "Tags: $tags" --data-binary "$message" "$URL/$TOPIC"
 	fi
 	if [ $? -eq 0 ]; then
 		LAST_SENT="$title"

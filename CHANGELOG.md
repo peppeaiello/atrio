@@ -7,6 +7,8 @@ What changes in each Atrio release. The section for a version is also the text o
 **Fixed**
 
 - Hovering an app no longer draws a dark shadow around its tile.
+- When the push service refuses an alert, the status shows its own answer, such as the reason Apprise gives, instead
+  of only "error 400". Run the install command once more to get it.
 
 ## 0.1.15 — 2026-11-07
 
