@@ -8,6 +8,7 @@ What changes in each Atrio release. The section for a version is also the text o
 
 - **The install command shows what it is doing**: a line for each step and a progress bar while it downloads Atrio,
   instead of a long silence between the first and the last line.
+- Clicking the Atrio row in the settings no longer turns it white.
 
 ## 0.1.16 — 2026-11-11
 

@@ -36,7 +36,7 @@ export default {
 </script>
 
 <template>
-	<div class="_is-large hover-effect _is-radius pr-2 mr-4 ml-4">
+	<div class="_is-large _is-radius pr-2 mr-4 ml-4">
 		<div class="is-flex is-align-items-center">
 			<div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
 				<img :src="$asset('@/assets/img/logo/atrio-mark.svg')" alt="" class="mr-2 ml-2 atrio-update-logo">
