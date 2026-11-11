@@ -64,6 +64,7 @@ main() {
 		mv "/usr/local/bin/$1.tmp" "/usr/local/bin/$1"
 	}
 
+	echo "Downloading the updater, push alerts and backups..."
 	# The public key that releases are signed with: the updater installs only what it signed
 	mkdir -p /usr/local/share/atrio
 	if [ -n "${ATRIO_SOURCE:-}" ]; then
@@ -83,6 +84,7 @@ main() {
 	install_script atrio-alerts
 	install_script atrio-backup
 
+	echo "Setting up their services..."
 	cat > /etc/systemd/system/atrio-update.service <<'UNIT'
 [Unit]
 Description=Install the latest Atrio web UI for CasaOS
@@ -203,6 +205,7 @@ UNIT
 	systemctl enable --now atrio-alerts.timer >/dev/null
 	systemctl enable --now atrio-alerts-test.path >/dev/null
 	systemctl enable --now atrio-backup.path >/dev/null
+	echo "Starting push alerts and backups..."
 	# A first run writes the status the settings read (alerts stay off until set up there)
 	/usr/local/bin/atrio-alerts || true
 	# Tells the web UI that backups are available

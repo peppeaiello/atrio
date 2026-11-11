@@ -53,6 +53,10 @@ write_status() {
 	printf '{"state":"%s","version":"%s","message":"%s","token":"%s","time":"%s"}\n' \
 		"$1" "$(installed_version "$WWW")" "$2" "$TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
 	mv "$STATUS.tmp" "$STATUS"
+	# Run by hand (install.sh), each step shows in the terminal too
+	if [ "$1" = running ] && [ -t 2 ]; then
+		echo "$2..." >&2
+	fi
 }
 
 fail() {
@@ -76,7 +80,12 @@ fi
 
 download() {
 	local CURL=(curl -fsSL --connect-timeout 20 --max-time 300 --retry 2)
-	"${CURL[@]}" -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz" &&
+	# A progress bar for the large file when a person is watching, nothing in the journal otherwise
+	local BIG=("${CURL[@]}")
+	if [ -t 2 ]; then
+		BIG=(curl -fSL --progress-bar --connect-timeout 20 --max-time 300 --retry 2)
+	fi
+	"${BIG[@]}" -o "$TMP/atrio.tar.gz" "$DOWNLOAD/atrio.tar.gz" &&
 		"${CURL[@]}" -o "$TMP/atrio.tar.gz.sha256" "$DOWNLOAD/atrio.tar.gz.sha256" || return 1
 	# A release without a signature is refused below, with its own message
 	if [ -f "$KEYRING" ]; then
@@ -108,6 +117,7 @@ if ! download; then
 		fail "Could not download the release from GitHub, Atrio was not changed"
 	fi
 fi
+write_status running "Checking the signature"
 (cd "$TMP" && sha256sum -c atrio.tar.gz.sha256 >/dev/null)
 if ! signed "$TMP"; then
 	# The copy kept here was checked when it was installed, and only root can write it
