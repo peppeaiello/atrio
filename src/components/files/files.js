@@ -235,6 +235,28 @@ export async function listLocations() {
   return { places, storage }
 }
 
+/* ------------------------------------------------------------------ Samba shares */
+
+// Folders this server shares on the local network. CasaOS names each share after its folder.
+export async function listShares() {
+  const shares = unwrap(await api.samba.getShares()) || []
+  return shares.map(share => ({ id: share.id, path: share.path, name: baseName(share.path) }))
+}
+
+// A guest share, the only kind the classic CasaOS panel creates.
+export async function shareFolder(path) {
+  return unwrap(await api.samba.createShare([{ path, anonymous: true }]))
+}
+
+export async function unshareFolder(id) {
+  return unwrap(await api.samba.deleteShare(id))
+}
+
+// What another computer types to open a share: File Explorer on Windows, Finder or a file manager elsewhere.
+export function shareAddresses(share, host) {
+  return { windows: `\\\\${host}\\${share.name}`, smb: `smb://${host}/${share.name}` }
+}
+
 /* ------------------------------------------------------------------ remote storage */
 
 // Accepts "smb://nas.local", "192.168.1.10" or "smb://192.168.1.10/share/"; returns the bare host, or ''

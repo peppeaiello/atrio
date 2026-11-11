@@ -8,6 +8,7 @@ const props = defineProps({
   items: { type: Array, required: true },
   selected: { type: Array, required: true },
   cutPaths: { type: Array, default: () => [] },
+  sharedPaths: { type: Array, default: () => [] },
   focusIndex: { type: Number, default: -1 },
   view: { type: String, default: 'grid' },
   sortKey: { type: String, default: 'name' },
@@ -20,6 +21,7 @@ const emit = defineEmits(['pick', 'open', 'toggle', 'menu', 'sort'])
 const root = ref(null)
 const selectedSet = computed(() => new Set(props.selected))
 const cutSet = computed(() => new Set(props.cutPaths))
+const sharedSet = computed(() => new Set(props.sharedPaths))
 
 function meta(item) {
   return item.is_dir ? '' : formatSize(item.size)
@@ -80,6 +82,9 @@ const sortColumns = [
         <span class="col--name row__name">
           <FileThumb :item="item" size="small" />
           <span class="row__label" :title="item.name">{{ item.name }}</span>
+          <span v-if="sharedSet.has(item.path)" class="shared">
+            <FilesIcon :size="13" name="share" />{{ $t('files.sharedLabel') }}
+          </span>
         </span>
         <span class="col--date row__meta">{{ formatDate(item.date, locale) }}</span>
         <span class="col--size row__meta">{{ item.is_dir ? '—' : formatSize(item.size) }}</span>
@@ -103,7 +108,10 @@ const sortColumns = [
     >
       <FileThumb :item="item" />
       <span class="tile__name" :title="item.name">{{ item.name }}</span>
-      <span class="tile__meta">{{ meta(item) }}</span>
+      <span v-if="sharedSet.has(item.path)" class="tile__meta shared">
+        <FilesIcon :size="13" name="share" />{{ $t('files.sharedLabel') }}
+      </span>
+      <span v-else class="tile__meta">{{ meta(item) }}</span>
       <button
         :aria-label="item.name" :aria-pressed="selectedSet.has(item.path) ? 'true' : 'false'" class="check tile__check" tabindex="-1"
         type="button" @click.stop="emit('toggle', index)"
@@ -162,6 +170,16 @@ const sortColumns = [
   min-height: 16px;
   font-size: 12px;
   color: var(--files-muted);
+}
+
+.shared {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #A5F3FC;
 }
 
 .tile__check {

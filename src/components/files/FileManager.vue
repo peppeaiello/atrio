@@ -28,13 +28,17 @@ import {
   listCloudServices,
   listFolder,
   listLocations,
+  listShares,
   onUploaded,
   openCloudSignIn,
   parentPath,
   previewMode,
   remove,
   rename,
+  shareAddresses,
+  shareFolder,
   transfer,
+  unshareFolder,
   updateTasks,
 } from './files.js'
 
@@ -85,6 +89,8 @@ const editingPath = ref(false)
 const cloudServices = ref([])
 const networkDialog = ref(false)
 const ejecting = ref(null) // { location, busy, error }
+const shares = ref([]) // Samba shares: [{ id, path, name }]
+const sharing = ref(null) // { mode: 'info' | 'stop', share, busy, error }
 
 const collator = computed(() => new Intl.Collator(locale.value, { numeric: true, sensitivity: 'base' }))
 
@@ -192,6 +198,15 @@ async function loadLocations() {
     locations.value = await listLocations()
   }
   catch {}
+}
+
+async function loadShares() {
+  try {
+    shares.value = await listShares()
+  }
+  catch {
+    shares.value = []
+  }
 }
 
 /* ------------------------------------------------------------------ path editing */
@@ -408,6 +423,14 @@ async function confirmDelete() {
 
 // A deleted folder may have been shared over Samba: drop the share like the classic file browser does.
 function forgetShares(paths) {
+  const gone = shares.value.filter(share => paths.some(p => isInside(share.path, p)))
+  if (gone.length)
+    Promise.allSettled(gone.map(share => unshareFolder(share.id))).then(loadShares)
+  forgetShortcuts(paths)
+}
+
+// Shortcuts the classic UI kept for shared folders, stored with the user's settings.
+function forgetShortcuts(paths) {
   const store = vm.$store
   const shortcuts = store?.state?.shortcutData || []
   const gone = shortcuts.filter(s => paths.some(p => isInside(s.path, p)))
@@ -608,6 +631,16 @@ function itemActions(list) {
   actions.push({ id: 'cut', label: t('cut'), icon: 'scissors', shortcut: 'Ctrl X' })
   if (one)
     actions.push({ id: 'copyPath', label: t('copyPath'), icon: 'link' })
+  if (one?.is_dir) {
+    actions.push({ id: 'd3', divider: true })
+    if (shareOf(one)) {
+      actions.push({ id: 'shareInfo', label: t('shareAddress'), icon: 'share' })
+      actions.push({ id: 'unshare', label: t('stopSharing'), icon: 'shareOff' })
+    }
+    else {
+      actions.push({ id: 'share', label: t('share'), icon: 'share' })
+    }
+  }
   actions.push({ id: 'd2', divider: true })
   actions.push({ id: 'delete', label: t('delete'), icon: 'trash', danger: true, shortcut: 'Del' })
   return actions
@@ -717,6 +750,9 @@ function runAction(id) {
     copy: () => copyToClipboard('copy'),
     cut: () => copyToClipboard('cut'),
     copyPath: () => copyPath(list[0]),
+    share: () => startShare(list[0]),
+    shareInfo: () => showShareInfo(list[0]),
+    unshare: () => startUnshare(shareOf(list[0])),
     delete: () => startDelete(list),
     upload: () => fileInput.value.click(),
     uploadFolder: () => folderInput.value.click(),
@@ -727,7 +763,7 @@ function runAction(id) {
     reload: () => load(true),
   }
   handlers[id]?.()
-  if (!dialog.value && !picker.value && !previewItem.value && !networkDialog.value)
+  if (!dialog.value && !picker.value && !previewItem.value && !networkDialog.value && !sharing.value)
     focusRoot()
 }
 
@@ -862,9 +898,89 @@ function init(start) {
   focusRoot()
   loadLocations()
   loadCloudServices()
+  loadShares()
   go(start || ROOT, { record: path.value !== (start || ROOT) && !!entries.value.length })
 }
 defineExpose({ init })
+
+/* ------------------------------------------------------------------ Samba shares */
+
+const sharedPaths = computed(() => shares.value.map(share => share.path))
+
+function shareOf(item) {
+  return item ? shares.value.find(share => share.path === item.path) : null
+}
+
+async function startShare(item) {
+  try {
+    await shareFolder(item.path)
+    await loadShares()
+    const share = shareOf(item)
+    if (share)
+      sharing.value = { mode: 'info', share }
+  }
+  catch (e) {
+    notify(errorMessage(e), 'error')
+  }
+}
+
+function showShareInfo(item) {
+  const share = shareOf(item)
+  if (share)
+    sharing.value = { mode: 'info', share }
+}
+
+function startUnshare(share) {
+  if (share)
+    sharing.value = { mode: 'stop', share, busy: false, error: '' }
+}
+
+async function confirmUnshare() {
+  const state = sharing.value
+  if (!state || state.busy)
+    return
+  state.busy = true
+  try {
+    await unshareFolder(state.share.id)
+    sharing.value = null
+    notify(t('sharingStopped'))
+    await loadShares()
+    focusRoot()
+  }
+  catch (e) {
+    state.busy = false
+    state.error = errorMessage(e)
+  }
+}
+
+function closeSharing() {
+  sharing.value = null
+  focusRoot()
+}
+
+// The address of this server as the browser reached it, which other computers on the network can use too.
+const shareRows = computed(() => {
+  if (sharing.value?.mode !== 'info')
+    return []
+  const addresses = shareAddresses(sharing.value.share, window.location.hostname)
+  return [
+    { id: 'windows', label: t('shareWindows'), value: addresses.windows },
+    { id: 'smb', label: t('shareSmb'), value: addresses.smb },
+  ]
+})
+
+// The Clipboard API needs HTTPS; on plain HTTP fall back to copying the selected field.
+async function copyAddress(e, value) {
+  const input = e.currentTarget.previousElementSibling
+  input?.select()
+  try {
+    await navigator.clipboard.writeText(value)
+  }
+  catch {
+    document.execCommand('copy')
+  }
+  notify(t('copied'))
+}
 
 /* ------------------------------------------------------------------ keyboard */
 
@@ -888,7 +1004,7 @@ function moveFocus(next, e) {
 }
 
 function onKeydown(e) {
-  if (dialog.value || picker.value || previewItem.value || menu.value || networkDialog.value || ejecting.value)
+  if (dialog.value || picker.value || previewItem.value || menu.value || networkDialog.value || ejecting.value || sharing.value)
     return
   const tag = e.target.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
@@ -1108,8 +1224,8 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
             </button>
           </div>
           <FilesSidebar
-            :current="path" :places="locations.places" :storage="locations.storage" @add="openAddStorageMenu" @disconnect="startDisconnect"
-            @go="go"
+            :current="path" :places="locations.places" :shares="shares" :storage="locations.storage" @add="openAddStorageMenu"
+            @disconnect="startDisconnect" @go="go" @unshare="startUnshare"
           />
         </aside>
 
@@ -1193,7 +1309,7 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
               <span v-if="!query">{{ $t('files.emptyHint') }}</span>
             </div>
             <FileItems
-              v-else ref="itemsRef" :cut-paths="cutPaths" :focus-index="focusIndex" :items="items" :locale="locale" :selected="selected"
+              v-else ref="itemsRef" :cut-paths="cutPaths" :focus-index="focusIndex" :shared-paths="sharedPaths" :items="items" :locale="locale" :selected="selected"
               :sort-dir="sortDir" :sort-key="sortKey" :view="view"
               @menu="openItemMenu" @open="i => open(items[i])" @pick="pick" @sort="setSort" @toggle="toggle"
             />
@@ -1267,6 +1383,42 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
         </button>
         <button :disabled="dialog.busy" class="btn btn--danger-solid" type="button" @click="submitDialog">
           <FilesIcon :size="16" name="trash" />{{ $t('files.delete') }}
+        </button>
+      </template>
+    </FilesDialog>
+
+    <FilesDialog v-if="sharing && sharing.mode === 'info'" :title="$t('files.sharedTitle', { name: sharing.share.name })" wide @close="closeSharing">
+      <p>{{ $t('files.shareBody') }}</p>
+      <div v-for="row in shareRows" :key="row.id" class="field">
+        <label :for="`files-share-${row.id}`">{{ row.label }}</label>
+        <span class="copy-row">
+          <input :id="`files-share-${row.id}`" :value="row.value" readonly spellcheck="false" @focus="$event.target.select()">
+          <button class="btn" type="button" @click="copyAddress($event, row.value)">
+            <FilesIcon :size="16" name="copy" />{{ $t('files.copy') }}
+          </button>
+        </span>
+      </div>
+      <template #actions>
+        <button class="btn" type="button" @click="startUnshare(sharing.share)">
+          <FilesIcon :size="16" name="shareOff" />{{ $t('files.stopSharing') }}
+        </button>
+        <button class="btn btn--primary" type="button" @click="closeSharing">
+          {{ $t('files.done') }}
+        </button>
+      </template>
+    </FilesDialog>
+
+    <FilesDialog v-if="sharing && sharing.mode === 'stop'" :title="$t('files.stopSharingTitle', { name: sharing.share.name })" @close="closeSharing">
+      <p>{{ $t('files.stopSharingBody') }}</p>
+      <p v-if="sharing.error" class="field__error" role="alert">
+        {{ sharing.error }}
+      </p>
+      <template #actions>
+        <button class="btn" type="button" @click="closeSharing">
+          {{ $t('files.cancel') }}
+        </button>
+        <button :disabled="sharing.busy" class="btn btn--primary" type="button" @click="confirmUnshare">
+          <FilesIcon :size="16" name="shareOff" />{{ $t('files.stopSharing') }}
         </button>
       </template>
     </FilesDialog>
@@ -1799,6 +1951,18 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
 .field__error {
   margin: 0;
   color: #FDA4AF;
+  font-size: 13px;
+}
+
+.copy-row {
+  display: flex;
+  gap: 8px;
+}
+
+.copy-row input {
+  flex: 1;
+  min-width: 0;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
 }
 

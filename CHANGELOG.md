@@ -4,6 +4,12 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.16 — unreleased
 
+**New**
+
+- **Share folders on your network from Files** (#9), as in the classic CasaOS panel: Share in a folder's menu
+  makes it a guest Samba share and shows the address to open it from Windows, a Mac or Linux. Shared folders
+  are marked as such and listed under Shared at the bottom of the sidebar, where sharing can be stopped.
+
 **Fixed**
 
 - Hovering an app no longer draws a dark shadow around its tile.

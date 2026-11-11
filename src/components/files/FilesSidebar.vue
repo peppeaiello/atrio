@@ -6,9 +6,11 @@ import { canDisconnect, formatSize, isInside } from './files.js'
 const props = defineProps({
   places: { type: Array, default: () => [] },
   storage: { type: Array, default: () => [] },
+  // Samba shares of this server: [{ id, path, name }]
+  shares: { type: Array, default: () => [] },
   current: { type: String, required: true },
 })
-const emit = defineEmits(['go', 'add', 'disconnect'])
+const emit = defineEmits(['go', 'add', 'disconnect', 'unshare'])
 
 // The deepest location that holds the current folder is the active one.
 const activePath = computed(() => {
@@ -28,9 +30,19 @@ function usage(loc) {
   return { percent: Math.round(((size - avail) / size) * 100), text: `${formatSize(avail)} / ${formatSize(size)}` }
 }
 
+const sharedItems = computed(() => props.shares.map(share => ({
+  name: share.name,
+  label: share.name,
+  path: share.path,
+  icon: 'share',
+  kind: 'share',
+  share,
+})))
+
 const groups = computed(() => [
   { id: 'places', items: props.places },
   { id: 'storage', items: props.storage },
+  ...(sharedItems.value.length ? [{ id: 'shared', items: sharedItems.value }] : []),
 ])
 </script>
 
@@ -59,7 +71,7 @@ const groups = computed(() => [
               <span class="loc__bar"><span :style="{ width: `${usage(loc).percent}%` }" /></span>
               <span class="loc__meta">{{ usage(loc).text }}</span>
             </template>
-            <span v-else-if="group.id === 'storage'" class="loc__meta">{{ loc.path }}</span>
+            <span v-else-if="group.id !== 'places'" class="loc__meta">{{ loc.path }}</span>
           </span>
         </button>
         <button
@@ -68,6 +80,12 @@ const groups = computed(() => [
           :title="$t(loc.kind === 'usb' ? 'files.eject' : 'files.disconnect')" class="loc__eject" type="button" @click="emit('disconnect', loc)"
         >
           <FilesIcon :size="16" name="eject" />
+        </button>
+        <button
+          v-if="loc.kind === 'share'" :aria-label="`${$t('files.stopSharing')} ${loc.name}`" :title="$t('files.stopSharing')"
+          class="loc__eject" type="button" @click="emit('unshare', loc.share)"
+        >
+          <FilesIcon :size="16" name="shareOff" />
         </button>
       </div>
     </section>
