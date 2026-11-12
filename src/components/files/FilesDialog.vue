@@ -11,7 +11,9 @@ const panel = ref(null)
 
 onMounted(async () => {
   await nextTick()
-  const target = panel.value?.querySelector('[autofocus], input, select, textarea, .dialog__actions .btn--primary, button')
+  // An element marked autofocus wins even when it comes after other buttons.
+  const target = panel.value?.querySelector('[autofocus]')
+    || panel.value?.querySelector('input, select, textarea, .dialog__actions .btn--primary, button')
   target?.focus()
   if (target?.select)
     target.select()

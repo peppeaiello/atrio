@@ -45,9 +45,10 @@ Object.entries(kindExtensions).forEach(([kind, exts]) => exts.forEach((ext) => {
   kindByExtension[ext] = kind
 }))
 
+// "photo.JPG" → "jpg"; a name without a dot is its own extension ("Dockerfile"), and so is a dotfile (".env" → "env").
 export function extension(name) {
   const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(dot + 1).toLowerCase() : name.toLowerCase()
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : name.toLowerCase()
 }
 
 export function kindOf(item) {
@@ -189,6 +190,18 @@ export async function transfer(type, paths, to, style) {
 
 export async function readText(path) {
   return unwrap(await api.file.getContent(path))
+}
+
+export async function saveText(path, content) {
+  return unwrap(await api.file.update(path, content))
+}
+
+// Size and modification date of one file as the server sees it now, or null when it is gone. CasaOS has no
+// call for a single file, so this reads its folder.
+export async function fileInfo(path) {
+  const list = await listFolder(parentPath(path))
+  const item = list.find(i => i.path === path)
+  return item ? { size: item.size, date: item.date } : null
 }
 
 // Locations for the sidebar: the CasaOS home, its standard folders, disks, network and cloud mounts.

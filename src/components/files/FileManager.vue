@@ -307,6 +307,15 @@ function open(item) {
   else previewItem.value = item
 }
 
+// The preview saved its text: refresh the folder so the size and date are current, and the preview with them.
+async function onPreviewSaved(item) {
+  notify(t('saved'))
+  await load(true)
+  const fresh = items.value.find(i => i.path === item.path)
+  if (fresh && previewItem.value?.path === item.path)
+    previewItem.value = fresh
+}
+
 function closePreview() {
   const index = items.value.findIndex(i => i.path === previewItem.value?.path)
   previewItem.value = null
@@ -1451,6 +1460,7 @@ const singleSelected = computed(() => selectedItems.value.length === 1)
 
     <FilePreview
       v-if="previewItem" :item="previewItem" :siblings="previewSiblings" @close="closePreview" @navigate="item => previewItem = item"
+      @saved="onPreviewSaved"
     />
 
     <FilesMenu v-if="menu" :actions="menu.actions" :title="menu.title" :x="menu.x" :y="menu.y" @close="closeMenu" @pick="runAction" />

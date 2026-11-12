@@ -4,6 +4,15 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.17 — unreleased
 
+**New**
+
+- **Edit text files in Files**, as in the classic CasaOS panel: Edit in the preview of a text or code file, such as
+  an app's docker-compose.yml, then Save. The preview is now a code editor with line numbers, syntax colours for
+  about thirty languages, folding, bracket matching, undo and redo, and a search bar with replace. YAML and JSON are
+  checked as you type: an error is marked on its line, and saving a file with an error asks first. It works on a
+  phone too. Leaving with unsaved changes asks first, and if something else changed the file after it was opened,
+  saving asks before replacing that version. Files over 512 KB stay read only.
+
 **Fixed**
 
 - **The install command shows what it is doing**: a line for each step and a progress bar while it downloads Atrio,
