@@ -259,6 +259,13 @@ export async function loadDigestUpdates() {
 	return (await readJson(`${STATE}/updates.json`))?.apps || {}
 }
 
+/** The apps whose updates are not shown: they can still be updated by hand. */
+export async function loadIgnoredUpdates() {
+	return (await readJson(`${STATE}/updates.json`))?.ignored || []
+}
+
+export const setIgnoreUpdates = (name, ignore) => run({ ACTION: 'ignore-updates', APP: name, IGNORE: ignore ? 1 : 0 })
+
 /** Asks the registries again for one app; resolves with its state, or '' when the service cannot. */
 async function checkDigest(name) {
 	try {

@@ -856,5 +856,9 @@
   "Downloading the new version…": "Downloading the new version…",
   "Starting the new version…": "Starting the new version…",
   "Saving a backup": "Saving a backup",
-  "Checking": "Checking"
+  "Checking": "Checking",
+  "Ignore updates": "Ignore updates",
+  "Show updates again": "Show updates again",
+  "Updates of {title} are shown again": "Updates of {title} are shown again",
+  "Updates of {title} are no longer shown. You can still update it from this menu.": "Updates of {title} are no longer shown. You can still update it from this menu."
 }

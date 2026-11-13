@@ -21,6 +21,8 @@ What changes in each Atrio release. The section for a version is also the text o
   downloads the new image of the same tag, recreates the app and checks that it stays up, offering the backup if it
   does not. The tag never changes, and nothing updates on its own. Apps pinned to a digest, and images built on the
   server, are left out.
+- **Ignore updates** in an app's menu turns its Update available badge off, for an app you keep on its version on
+  purpose. It can still be updated from the same menu, and Show updates again brings the badge back.
 - While an app updates, its tile shows each step on its ring (backup, download, start, check) instead of the menu
   staying open with a loading animation.
 

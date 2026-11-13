@@ -856,5 +856,9 @@
   "Downloading the new version…": "Download della nuova versione…",
   "Starting the new version…": "Avvio della nuova versione…",
   "Saving a backup": "Backup in corso",
-  "Checking": "Controllo"
+  "Checking": "Controllo",
+  "Ignore updates": "Ignora gli aggiornamenti",
+  "Show updates again": "Mostra di nuovo gli aggiornamenti",
+  "Updates of {title} are shown again": "Gli aggiornamenti di {title} vengono di nuovo mostrati",
+  "Updates of {title} are no longer shown. You can still update it from this menu.": "Gli aggiornamenti di {title} non vengono più mostrati. Puoi comunque aggiornarla da questo menu."
 }

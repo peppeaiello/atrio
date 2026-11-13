@@ -9,7 +9,7 @@ import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_LinkApp from '@/mixins/app/Business_LinkApp'
 import tipEditorModal from '@/components/Apps/TipEditorModal.vue'
 import commonI18n, { ice_i18n } from '@/mixins/base/common-i18n'
-import { backupRun, updateApp } from '@/plugins/appBackup'
+import { backupRun, setIgnoreUpdates, updateApp } from '@/plugins/appBackup'
 
 // The update ring, the same size as the install one
 const PULL_RADIUS = 30
@@ -39,6 +39,11 @@ export default {
     },
     // Atrio: a newer image is available (from the compose app list)
     updateAvailable: {
+      type: Boolean,
+      default: false,
+    },
+    // Atrio: the badge is off for this app, which can still be updated by hand
+    updatesIgnored: {
       type: Boolean,
       default: false,
     },
@@ -642,6 +647,28 @@ export default {
       this.$refs.dro.isActive = false
     },
 
+    async toggleIgnoreUpdates() {
+      this.$refs.dro.isActive = false
+      try {
+        await setIgnoreUpdates(this.item.name, !this.updatesIgnored)
+        this.$buefy.toast.open({
+          message: this.updatesIgnored
+            ? this.$t('Updates of {title} are shown again', { title: this.title })
+            : this.$t('Updates of {title} are no longer shown. You can still update it from this menu.', { title: this.title }),
+          type: 'is-success',
+          duration: 6000,
+        })
+        this.$EventBus.$emit('atrio:refresh-apps')
+      }
+      catch (e) {
+        this.$buefy.toast.open({
+          message: e.message === 'Unknown request'
+            ? this.$t('This needs the latest version of the service on the server. Run the install command once more.')
+            : this.$t(e.message),
+          type: 'is-danger',
+        })
+      }
+    },
     async checkAppVersion(name) {
       this.isCheckThenUpdate = true
       // Atrio: the tile shows the progress, the menu does not stay open over it
@@ -887,9 +914,9 @@ export default {
 
           <b-button v-if="isV2App && !item.is_uncontrolled" expanded type="is-text" @click="checkAppVersion(item.name)">
             {{ updateAvailable ? $t('Update now') : $t('Check then update') }}
-            <b-loading :model-value="isCheckThenUpdate || isUpdating" :is-full-page="false">
-              <img :src="$asset('@/assets/img/loading/waiting.svg')" alt="pending" class="ml-4 is-24x24">
-            </b-loading>
+          </b-button>
+          <b-button v-if="isV2App && !item.is_uncontrolled" expanded type="is-text" @click="toggleIgnoreUpdates">
+            {{ updatesIgnored ? $t('Show updates again') : $t('Ignore updates') }}
           </b-button>
           <b-button v-if="isV2App || isLinkApp" expanded type="is-text" @click="configApp()">
             {{ $t('Setting') }}

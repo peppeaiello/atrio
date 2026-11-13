@@ -86,7 +86,7 @@
 				>
 					<app-card
 						:item="item"
-						:update-available="Boolean(updates[item.name])"
+						:update-available="Boolean(updates[item.name])" :updates-ignored="ignoredUpdates.includes(item.name)"
 						:pull-progress="pulling[item.name] ?? null"
 						@configApp="showConfigPanel"
 						@importApp="showContainerPanel"
@@ -203,7 +203,7 @@ import isEqual from 'lodash/isEqual'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import YAML from 'yamljs'
 import { findDowngrade } from '@/plugins/appVersions'
-import { loadDigestUpdates, updateApp } from '@/plugins/appBackup'
+import { loadDigestUpdates, loadIgnoredUpdates, updateApp } from '@/plugins/appBackup'
 
 const SYNCTHING_STORE_ID = 74
 
@@ -265,6 +265,7 @@ export default {
 			search: '',
 			// Atrio: app name -> a newer image is available
 			updates: {},
+			ignoredUpdates: [],
 			user_id: localStorage.getItem('user_id'),
 			appList: [],
 			oldAppList: [],
@@ -548,10 +549,13 @@ export default {
 				const apps = Object.entries(res.data.data || {})
 				// Atrio: apps on "latest" get theirs from the digests the server checks every 6 hours
 				const digests = await loadDigestUpdates()
+				// Apps whose updates were set to be ignored show no badge
+				const ignored = await loadIgnoredUpdates()
+				this.ignoredUpdates = ignored
 				this.updates = Object.fromEntries(await Promise.all(apps.map(async ([name, app]) => [
 					name,
-					(Boolean(app.update_available) && !(await findDowngrade(this.$openAPI, name, app.compose)))
-						|| digests[name]?.state === 'update',
+					!ignored.includes(name) && ((Boolean(app.update_available) && !(await findDowngrade(this.$openAPI, name, app.compose)))
+						|| digests[name]?.state === 'update'),
 				])))
 			} catch (e) {
 				// Kept as it was: checked again in a minute

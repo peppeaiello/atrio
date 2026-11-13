@@ -40,6 +40,7 @@ HEALTH_STEADY="${ATRIO_HEALTH_STEADY:-20}"
 ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST" DEST_MOUNT="" NEW_DEST="" FROM=""
 EVERY="" AT="" DAY="" KEEP="" PASSWORD="" REPLACE_KEY=0
 IMAGES_CHOSEN=()
+IGNORE=""
 # The folder new backups go to; DEST can be an older one for a restore or a delete
 CONF_DEST="$DEFAULT_DEST"
 CONF_MOUNT=""
@@ -135,11 +136,12 @@ read_request() {
 			PASSWORD) PASSWORD="$value" ;;
 			REPLACE_KEY) [ "$value" = 1 ] && REPLACE_KEY=1 ;;
 			IMAGE) [[ "$value" =~ ^sha256:[0-9a-f]{64}$ ]] && IMAGES_CHOSEN+=("$value") ;;
+			IGNORE) [[ "$value" =~ ^[01]$ ]] && IGNORE="$value" ;;
 		esac
 	done < "$REQUEST"
 	rm -f "$REQUEST"
 	case "$ACTION" in
-		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings|images|remove-images|check-updates|update-app) ;;
+		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings|images|remove-images|check-updates|update-app|ignore-updates) ;;
 		*) ACTION=""; APP=""; ID=""; fail "Unknown request" ;;
 	esac
 	if ! [[ "$APP" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
@@ -1263,6 +1265,8 @@ do_remove_images() {
 # the digests of the image each container runs. Results in updates.json, read by the web UI.
 UPDATES_TSV="$STATE/updates.tsv"
 UPDATES_JSON="$STATE/updates.json"
+# Apps whose updates are not shown, one name per line: they can still be updated by hand
+UPDATES_IGNORED="$STATE/updates-ignored"
 ACCEPT="application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json"
 
 # The digest the registry gives for an image reference now, or nothing
@@ -1344,7 +1348,15 @@ write_updates() {
 			first=0
 			printf '"%s":{"state":"%s","checked":"%s","services":%s}' "$app" "$state" "$checked" "$details"
 		done < "$UPDATES_TSV"
-		printf '}}\n'
+		printf '},"ignored":['
+		first=1
+		[ -f "$UPDATES_IGNORED" ] && while IFS= read -r app; do
+			[[ "$app" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] && [ -d "$APPS/$app" ] || continue
+			[ "$first" = 1 ] || printf ','
+			first=0
+			printf '"%s"' "$app"
+		done < "$UPDATES_IGNORED"
+		printf ']}\n'
 	} > "$UPDATES_JSON.tmp"
 	chmod 644 "$UPDATES_JSON.tmp"
 	mv "$UPDATES_JSON.tmp" "$UPDATES_JSON"
@@ -1363,6 +1375,19 @@ check_updates() {
 	done
 	APP="${1:-atrio}"
 	write_updates
+}
+
+do_ignore_updates() {
+	[ -f "$APPS/$APP/docker-compose.yml" ] || fail "Unknown app"
+	[ -n "$IGNORE" ] || fail "Unknown request"
+	touch "$UPDATES_IGNORED"
+	{
+		grep -Fxv -- "$APP" "$UPDATES_IGNORED"
+		[ "$IGNORE" = 1 ] && printf '%s\n' "$APP"
+	} > "$UPDATES_IGNORED.tmp"
+	mv "$UPDATES_IGNORED.tmp" "$UPDATES_IGNORED"
+	write_updates
+	write_status done "" ""
 }
 
 # Updates an app to the newer image of the same tag: a backup first, then the new images, the app
@@ -1467,4 +1492,5 @@ case "$ACTION" in
 		write_status running preparing
 		do_update_app
 		;;
+	ignore-updates) do_ignore_updates ;;
 esac
