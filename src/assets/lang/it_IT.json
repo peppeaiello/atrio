@@ -863,8 +863,6 @@
   "Updates of {title} are no longer shown. You can still update it from this menu.": "Gli aggiornamenti di {title} non vengono più mostrati. Puoi comunque aggiornarla da questo menu.",
   "Activity": "Attività",
   "Installs, updates, backups and restores": "Installazioni, aggiornamenti, backup e ripristini",
-  "What happened on this server: installs, updates, backups and restores": "Cosa è successo su questo server: installazioni, aggiornamenti, backup e ripristini",
-  "Nothing yet: installs, updates, backups and restores appear here as they happen.": "Ancora niente: installazioni, aggiornamenti, backup e ripristini compaiono qui man mano che avvengono.",
   "Show older": "Mostra i più vecchi",
   "Today": "Oggi",
   "Yesterday": "Ieri",
@@ -899,5 +897,8 @@
   "Updates of {app} are no longer shown": "Gli aggiornamenti di {app} non vengono più mostrati",
   "Updates of {app} are shown again": "Gli aggiornamenti di {app} vengono di nuovo mostrati",
   "{count} unused images removed": "{count} immagini non usate rimosse",
-  "every {day} at {time}": "ogni {day} alle {time}"
+  "every {day} at {time}": "ogni {day} alle {time}",
+  "What happened on this server: installs, updates, backups and restores, also while Atrio was closed.": "Cosa è successo su questo server: installazioni, aggiornamenti, backup e ripristini, anche mentre Atrio era chiuso.",
+  "Nothing yet": "Ancora niente",
+  "Installs, updates, backups and restores appear here as they happen.": "Installazioni, aggiornamenti, backup e ripristini compaiono qui man mano che avvengono."
 }

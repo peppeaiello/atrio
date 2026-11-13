@@ -863,8 +863,6 @@
   "Updates of {title} are no longer shown. You can still update it from this menu.": "Updates of {title} are no longer shown. You can still update it from this menu.",
   "Activity": "Activity",
   "Installs, updates, backups and restores": "Installs, updates, backups and restores",
-  "What happened on this server: installs, updates, backups and restores": "What happened on this server: installs, updates, backups and restores",
-  "Nothing yet: installs, updates, backups and restores appear here as they happen.": "Nothing yet: installs, updates, backups and restores appear here as they happen.",
   "Show older": "Show older",
   "Today": "Today",
   "Yesterday": "Yesterday",
@@ -899,5 +897,8 @@
   "Updates of {app} are no longer shown": "Updates of {app} are no longer shown",
   "Updates of {app} are shown again": "Updates of {app} are shown again",
   "{count} unused images removed": "{count} unused images removed",
-  "every {day} at {time}": "every {day} at {time}"
+  "every {day} at {time}": "every {day} at {time}",
+  "What happened on this server: installs, updates, backups and restores, also while Atrio was closed.": "What happened on this server: installs, updates, backups and restores, also while Atrio was closed.",
+  "Nothing yet": "Nothing yet",
+  "Installs, updates, backups and restores appear here as they happen.": "Installs, updates, backups and restores appear here as they happen."
 }

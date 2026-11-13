@@ -5,6 +5,7 @@ import { ice_i18n } from '@/mixins/base/common-i18n'
 import { checkLatest, release, updateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { clearNotifications, hasNotification, markAllRead, notifications, notify, removeNotification } from '@/plugins/notifications'
+import ActivityList from '@/components/home/ActivityList.vue'
 
 const DISK_FULL = 90
 const DISK_OK = 85
@@ -24,9 +25,12 @@ function appTitle(properties) {
 export default {
 	name: 'NotificationCenter',
 	compatConfig: { MODE: 3 },
+	components: { ActivityList },
 	data() {
 		return {
 			open: false,
+			// notifications: what to look at now, kept in this browser; activity: the server's history
+			tab: 'notifications',
 			notifications,
 			// Unread when the panel opened: still highlighted while it stays open
 			fresh: [],
@@ -59,12 +63,14 @@ export default {
 	},
 	mounted() {
 		this.$EventBus.$on('atrio:open-notifications', this.show)
+		this.$EventBus.$on('atrio:open-activity', this.showActivity)
 		window.addEventListener('keydown', this.onKey)
 		checkLatest()
 		this.checkCasaOS()
 	},
 	beforeUnmount() {
 		this.$EventBus.$off('atrio:open-notifications', this.show)
+		this.$EventBus.$off('atrio:open-activity', this.showActivity)
 		window.removeEventListener('keydown', this.onKey)
 		clearInterval(this.clock)
 	},
@@ -138,6 +144,21 @@ export default {
 				// Checked again on the next page load
 			}
 		},
+		showActivity() {
+			this.tab = 'activity'
+			this.show()
+		},
+		selectTab(tab) {
+			this.tab = tab
+		},
+		onTabKey(event) {
+			const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
+			if (!step) return
+			event.preventDefault()
+			const next = this.tab === 'notifications' ? 'activity' : 'notifications'
+			this.tab = next
+			this.$nextTick(() => this.$refs.tablist?.querySelector(`[data-tab="${next}"]`)?.focus())
+		},
 		show() {
 			if (this.open) return
 			this.returnFocus = document.activeElement
@@ -150,6 +171,7 @@ export default {
 		},
 		close() {
 			this.open = false
+			this.tab = 'notifications'
 			clearInterval(this.clock)
 			this.$nextTick(() => restoreFocus(this.returnFocus))
 		},
@@ -193,6 +215,21 @@ export default {
 						</button>
 					</header>
 
+					<div ref="tablist" :aria-label="$t('Sections')" class="atrio-sheet-tabs" role="tablist" @keydown="onTabKey">
+						<button
+							v-for="item in [{ id: 'notifications', label: $t('Notifications') }, { id: 'activity', label: $t('Activity') }]" :id="`atrio-tab-${item.id}`" :key="item.id"
+							:aria-controls="`atrio-tabpanel-${item.id}`" :aria-selected="tab === item.id" :class="{ 'is-active': tab === item.id }" :data-tab="item.id"
+							:tabindex="tab === item.id ? 0 : -1" role="tab" type="button" @click="selectTab(item.id)"
+						>
+							{{ item.label }}
+						</button>
+					</div>
+
+					<div v-if="tab === 'activity'" id="atrio-tabpanel-activity" aria-labelledby="atrio-tab-activity" role="tabpanel">
+						<ActivityList />
+					</div>
+
+					<div v-else id="atrio-tabpanel-notifications" aria-labelledby="atrio-tab-notifications" role="tabpanel">
 					<div v-if="items.length" class="atrio-notifications-tools">
 						<span>{{ $t('{count} notifications', { count: items.length }) }}</span>
 						<button class="atrio-button is-small" type="button" @click="clear">{{ $t('Clear all') }}</button>
@@ -219,6 +256,7 @@ export default {
 						<b-icon icon="bell-check-outline" pack="mdi" size="is-large" />
 						<p>{{ $t('Nothing new') }}</p>
 						<small>{{ $t('Installs, updates and warnings about disks and temperature appear here.') }}</small>
+					</div>
 					</div>
 				</aside>
 			</div>

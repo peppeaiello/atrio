@@ -1,10 +1,9 @@
 <script>
 // What happened on the server: installs, updates, backups, restores and the rest, newest first.
-// The services on the server write activity.log (see scripts/); opened with
-// `$EventBus.$emit('atrio:open-activity')`. Shares the sheet styles of AppDetailsPanel.
+// The services on the server write activity.log (see scripts/). The Activity tab of the
+// notification centre, opened with `$EventBus.$emit('atrio:open-activity')`.
 import api from '@/service/api.js'
 import { ice_i18n } from '@/mixins/base/common-i18n'
-import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 
 const LOG = '/var/lib/casaos/atrio/activity.log'
 const PAGE = 100
@@ -29,11 +28,10 @@ const ACTIONS = {
 }
 
 export default {
-	name: 'ActivityPanel',
+	name: 'ActivityList',
 	compatConfig: { MODE: 3 },
 	data() {
 		return {
-			open: false,
 			loading: false,
 			events: null,
 			titles: {},
@@ -53,31 +51,9 @@ export default {
 		},
 	},
 	mounted() {
-		this.$EventBus.$on('atrio:open-activity', this.show)
-		window.addEventListener('keydown', this.onKey)
-	},
-	beforeUnmount() {
-		this.$EventBus.$off('atrio:open-activity', this.show)
-		window.removeEventListener('keydown', this.onKey)
+		this.load()
 	},
 	methods: {
-		async show() {
-			if (this.open) return
-			this.returnFocus = document.activeElement
-			this.open = true
-			this.shown = PAGE
-			this.$nextTick(() => this.$refs.sheet?.focus())
-			await this.load()
-		},
-		close() {
-			this.open = false
-			this.$nextTick(() => restoreFocus(this.returnFocus))
-		},
-		onKey(event) {
-			if (!this.open) return
-			if (event.key === 'Escape') this.close()
-			else trapTab(event, this.$refs.sheet)
-		},
 		async load() {
 			this.loading = true
 			try {
@@ -152,64 +128,35 @@ export default {
 </script>
 
 <template>
-	<Teleport to="body">
-		<transition name="atrio-sheet">
-			<div v-if="open" class="atrio-sheet-backdrop" @click.self="close">
-				<aside ref="sheet" :aria-label="$t('Activity')" aria-modal="true" class="atrio-sheet atrio-activity" role="dialog" tabindex="-1">
-					<header class="atrio-sheet-head">
-						<span class="atrio-activity-icon">
-							<b-icon icon="history" pack="mdi" />
-						</span>
-						<div class="atrio-sheet-title">
-							<h2>{{ $t('Activity') }}</h2>
-							<p class="atrio-activity-sub">{{ $t('What happened on this server: installs, updates, backups and restores') }}</p>
-						</div>
-						<button :aria-label="$t('Close')" class="atrio-icon-button" type="button" @click="close">
-							<b-icon icon="close-outline" pack="casa" />
-						</button>
-					</header>
-
-					<p v-if="loading && !events" class="atrio-config-empty">{{ $t('Loading…') }}</p>
-					<p v-else-if="!events?.length" class="atrio-config-empty">{{ $t('Nothing yet: installs, updates, backups and restores appear here as they happen.') }}</p>
-
-					<div v-else class="atrio-sheet-config">
-						<section v-for="group in days" :key="group.day">
-							<h3>{{ group.day }}</h3>
-							<ul class="atrio-activity-list">
-								<li v-for="(event, index) in group.events" :key="`${event.time}-${index}`" :class="{ 'is-error': event.result === 'error' }">
-									<b-icon :icon="icon(event)" pack="mdi" size="is-20" />
-									<span class="atrio-activity-text">{{ text(event) }}</span>
-									<time :datetime="event.time">{{ hour(event.time) }}</time>
-								</li>
-							</ul>
-						</section>
-						<button v-if="events.length > shown" class="atrio-button is-small" type="button" @click="shown += 100">{{ $t('Show older') }}</button>
-					</div>
-				</aside>
-			</div>
-		</transition>
-	</Teleport>
+	<div class="atrio-activity">
+		<p class="atrio-activity-sub">{{ $t('What happened on this server: installs, updates, backups and restores, also while Atrio was closed.') }}</p>
+		<p v-if="loading && !events" class="atrio-config-empty">{{ $t('Loading…') }}</p>
+		<div v-else-if="!events?.length" class="atrio-notifications-empty">
+			<b-icon icon="history" pack="mdi" size="is-large" />
+			<p>{{ $t('Nothing yet') }}</p>
+			<small>{{ $t('Installs, updates, backups and restores appear here as they happen.') }}</small>
+		</div>
+		<template v-else>
+			<section v-for="group in days" :key="group.day" class="atrio-activity-day">
+				<h3>{{ group.day }}</h3>
+				<ul class="atrio-activity-list">
+					<li v-for="(event, index) in group.events" :key="`${event.time}-${index}`" :class="{ 'is-error': event.result === 'error' }">
+						<b-icon :icon="icon(event)" pack="mdi" size="is-20" />
+						<span class="atrio-activity-text">{{ text(event) }}</span>
+						<time :datetime="event.time">{{ hour(event.time) }}</time>
+					</li>
+				</ul>
+			</section>
+			<button v-if="events.length > shown" class="atrio-button is-small" type="button" @click="shown += 100">{{ $t('Show older') }}</button>
+		</template>
+	</div>
 </template>
 
 <style lang="scss">
 .atrio-activity {
-	width: min(36rem, calc(100% - 2rem));
-}
-
-.atrio-activity-icon {
-	display: grid;
-	place-items: center;
-	width: 3.75rem;
-	height: 3.75rem;
-	border-radius: 1.125rem;
-	background: rgba(167, 139, 250, 0.16);
-	color: #ddd6fe;
-
-	.icon {
-		width: 2rem;
-		height: 2rem;
-		font-size: 2rem;
-	}
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
 }
 
 .atrio-activity-sub {
@@ -217,6 +164,14 @@ export default {
 	font-size: 0.8125rem;
 }
 
+.atrio-activity-day h3 {
+	margin-bottom: 0.25rem;
+	color: var(--atrio-text-muted);
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
 .atrio-activity-list {
 	margin: 0;
 	padding: 0;

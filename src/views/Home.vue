@@ -8,7 +8,6 @@ import AppSection from '@/components/Apps/AppSection.vue'
 import CommandPalette from '@/components/home/CommandPalette.vue'
 import AppDetailsPanel from '@/components/home/AppDetailsPanel.vue'
 import HardwarePanel from '@/components/home/HardwarePanel.vue'
-import ActivityPanel from '@/components/home/ActivityPanel.vue'
 import AtrioUpdateScreen from '@/components/settings/AtrioUpdateScreen.vue'
 import NotificationCenter from '@/components/home/NotificationCenter.vue'
 import FilePanel from '@/components/files/FileManager.vue'
@@ -30,7 +29,6 @@ export default {
     CommandPalette,
     AppDetailsPanel,
     HardwarePanel,
-    ActivityPanel,
     AtrioUpdateScreen,
     NotificationCenter,
   },
@@ -373,7 +371,6 @@ export default {
     <CommandPalette />
     <AppDetailsPanel />
     <HardwarePanel />
-    <ActivityPanel />
     <AtrioUpdateScreen />
     <NotificationCenter />
 
