@@ -161,6 +161,21 @@ export async function importSettings(text, password, replaceKey = false) {
 	}
 }
 
+// --- Unused images: the ones CasaOS leaves behind after updates and uninstalls ---------------------
+
+/** Lists them again on the server: { images: [{ id, size, created, tags }], total }. */
+export async function scanImages() {
+	await run({ ACTION: 'images', APP: 'atrio' })
+	return readJson(`${STATE}/images.json`)
+}
+
+/** Removes the images with these ids, or every unused one with none; resolves with { removed, freed }. */
+export async function removeImages(ids = []) {
+	const status = await run({ ACTION: 'remove-images', APP: 'atrio', IMAGE: ids })
+	const [removed, freed] = String(status.message || '').split(' ').map(Number)
+	return { removed: removed || 0, freed: freed || 0 }
+}
+
 /** The key that encrypts and signs this server's backups, created with the first backup. */
 export async function backupKey() {
 	return ((await read(`${STATE}/backup.key`)) || '').trim()

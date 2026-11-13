@@ -39,6 +39,7 @@ HEALTH_STEADY="${ATRIO_HEALTH_STEADY:-20}"
 
 ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST" DEST_MOUNT="" NEW_DEST="" FROM=""
 EVERY="" AT="" DAY="" KEEP="" PASSWORD="" REPLACE_KEY=0
+IMAGES_CHOSEN=()
 # The folder new backups go to; DEST can be an older one for a restore or a delete
 CONF_DEST="$DEFAULT_DEST"
 CONF_MOUNT=""
@@ -133,11 +134,12 @@ read_request() {
 			KEEP) KEEP="$value" ;;
 			PASSWORD) PASSWORD="$value" ;;
 			REPLACE_KEY) [ "$value" = 1 ] && REPLACE_KEY=1 ;;
+			IMAGE) [[ "$value" =~ ^sha256:[0-9a-f]{64}$ ]] && IMAGES_CHOSEN+=("$value") ;;
 		esac
 	done < "$REQUEST"
 	rm -f "$REQUEST"
 	case "$ACTION" in
-		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings) ;;
+		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings|images|remove-images) ;;
 		*) ACTION=""; APP=""; ID=""; fail "Unknown request" ;;
 	esac
 	if ! [[ "$APP" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
@@ -1173,6 +1175,86 @@ do_import_settings() {
 	write_status done "" ""
 }
 
+# --- Unused images ----------------------------------------------------------------------------
+
+# Images no container uses, running or stopped, and no installed app names in its compose file:
+# CasaOS keeps the old image after every update and after an uninstall. Listed in images.json
+# for the web UI; removed only when asked, one by one or all, after checking again.
+IMAGES_INDEX="$STATE/images.json"
+
+# The ids of the images in use, one per line
+images_in_use() {
+	local ids file
+	ids=$(docker ps -aq 2>/dev/null)
+	# shellcheck disable=SC2086
+	[ -n "$ids" ] && docker inspect -f '{{.Image}}' $ids 2>/dev/null
+	# An app whose containers are gone keeps the image its compose file names
+	for file in "$APPS"/*/docker-compose.yml; do
+		[ -f "$file" ] || continue
+		sed -n 's/^[[:space:]]*image:[[:space:]]*["'"'"']\{0,1\}\([^"'"'"' ]*\).*/\1/p' "$file"
+	done | sort -u | while IFS= read -r ref; do
+		[ -n "$ref" ] && docker image inspect -f '{{.Id}}' "$ref" 2>/dev/null
+	done
+}
+
+# "id<tab>size<tab>created<tab>tags" for each unused image
+unused_images() {
+	local used
+	used=$(images_in_use | sort -u)
+	docker images -q --no-trunc 2>/dev/null | sort -u | while IFS= read -r id; do
+		[ -n "$id" ] || continue
+		printf '%s\n' "$used" | grep -Fxq -- "$id" && continue
+		docker image inspect -f '{{.Id}}{{"\t"}}{{.Size}}{{"\t"}}{{.Created}}{{"\t"}}{{join .RepoTags " "}}' "$id" 2>/dev/null
+	done
+}
+
+write_images() {
+	local first=1 total=0 id size created tags
+	{
+		printf '{"time":"%s","images":[' "$(date -Iseconds)"
+		while IFS=$'\t' read -r id size created tags; do
+			[[ "$size" =~ ^[0-9]+$ ]] || continue
+			[ "$first" = 1 ] || printf ','
+			first=0
+			total=$((total + size))
+			printf '{"id":"%s","size":%s,"created":"%s","tags":"%s"}' "$id" "$size" "$(json "$created")" "$(json "$tags")"
+		done < <(unused_images)
+		printf '],"total":%s}\n' "$total"
+	} > "$IMAGES_INDEX.tmp"
+	chmod 644 "$IMAGES_INDEX.tmp"
+	mv "$IMAGES_INDEX.tmp" "$IMAGES_INDEX"
+}
+
+docker_free() {
+	local root
+	root=$(docker info -f '{{.DockerRootDir}}' 2>/dev/null)
+	free_bytes "${root:-/var/lib/docker}"
+}
+
+# The images chosen (IMAGE lines), or all of them with none chosen, if they are still unused
+do_remove_images() {
+	local before after unused id removed=0 failed=0
+	unused=$(unused_images | cut -f1)
+	[ "${#IMAGES_CHOSEN[@]}" -gt 0 ] || mapfile -t IMAGES_CHOSEN <<< "$unused"
+	before=$(docker_free)
+	for id in ${IMAGES_CHOSEN[@]+"${IMAGES_CHOSEN[@]}"}; do
+		[ -n "$id" ] || continue
+		# In use since the list was made: never removed
+		printf '%s\n' "$unused" | grep -Fxq -- "$id" || continue
+		# -f also takes an image with several tags; it is used by no container, checked above
+		if docker image rm -f "$id" >/dev/null 2>&1; then
+			removed=$((removed + 1))
+		else
+			failed=$((failed + 1))
+		fi
+	done
+	after=$(docker_free)
+	write_images
+	ID=""
+	[ "$failed" -eq 0 ] || fail "Some images could not be removed"
+	write_status done "" "$removed $(( ${after:-0} > ${before:-0} ? after - before : 0 ))"
+}
+
 # --- Main -------------------------------------------------------------------------------------
 
 case "${1:-}" in
@@ -1222,4 +1304,13 @@ case "$ACTION" in
 	schedule) do_schedule ;;
 	export-settings) do_export_settings ;;
 	import-settings) do_import_settings ;;
+	images)
+		write_status running scanning
+		write_images
+		write_status done "" ""
+		;;
+	remove-images)
+		write_status running removing
+		do_remove_images
+		;;
 esac

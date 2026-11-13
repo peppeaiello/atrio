@@ -2,6 +2,7 @@
 import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
 import PushAlerts from '@/components/settings/PushAlerts.vue'
 import SettingsBackup from '@/components/settings/SettingsBackup.vue'
+import UnusedImages from '@/components/settings/UnusedImages.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
@@ -25,6 +26,7 @@ export default {
     AtrioUpdate,
     PushAlerts,
     SettingsBackup,
+    UnusedImages,
     AccountPanel,
   },
   mixins: [mixin],
@@ -743,6 +745,7 @@ export default {
                   </span>
                   <b-switch v-model="autoUsbMount" class="mr-0" @update:model-value="usbAutoMount" />
                 </div>
+                <UnusedImages />
               </section>
 
               <section class="atrio-settings-section">

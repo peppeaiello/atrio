@@ -830,5 +830,20 @@
   "openssl is missing on the server: the settings cannot be encrypted": "openssl is missing on the server: the settings cannot be encrypted",
   "openssl is missing on the server: the settings cannot be read": "openssl is missing on the server: the settings cannot be read",
   "Could not create a temporary folder": "Could not create a temporary folder",
-  "Could not create a temporary file": "Could not create a temporary file"
+  "Could not create a temporary file": "Could not create a temporary file",
+  "Unused app images": "Unused app images",
+  "{count} images, {size}: old versions left after updates and uninstalls": "{count} images, {size}: old versions left after updates and uninstalls",
+  "None: every image is used by an app": "None: every image is used by an app",
+  "Show": "Show",
+  "Image without a name": "Image without a name",
+  "Remove every unused image?": "Remove every unused image?",
+  "Remove this image?": "Remove this image?",
+  "{count} images that no app uses are removed, {size} in all. Apps are not touched; going back to one of these versions, for example by restoring an old backup, downloads it again.": "{count} images that no app uses are removed, {size} in all. Apps are not touched; going back to one of these versions, for example by restoring an old backup, downloads it again.",
+  "{name} is removed ({size}). No app uses it; going back to this version, for example by restoring an old backup, downloads it again.": "{name} is removed ({size}). No app uses it; going back to this version, for example by restoring an old backup, downloads it again.",
+  "{count} images removed, {size} freed": "{count} images removed, {size} freed",
+  "{count} images removed": "{count} images removed",
+  "Removing…": "Removing…",
+  "Remove all ({size})": "Remove all ({size})",
+  "Check again": "Check again",
+  "Some images could not be removed": "Some images could not be removed"
 }
