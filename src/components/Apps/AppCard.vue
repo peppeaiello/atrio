@@ -24,6 +24,8 @@ const SERVER_UPDATE_STEPS = {
   pulling: [55, 'Downloading'],
   recreating: [80, 'Starting'],
   checking: [92, 'Checking'],
+  'going-back': [95, 'Going back'],
+  restoring: [97, 'Going back'],
 }
 
 export default {

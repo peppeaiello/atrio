@@ -41,6 +41,9 @@ ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST" DEST_MOUNT=
 EVERY="" AT="" DAY="" KEEP="" PASSWORD="" REPLACE_KEY=0
 IMAGES_CHOSEN=()
 IGNORE=""
+# "service=image" for an update to the App Store's version, and set while going back after one
+NEW_IMAGES=()
+ROLLBACK=0
 # The folder new backups go to; DEST can be an older one for a restore or a delete
 CONF_DEST="$DEFAULT_DEST"
 CONF_MOUNT=""
@@ -165,6 +168,7 @@ read_request() {
 			REPLACE_KEY) [ "$value" = 1 ] && REPLACE_KEY=1 ;;
 			IMAGE) [[ "$value" =~ ^sha256:[0-9a-f]{64}$ ]] && IMAGES_CHOSEN+=("$value") ;;
 			IGNORE) [[ "$value" =~ ^[01]$ ]] && IGNORE="$value" ;;
+			SET_IMAGE) [[ "$value" =~ ^[A-Za-z0-9._-]+=[a-z0-9][a-z0-9._/:@-]*$ ]] && NEW_IMAGES+=("$value") ;;
 		esac
 	done < "$REQUEST"
 	rm -f "$REQUEST"
@@ -339,6 +343,8 @@ on_exit() {
 	[ -n "$TMP_ARCHIVE" ] && rm -f "$TMP_ARCHIVE" "$TMP_ARCHIVE.info"
 	[ -n "$UPLOAD_TMP" ] && timeout 60 rm -f "$UPLOAD_TMP"
 	rm -rf "$STAGE"
+	# A new compose file prepared for an update that stopped before using it
+	[ -n "$APP" ] && [ -d "$APPS/$APP" ] && rm -f "$APPS/$APP/docker-compose.yml.atrio-next"
 	if [ "${#STOPPED[@]}" -gt 0 ]; then
 		compose start >/dev/null 2>&1 || docker start "${STOPPED[@]}" >/dev/null 2>&1
 	fi
@@ -813,8 +819,11 @@ do_restore() {
 	free=$(df -B1 --output=avail "$APPS" | tail -n 1 | tr -d ' ')
 	[ "${free:-0}" -gt "$(info_value "$info" BYTES)" ] || fail "Not enough free space to restore this backup"
 
-	# The current state first, so that this restore can be undone too
-	if [ -f "$compose_dir/docker-compose.yml" ]; then
+	# The current state first, so that this restore can be undone too. Going back after an update
+	# that failed only stops the app: the backup made just before is the state to keep.
+	if [ "$ROLLBACK" = 1 ]; then
+		stop_app
+	elif [ -f "$compose_dir/docker-compose.yml" ]; then
 		make_archive before-restore ${current[@]+"${current[@]}"}
 		# Nothing changes until the copy to go back to is safe where it belongs
 		publish_archive
@@ -865,6 +874,7 @@ do_restore() {
 	fi
 	prune_auto
 	write_index
+	[ "$ROLLBACK" = 1 ] && return 0
 	write_status done "" ""
 }
 
@@ -1418,12 +1428,63 @@ do_ignore_updates() {
 	write_status done "" ""
 }
 
-# Updates an app to the newer image of the same tag: a backup first, then the new images, the app
-# recreated with them, and a check that it stays up. The web UI offers the backup if it does not.
+# The repository of an image reference, without its registry's default names, tag and digest
+image_repo() {
+	local ref="${1%%@*}" last
+	last="${ref##*/}"
+	[[ "$last" == *:* ]] && ref="${ref%:*}"
+	ref="${ref#docker.io/}"
+	ref="${ref#index.docker.io/}"
+	printf '%s' "${ref#library/}"
+}
+
+# Writes the App Store's images in a copy of the compose file, $1: only the "image:" line of each
+# service named, and only to another version of the same repository. Fails when anything is off.
+set_images() {
+	local file="$1" item service image current count
+	cp -p "$APPS/$APP/docker-compose.yml" "$file" || fail "The new version could not be downloaded, the app was not changed"
+	for item in "${NEW_IMAGES[@]}"; do
+		service="${item%%=*}"
+		image="${item#*=}"
+		current=$(docker ps -a --filter "label=com.docker.compose.project=$APP" --filter "label=com.docker.compose.service=$service" \
+			--format '{{.Image}}' 2>/dev/null | head -n 1)
+		if [ -z "$current" ] || [ "$(image_repo "$current")" != "$(image_repo "$image")" ]; then
+			rm -f "$file"
+			fail "The App Store's version does not match this app, it was not changed"
+		fi
+		# The service's own block: a key one level under "services:", then its image line
+		count=$(awk -v svc="$service" -v img="$image" '
+			function indent(s) { match(s, /^ */); return RLENGTH }
+			/^[^ #]/ { top = ($0 ~ /^services:[[:space:]]*$/); level = -1; mine = 0 }
+			top && /^ +[^ #]/ {
+				n = indent($0)
+				if (level < 0) level = n
+				if (n == level) { key = $0; sub(/^ +/, "", key); sub(/:.*/, "", key); gsub(/["'"'"']/, "", key); mine = (key == svc); child = -1 }
+				else if (mine && n > level) {
+					# Only the service'"'"'s own keys, not the ones nested under them
+					if (child < 0) child = n
+					if (n == child && $0 ~ /^ +image:/) { sub(/image:.*/, "image: " img); done++ }
+				}
+			}
+			{ print > "/dev/stderr" }
+			END { print done + 0 }' "$file" 2>"$file.next")
+		if [ "$count" != 1 ]; then
+			rm -f "$file" "$file.next"
+			fail "The App Store's version does not match this app, it was not changed"
+		fi
+		mv "$file.next" "$file"
+	done
+}
+
+# Updates an app: to the App Store's version (SET_IMAGE lines), or to the newer image of the same tag.
+# A backup first, then the new images, the app recreated with them and a check that it stays up;
+# if it does not, the app goes back to that backup on its own, also with no browser open.
 do_update_app() {
-	local folders=()
-	[ -f "$APPS/$APP/docker-compose.yml" ] || fail "Unknown app"
+	local folders=() compose_file="$APPS/$APP/docker-compose.yml" next="$APPS/$APP/docker-compose.yml.atrio-next"
+	[ -f "$compose_file" ] || fail "Unknown app"
 	REASON=before-update
+	# The App Store's version is checked before anything else happens
+	[ "${#NEW_IMAGES[@]}" -gt 0 ] && set_images "$next"
 	require_dest
 	mapfile -t folders < <(backup_folders)
 	make_archive before-update ${folders[@]+"${folders[@]}"}
@@ -1432,20 +1493,37 @@ do_update_app() {
 	publish_archive
 	prune_auto
 	write_index
+	local before="$compose_file.atrio-before-update"
+	cp -p "$compose_file" "$before" || fail "The new version could not be downloaded, the app was not changed"
+	[ -f "$next" ] && mv "$next" "$compose_file"
 	write_status running pulling
-	compose pull >/dev/null 2>&1 || fail "The new version could not be downloaded, the app was not changed"
+	if ! compose pull >/dev/null 2>&1; then
+		mv "$before" "$compose_file"
+		fail "The new version could not be downloaded, the app was not changed"
+	fi
 	write_status running recreating
 	# A stopped app gets the new version but stays stopped
-	if [ "$RUNNING_BEFORE" = 1 ]; then
-		compose up -d >/dev/null 2>&1 || fail "The app could not be started with the new version"
-		write_status running checking
-		app_health || fail "The app was updated but is not running properly"
-	else
-		compose up --no-start >/dev/null 2>&1 || fail "The app could not be started with the new version"
+	local up=(up -d)
+	[ "$RUNNING_BEFORE" = 1 ] || up=(up --no-start)
+	if ! compose "${up[@]}" >/dev/null 2>&1 || { [ "$RUNNING_BEFORE" = 1 ] && write_status running checking && ! app_health; }; then
+		rm -f "$before"
+		roll_back
 	fi
+	rm -f "$before"
 	check_updates "$APP" >/dev/null
-	APP="${APP:-}"
 	write_status done "" ""
+}
+
+# The new version did not come up: back to the backup made just before, compose file and data
+roll_back() {
+	write_status running "going-back"
+	ROLLBACK=1
+	FROM=""
+	DEST="$CONF_DEST"
+	DEST_MOUNT="$CONF_MOUNT"
+	do_restore
+	check_updates "$APP" >/dev/null
+	fail "The new version did not start, so the app went back to how it was before the update"
 }
 
 # --- Main -------------------------------------------------------------------------------------

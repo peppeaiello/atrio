@@ -277,21 +277,51 @@ async function checkDigest(name) {
 	}
 }
 
-// The server makes a backup, downloads the new images of the same tags, recreates the app and checks it
-async function updateByDigest(vm, name, title, quiet) {
+const ROLLED_BACK = 'The new version did not start, so the app went back to how it was before the update'
+
+// The server makes a backup, writes the App Store's images (`images`, "service=image") if any, downloads
+// them, recreates the app and checks it; if it does not come up, it goes back to the backup on its own.
+// Rejects with 'Unknown request' when the service on the server is older than this.
+async function updateOnServer(vm, name, title, quiet, images = []) {
 	if (!quiet) vm.$buefy.toast.open({ message: vm.$t('Saving a backup of {title}, then updating it…', { title }), type: 'is-info', duration: 5000 })
 	try {
-		await run({ ACTION: 'update-app', APP: name })
+		await run({ ACTION: 'update-app', APP: name, SET_IMAGE: images })
 		if (!quiet) vm.$buefy.toast.open({ message: vm.$t('{title} is updated', { title }), type: 'is-success' })
 		return 'updated'
 	}
 	catch (e) {
-		const backup = e.status?.id
+		if (e.message === 'Unknown request') throw e
 		if (!quiet) {
-			if (backup && e.message === 'The app was updated but is not running properly') askToGoBack(vm, name, title, backup)
-			else vm.$buefy.toast.open({ message: vm.$t('{title} was not updated: {reason}', { title, reason: vm.$t(e.message) }), type: 'is-danger', duration: 10000 })
+			vm.$buefy.toast.open({
+				message: e.message === ROLLED_BACK
+					? vm.$t('{title} did not start with the new version, so Atrio put it back as it was before the update.', { title })
+					: vm.$t('{title} was not updated: {reason}', { title, reason: vm.$t(e.message) }),
+				type: e.message === ROLLED_BACK ? 'is-warning' : 'is-danger',
+				duration: 12000,
+			})
 		}
 		return 'failed'
+	}
+}
+
+// The App Store's image for each service whose image it changes, as "service=image". Like CasaOS, a
+// service on "latest" keeps its image. Null when the App Store's version cannot be read.
+async function storeImages(openAPI, name) {
+	try {
+		const { appStore, compose } = openAPI.appManagement
+		const mine = (await compose.myComposeApp(name)).data.data
+		const storeId = mine.store_info?.store_app_id || name
+		const store = (await appStore.composeApp(storeId)).data.data?.compose?.services || {}
+		const images = []
+		for (const [service, { image }] of Object.entries(mine.compose?.services || {})) {
+			const next = store[service]?.image
+			if (!next || !image || next === image || /:latest(@|$)/.test(image) || !/:/.test(image.split('/').pop())) continue
+			images.push(`${service}=${next}`)
+		}
+		return images
+	}
+	catch (e) {
+		return null
 	}
 }
 
@@ -306,7 +336,14 @@ export async function updateApp(vm, name, title, { quiet = false } = {}) {
 	const older = await findDowngrade(vm.$openAPI, name)
 	if (older) {
 		// The App Store's tag is not taken, but a newer image of the tag the app has now is fine
-		if (await backupsInstalled() && await checkDigest(name) === 'update') return updateByDigest(vm, name, title, quiet)
+		if (await backupsInstalled() && await checkDigest(name) === 'update') {
+			try {
+				return await updateOnServer(vm, name, title, quiet)
+			}
+			catch (e) {
+				return 'failed'
+			}
+		}
 		if (!quiet) {
 			vm.$buefy.toast.open({
 				message: vm.$t('{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.', { title, ...older }),
@@ -328,10 +365,30 @@ export async function updateApp(vm, name, title, { quiet = false } = {}) {
 	// Nothing newer in the App Store: an app on "latest" may still have a newer image of the same tag
 	if (!hasUpdate && await backupsInstalled()) {
 		const state = await checkDigest(name)
-		if (state === 'update') return updateByDigest(vm, name, title, quiet)
+		if (state === 'update') {
+			try {
+				return await updateOnServer(vm, name, title, quiet)
+			}
+			catch (e) {
+				return 'failed'
+			}
+		}
 		if (state === 'current') {
 			if (!quiet) vm.$buefy.toast.open({ message: vm.$t('{title} is up to date', { title }), type: 'is-info' })
 			return 'current'
+		}
+	}
+
+	// The App Store's version, on the server: backup, new version, and back on its own if it does not start
+	if (hasUpdate && await backupsInstalled()) {
+		const images = await storeImages(vm.$openAPI, name)
+		if (images?.length) {
+			try {
+				return await updateOnServer(vm, name, title, quiet, images)
+			}
+			catch (e) {
+				// A service older than 0.1.18: CasaOS updates it, with the backup and the watch below
+			}
 		}
 	}
 

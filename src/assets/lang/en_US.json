@@ -900,5 +900,9 @@
   "every {day} at {time}": "every {day} at {time}",
   "What happened on this server: installs, updates, backups and restores, also while Atrio was closed.": "What happened on this server: installs, updates, backups and restores, also while Atrio was closed.",
   "Nothing yet": "Nothing yet",
-  "Installs, updates, backups and restores appear here as they happen.": "Installs, updates, backups and restores appear here as they happen."
+  "Installs, updates, backups and restores appear here as they happen.": "Installs, updates, backups and restores appear here as they happen.",
+  "{title} did not start with the new version, so Atrio put it back as it was before the update.": "{title} did not start with the new version, so Atrio put it back as it was before the update.",
+  "The new version did not start, so the app went back to how it was before the update": "The new version did not start, so the app went back to how it was before the update",
+  "The App Store's version does not match this app, it was not changed": "The App Store's version does not match this app, it was not changed",
+  "Going back": "Going back"
 }

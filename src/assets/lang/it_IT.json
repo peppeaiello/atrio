@@ -900,5 +900,9 @@
   "every {day} at {time}": "ogni {day} alle {time}",
   "What happened on this server: installs, updates, backups and restores, also while Atrio was closed.": "Cosa è successo su questo server: installazioni, aggiornamenti, backup e ripristini, anche mentre Atrio era chiuso.",
   "Nothing yet": "Ancora niente",
-  "Installs, updates, backups and restores appear here as they happen.": "Installazioni, aggiornamenti, backup e ripristini compaiono qui man mano che avvengono."
+  "Installs, updates, backups and restores appear here as they happen.": "Installazioni, aggiornamenti, backup e ripristini compaiono qui man mano che avvengono.",
+  "{title} did not start with the new version, so Atrio put it back as it was before the update.": "{title} non è partita con la nuova versione, quindi Atrio l'ha rimessa com'era prima dell'aggiornamento.",
+  "The new version did not start, so the app went back to how it was before the update": "La nuova versione non è partita, quindi l'app è tornata com'era prima dell'aggiornamento",
+  "The App Store's version does not match this app, it was not changed": "La versione dell'App Store non corrisponde a quest'app, che non è stata cambiata",
+  "Going back": "Ritorno indietro"
 }
