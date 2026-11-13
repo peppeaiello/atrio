@@ -845,5 +845,16 @@
   "Removing…": "Rimozione…",
   "Remove all ({size})": "Rimuovi tutte ({size})",
   "Check again": "Controlla di nuovo",
-  "Some images could not be removed": "Alcune immagini non sono state rimosse"
+  "Some images could not be removed": "Alcune immagini non sono state rimosse",
+  "Saving a backup of {title}, then updating it…": "Salvo un backup di {title}, poi lo aggiorno…",
+  "{title} is updated": "{title} è aggiornata",
+  "{title} was not updated: {reason}": "{title} non è stata aggiornata: {reason}",
+  "{title} is up to date": "{title} è già aggiornata",
+  "The new version could not be downloaded, the app was not changed": "Non è stato possibile scaricare la nuova versione, l'app non è stata cambiata",
+  "The app could not be started with the new version": "Non è stato possibile avviare l'app con la nuova versione",
+  "The app was updated but is not running properly": "L'app è stata aggiornata ma non funziona correttamente",
+  "Downloading the new version…": "Download della nuova versione…",
+  "Starting the new version…": "Avvio della nuova versione…",
+  "Saving a backup": "Backup in corso",
+  "Checking": "Controllo"
 }

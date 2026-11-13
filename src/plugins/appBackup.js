@@ -70,7 +70,7 @@ async function run(fields) {
 			if (status?.token === token) {
 				backupRun.step = status.step
 				if (status.state === 'done') return status
-				if (status.state === 'error') throw new Error(status.message)
+				if (status.state === 'error') throw Object.assign(new Error(status.message), { status })
 			}
 			else if (status?.state === 'running') {
 				// An automatic backup is running: the service takes this request once it is done
@@ -252,15 +252,54 @@ function watchUpdate(vm, name, title, backupId) {
 	setTimeout(check, WATCH_POLL_MS)
 }
 
+// --- New versions by digest: apps on "latest", which the App Store never offers an update for ------
+
+/** What the server found last time: { [app]: { state: 'update' | 'current' | 'unknown', checked, services } }. */
+export async function loadDigestUpdates() {
+	return (await readJson(`${STATE}/updates.json`))?.apps || {}
+}
+
+/** Asks the registries again for one app; resolves with its state, or '' when the service cannot. */
+async function checkDigest(name) {
+	try {
+		await run({ ACTION: 'check-updates', APP: name })
+		return (await loadDigestUpdates())[name]?.state || ''
+	}
+	catch (e) {
+		return ''
+	}
+}
+
+// The server makes a backup, downloads the new images of the same tags, recreates the app and checks it
+async function updateByDigest(vm, name, title, quiet) {
+	if (!quiet) vm.$buefy.toast.open({ message: vm.$t('Saving a backup of {title}, then updating it…', { title }), type: 'is-info', duration: 5000 })
+	try {
+		await run({ ACTION: 'update-app', APP: name })
+		if (!quiet) vm.$buefy.toast.open({ message: vm.$t('{title} is updated', { title }), type: 'is-success' })
+		return 'updated'
+	}
+	catch (e) {
+		const backup = e.status?.id
+		if (!quiet) {
+			if (backup && e.message === 'The app was updated but is not running properly') askToGoBack(vm, name, title, backup)
+			else vm.$buefy.toast.open({ message: vm.$t('{title} was not updated: {reason}', { title, reason: vm.$t(e.message) }), type: 'is-danger', duration: 10000 })
+		}
+		return 'failed'
+	}
+}
+
 /**
  * Updates one app, safely: not when it would go back to an older version, and with a backup first.
- * `vm` is the calling component. Resolves with 'kept' (would go back), 'current' (nothing newer), 'failed' or 'started'.
+ * `vm` is the calling component. Resolves with 'kept' (would go back), 'current' (nothing newer), 'failed', 'started'
+ * (CasaOS updates it in the background) or 'updated' (a newer image of the same tag, already done on the server).
  * With `quiet`, nothing is asked or shown, for bulk actions.
  */
 export async function updateApp(vm, name, title, { quiet = false } = {}) {
 	const compose = vm.$openAPI.appManagement.compose
 	const older = await findDowngrade(vm.$openAPI, name)
 	if (older) {
+		// The App Store's tag is not taken, but a newer image of the tag the app has now is fine
+		if (await backupsInstalled() && await checkDigest(name) === 'update') return updateByDigest(vm, name, title, quiet)
 		if (!quiet) {
 			vm.$buefy.toast.open({
 				message: vm.$t('{title} stays on {installed}: the App Store only offers {store}, which could stop it from working. To change version, edit the tag in its settings.', { title, ...older }),
@@ -279,6 +318,16 @@ export async function updateApp(vm, name, title, { quiet = false } = {}) {
 	catch (e) {
 		// Asked again by CasaOS itself when updating
 	}
+	// Nothing newer in the App Store: an app on "latest" may still have a newer image of the same tag
+	if (!hasUpdate && await backupsInstalled()) {
+		const state = await checkDigest(name)
+		if (state === 'update') return updateByDigest(vm, name, title, quiet)
+		if (state === 'current') {
+			if (!quiet) vm.$buefy.toast.open({ message: vm.$t('{title} is up to date', { title }), type: 'is-info' })
+			return 'current'
+		}
+	}
+
 	if (hasUpdate && await backupsInstalled()) {
 		if (!quiet) vm.$buefy.toast.open({ message: vm.$t('Saving a backup of {title} before updating…', { title }), type: 'is-info', duration: 5000 })
 		try {

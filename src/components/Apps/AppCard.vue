@@ -14,6 +14,17 @@ import { backupRun, updateApp } from '@/plugins/appBackup'
 // The update ring, the same size as the install one
 const PULL_RADIUS = 30
 const PULL_CIRCUMFERENCE = 2 * Math.PI * PULL_RADIUS
+// Atrio: the steps of an update run by the server (atrio-backup update-app): ring position and label
+const SERVER_UPDATE_STEPS = {
+  preparing: [5, 'Saving a backup'],
+  stopping: [10, 'Saving a backup'],
+  archiving: [20, 'Saving a backup'],
+  starting: [35, 'Saving a backup'],
+  uploading: [40, 'Saving a backup'],
+  pulling: [55, 'Downloading'],
+  recreating: [80, 'Starting'],
+  checking: [92, 'Checking'],
+}
 
 export default {
   name: 'AppCard',
@@ -83,17 +94,29 @@ export default {
       return this.$t('Open {name}', { name: this.title })
     },
     // Quiet status: running is the normal case, only exceptions get a visible label
+    // Atrio: an update the server runs (a newer image of the same tag) moves the ring step by step
+    serverUpdate() {
+      return backupRun.app === this.item.name && backupRun.action === 'update-app'
+    },
+    progress() {
+      if (this.pullProgress !== null) return this.pullProgress
+      if (this.serverUpdate) return SERVER_UPDATE_STEPS[backupRun.step]?.[0] ?? 5
+      if (this.isCheckThenUpdate) return 0
+      return null
+    },
     isPulling() {
-      return this.pullProgress !== null
+      return this.progress !== null
     },
     pullOffset() {
-      return PULL_CIRCUMFERENCE * (1 - Math.min(100, Math.max(0, this.pullProgress || 0)) / 100)
+      return PULL_CIRCUMFERENCE * (1 - Math.min(100, Math.max(0, this.progress || 0)) / 100)
     },
     backingUp() {
-      return backupRun.app === this.item.name && backupRun.action !== 'scan'
+      return backupRun.app === this.item.name && backupRun.action !== 'scan' && backupRun.action !== 'check-updates'
     },
     statusPill() {
+      if (this.serverUpdate) return this.$t(SERVER_UPDATE_STEPS[backupRun.step]?.[1] || 'Updating')
       if (this.backingUp) return backupRun.action === 'restore' ? this.$t('Restoring') : this.$t('Backing up')
+      if (this.isCheckThenUpdate && this.pullProgress === null) return this.$t('Checking for updates…')
       if (this.isPulling) return this.pullProgress < 100 ? `${this.$t('Downloading')} ${this.pullProgress}%` : this.$t('Updating')
       if (this.item.app_type === 'system' || !this.item.status) return ''
       if (this.isStopped) return this.$t('Stopped')
@@ -621,10 +644,16 @@ export default {
 
     async checkAppVersion(name) {
       this.isCheckThenUpdate = true
+      // Atrio: the tile shows the progress, the menu does not stay open over it
+      this.$refs.dro.isActive = false
       try {
-        if (await updateApp(this, name, this.title) === 'started') {
+        const outcome = await updateApp(this, name, this.title)
+        if (outcome === 'started') {
           // messageBus :: apps_checkThenUpdate
           this.$messageBus('apps_checkupdate', this.item.name.toString())
+        }
+        else if (outcome === 'updated') {
+          this.$EventBus.$emit('atrio:refresh-apps')
         }
       }
       finally {
@@ -912,19 +941,19 @@ export default {
               <span v-if="statusClass.includes('is-running')" aria-hidden="true" class="atrio-icon-dot" />
               <!-- Atrio: download of an update, with the same ring as an install -->
               <div
-                v-if="isPulling" :aria-label="`${title}: ${statusPill}`" :aria-valuenow="pullProgress < 100 ? pullProgress : undefined"
-                :class="{ 'is-restarting': pullProgress >= 100 }" aria-valuemax="100" aria-valuemin="0" class="atrio-pull-ring" role="progressbar"
+                v-if="isPulling" :aria-label="`${title}: ${statusPill}`" :aria-valuenow="progress < 100 ? progress : undefined"
+                :class="{ 'is-restarting': progress >= 100 }" aria-valuemax="100" aria-valuemin="0" class="atrio-pull-ring" role="progressbar"
               >
                 <svg aria-hidden="true" viewBox="0 0 72 72">
                   <circle :r="pullRadius" class="atrio-installing-track" cx="36" cy="36" />
                   <circle
-                    :r="pullRadius" :stroke-dasharray="pullCircumference" :stroke-dashoffset="pullProgress < 100 ? pullOffset : pullCircumference * 0.72"
+                    :r="pullRadius" :stroke-dasharray="pullCircumference" :stroke-dashoffset="progress < 100 ? pullOffset : pullCircumference * 0.72"
                     class="atrio-installing-ring" cx="36" cy="36"
                   />
                 </svg>
-                <span v-if="pullProgress > 0 && pullProgress < 100" class="atrio-installing-percent">{{ pullProgress }}%</span>
+                <span v-if="progress > 0 && progress < 100" class="atrio-installing-percent">{{ progress }}%</span>
                 <!-- Download done: the container is being recreated -->
-                <b-icon v-else-if="pullProgress >= 100" class="atrio-pull-restart" custom-size="mdi-24px" icon="restart" pack="mdi" />
+                <b-icon v-else-if="progress >= 100" class="atrio-pull-restart" custom-size="mdi-24px" icon="restart" pack="mdi" />
               </div>
               <!-- Unstable -->
               <CTooltip v-if="newAppIds.includes(item.name)" class="__position" content="NEW" />

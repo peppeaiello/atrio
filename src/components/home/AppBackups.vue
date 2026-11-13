@@ -19,6 +19,8 @@ const STEPS = {
 	restoring: 'Putting the files back…',
 	starting: 'Starting the app…',
 	waiting: 'Waiting for an automatic backup to finish…',
+	pulling: 'Downloading the new version…',
+	recreating: 'Starting the new version…',
 }
 const NO_PLAN = { every: 'off', time: '03:00', day: 1, keep: 7 }
 

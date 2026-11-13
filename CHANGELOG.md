@@ -14,6 +14,15 @@ What changes in each Atrio release. The section for a version is also the text o
   uninstall, and they add up (on our test server, 16 images and about 18 GB, mostly old Immich versions). Atrio lists
   the images that no container, running or stopped, and no installed app uses, with their size and date, and removes
   them one by one or all together, showing the space freed. Nothing is removed on its own.
+- **Update available for apps on "latest" too.** CasaOS only offers an update when the App Store moves an app to
+  another tag, so apps on `latest`, or on a tag like `3` that keeps getting new builds, never showed one. Every 6
+  hours the server now asks each registry (Docker Hub, GitHub, linuxserver and others) which image the app's tag
+  points at, and the tile shows Update available when it is newer than the one running. Update now saves a backup,
+  downloads the new image of the same tag, recreates the app and checks that it stays up, offering the backup if it
+  does not. The tag never changes, and nothing updates on its own. Apps pinned to a digest, and images built on the
+  server, are left out.
+- While an app updates, its tile shows each step on its ring (backup, download, start, check) instead of the menu
+  staying open with a loading animation.
 
 **Fixed**
 

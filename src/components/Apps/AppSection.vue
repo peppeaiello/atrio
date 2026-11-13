@@ -203,7 +203,7 @@ import isEqual from 'lodash/isEqual'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import YAML from 'yamljs'
 import { findDowngrade } from '@/plugins/appVersions'
-import { updateApp } from '@/plugins/appBackup'
+import { loadDigestUpdates, updateApp } from '@/plugins/appBackup'
 
 const SYNCTHING_STORE_ID = 74
 
@@ -358,7 +358,7 @@ export default {
 	beforeDestroy () {
 		this.$EventBus.$off(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, this.openSyncthingStore)
 		this.$EventBus.$off(events.RELOAD_APP_LIST, this.getList)
-		this.$EventBus.$off('atrio:refresh-apps', this.getList)
+		this.$EventBus.$off('atrio:refresh-apps', this.refreshApps)
 		this.$EventBus.$off('atrio:config-app', this.openConfigFromPanel)
 		window.removeEventListener('resize', this.getSkCount)
 		window.removeEventListener('keydown', this.onSelectKey)
@@ -371,7 +371,7 @@ export default {
 		window.addEventListener('resize', this.getSkCount)
 		this.getSkCount()
 		// From the app details panel
-		this.$EventBus.$on('atrio:refresh-apps', this.getList)
+		this.$EventBus.$on('atrio:refresh-apps', this.refreshApps)
 		this.$EventBus.$on('atrio:config-app', this.openConfigFromPanel)
 	},
 	watch: {
@@ -467,6 +467,7 @@ export default {
 				for (const name of names) outcomes.push(await updateApp(this, name, title(name), { quiet: true }))
 				kept = names.filter((name, index) => outcomes[index] === 'kept')
 				results = outcomes.map(outcome => ({ status: outcome === 'failed' ? 'rejected' : 'fulfilled' }))
+				this.loadUpdates()
 				if (kept.length) {
 					this.$buefy.toast.open({
 						message: this.$t('Not updated, the App Store only offers an older version: {names}', { names: kept.map(title).join(', ') }),
@@ -536,13 +537,21 @@ export default {
 				// Private window: the choice lasts until the page closes
 			}
 		},
+		// After an action: the list and the update badges
+		refreshApps () {
+			this.getList()
+			this.loadUpdates()
+		},
 		async loadUpdates () {
 			try {
 				const res = await this.$openAPI.appManagement.compose.myComposeAppList()
 				const apps = Object.entries(res.data.data || {})
+				// Atrio: apps on "latest" get theirs from the digests the server checks every 6 hours
+				const digests = await loadDigestUpdates()
 				this.updates = Object.fromEntries(await Promise.all(apps.map(async ([name, app]) => [
 					name,
-					Boolean(app.update_available) && !(await findDowngrade(this.$openAPI, name, app.compose)),
+					(Boolean(app.update_available) && !(await findDowngrade(this.$openAPI, name, app.compose)))
+						|| digests[name]?.state === 'update',
 				])))
 			} catch (e) {
 				// Kept as it was: checked again in a minute

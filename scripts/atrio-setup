@@ -176,6 +176,30 @@ OnCalendar=*:0/15
 WantedBy=timers.target
 UNIT
 
+# New versions of apps on "latest": the registries are asked every 6 hours
+cat > /etc/systemd/system/atrio-check-updates.service <<'UNIT'
+[Unit]
+Description=Check the registries for new versions of the apps
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-backup --check-updates
+TimeoutStartSec=30min
+UNIT
+
+cat > /etc/systemd/system/atrio-check-updates.timer <<'UNIT'
+[Unit]
+Description=Check for new versions of the apps every 6 hours
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+UNIT
+
 systemctl daemon-reload
 systemctl reset-failed atrio-backup.path atrio-backup.service 2>/dev/null || true
 systemctl enable --now atrio-update.path >/dev/null
@@ -184,6 +208,7 @@ systemctl enable --now atrio-alerts.timer >/dev/null
 systemctl enable --now atrio-alerts-test.path >/dev/null
 systemctl enable --now atrio-backup.path >/dev/null
 systemctl enable --now atrio-backup-schedule.timer >/dev/null
+systemctl enable --now atrio-check-updates.timer >/dev/null
 echo "Starting push alerts and backups..."
 # A first run writes the status the settings read (alerts stay off until set up there)
 [ "$MODE" = "--update" ] || /usr/local/bin/atrio-alerts || true

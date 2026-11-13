@@ -139,7 +139,7 @@ read_request() {
 	done < "$REQUEST"
 	rm -f "$REQUEST"
 	case "$ACTION" in
-		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings|images|remove-images) ;;
+		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings|images|remove-images|check-updates|update-app) ;;
 		*) ACTION=""; APP=""; ID=""; fail "Unknown request" ;;
 	esac
 	if ! [[ "$APP" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
@@ -1255,11 +1255,156 @@ do_remove_images() {
 	write_status done "" "$removed $(( ${after:-0} > ${before:-0} ? after - before : 0 ))"
 }
 
+# --- New versions by digest -------------------------------------------------------------------
+
+# CasaOS only offers an update when the App Store moves an app to another tag, so apps on "latest"
+# (or on a tag that is published again) never get one. Here the registry is asked for the digest
+# the tag points at now, with HEAD requests (not counted in Docker Hub's limit), and compared with
+# the digests of the image each container runs. Results in updates.json, read by the web UI.
+UPDATES_TSV="$STATE/updates.tsv"
+UPDATES_JSON="$STATE/updates.json"
+ACCEPT="application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json"
+
+# The digest the registry gives for an image reference now, or nothing
+remote_digest() {
+	local ref="$1" last tag first host repo url headers auth realm service scope token code
+	[[ "$ref" =~ ^[a-z0-9][a-z0-9._/:-]*$ ]] || return 1
+	last="${ref##*/}"
+	if [[ "$last" == *:* ]]; then
+		tag="${last##*:}"
+		ref="${ref%:*}"
+	else
+		tag=latest
+	fi
+	first="${ref%%/*}"
+	if [[ "$ref" == */* ]] && { [[ "$first" == *.* ]] || [[ "$first" == *:* ]] || [ "$first" = localhost ]; }; then
+		host="$first"
+		repo="${ref#*/}"
+	else
+		host=registry-1.docker.io
+		repo="$ref"
+		[[ "$repo" == */* ]] || repo="library/$repo"
+	fi
+	[ "$host" = docker.io ] && host=registry-1.docker.io
+	url="https://$host/v2/$repo/manifests/$tag"
+	headers=$(curl -sSI -L --connect-timeout 10 --max-time 30 -H "Accept: $ACCEPT" "$url" 2>/dev/null | tr -d '\r')
+	code=$(printf '%s\n' "$headers" | awk '/^HTTP\//{c=$2} END{print c}')
+	if [ "$code" = 401 ]; then
+		# Anonymous token, as docker pull gets one
+		auth=$(printf '%s\n' "$headers" | grep -i '^www-authenticate: *bearer' | tail -n 1)
+		realm=$(printf '%s' "$auth" | sed -n 's/.*realm="\([^"]*\)".*/\1/p')
+		service=$(printf '%s' "$auth" | sed -n 's/.*service="\([^"]*\)".*/\1/p')
+		scope=$(printf '%s' "$auth" | sed -n 's/.*scope="\([^"]*\)".*/\1/p')
+		[[ "$realm" =~ ^https:// ]] || return 1
+		token=$(curl -fsS -G --connect-timeout 10 --max-time 30 "$realm" --data-urlencode "service=$service" --data-urlencode "scope=$scope" 2>/dev/null \
+			| sed -n 's/.*"\(access_\)\{0,1\}token" *: *"\([^"]*\)".*/\2/p' | head -n 1)
+		[ -n "$token" ] || return 1
+		headers=$(curl -sSI -L --connect-timeout 10 --max-time 30 -H "Accept: $ACCEPT" -H "Authorization: Bearer $token" "$url" 2>/dev/null | tr -d '\r')
+		code=$(printf '%s\n' "$headers" | awk '/^HTTP\//{c=$2} END{print c}')
+	fi
+	[ "$code" = 200 ] || return 1
+	printf '%s\n' "$headers" | grep -i '^docker-content-digest:' | tail -n 1 | awk '{print $2}' | grep -E '^sha256:[0-9a-f]{64}$'
+}
+
+# One app: "update" when a service's image has a newer digest, "current", or "unknown" when the
+# registry could not be asked or the image was built here. Prints its line for updates.tsv.
+check_app() {
+	local app="$1" ids id line service ref image local_digests remote state any=current details="" first=1
+	APP="$app"
+	ids=$(container_ids)
+	for id in $ids; do
+		line=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.service"}}{{"\t"}}{{.Config.Image}}{{"\t"}}{{.Image}}' "$id" 2>/dev/null) || continue
+		IFS=$'\t' read -r service ref image <<< "$line"
+		state=unknown
+		if [[ "$ref" != *@* ]]; then
+			local_digests=$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$image" 2>/dev/null | sed -n 's/.*@//p')
+			if [ -n "$local_digests" ] && remote=$(remote_digest "$ref") && [ -n "$remote" ]; then
+				if printf '%s\n' "$local_digests" | grep -Fxq -- "$remote"; then state=current; else state=update; fi
+			fi
+		fi
+		case "$state" in
+			update) any=update ;;
+			unknown) [ "$any" = current ] && any=unknown ;;
+		esac
+		[ "$first" = 1 ] || details="$details,"
+		first=0
+		details="$details{\"service\":\"$(json "$service")\",\"image\":\"$(json "$ref")\",\"state\":\"$state\"}"
+	done
+	[ -n "$ids" ] || any=unknown
+	printf '%s\t%s\t%s\t[%s]\n' "$app" "$any" "$(date -Iseconds)" "$details"
+}
+
+write_updates() {
+	local app state checked details first=1
+	{
+		printf '{"time":"%s","apps":{' "$(date -Iseconds)"
+		[ -f "$UPDATES_TSV" ] && while IFS=$'\t' read -r app state checked details; do
+			[ -d "$APPS/$app" ] || continue
+			[ "$first" = 1 ] || printf ','
+			first=0
+			printf '"%s":{"state":"%s","checked":"%s","services":%s}' "$app" "$state" "$checked" "$details"
+		done < "$UPDATES_TSV"
+		printf '}}\n'
+	} > "$UPDATES_JSON.tmp"
+	chmod 644 "$UPDATES_JSON.tmp"
+	mv "$UPDATES_JSON.tmp" "$UPDATES_JSON"
+}
+
+# Every installed app, or only $1
+check_updates() {
+	local app line
+	touch "$UPDATES_TSV"
+	for app in $(find "$APPS" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null); do
+		[[ "$app" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] && [ -f "$APPS/$app/docker-compose.yml" ] || continue
+		[ -z "${1:-}" ] || [ "$app" = "$1" ] || continue
+		line=$(check_app "$app")
+		{ awk -F'\t' -v app="$app" '$1 != app' "$UPDATES_TSV"; printf '%s\n' "$line"; } > "$UPDATES_TSV.tmp"
+		mv "$UPDATES_TSV.tmp" "$UPDATES_TSV"
+	done
+	APP="${1:-atrio}"
+	write_updates
+}
+
+# Updates an app to the newer image of the same tag: a backup first, then the new images, the app
+# recreated with them, and a check that it stays up. The web UI offers the backup if it does not.
+do_update_app() {
+	local folders=()
+	[ -f "$APPS/$APP/docker-compose.yml" ] || fail "Unknown app"
+	REASON=before-update
+	require_dest
+	mapfile -t folders < <(backup_folders)
+	make_archive before-update ${folders[@]+"${folders[@]}"}
+	ID="$LAST_ID"
+	start_again
+	publish_archive
+	prune_auto
+	write_index
+	write_status running pulling
+	compose pull >/dev/null 2>&1 || fail "The new version could not be downloaded, the app was not changed"
+	write_status running recreating
+	# A stopped app gets the new version but stays stopped
+	if [ "$RUNNING_BEFORE" = 1 ]; then
+		compose up -d >/dev/null 2>&1 || fail "The app could not be started with the new version"
+		write_status running checking
+		app_health || fail "The app was updated but is not running properly"
+	else
+		compose up --no-start >/dev/null 2>&1 || fail "The app could not be started with the new version"
+	fi
+	check_updates "$APP" >/dev/null
+	APP="${APP:-}"
+	write_status done "" ""
+}
+
 # --- Main -------------------------------------------------------------------------------------
 
 case "${1:-}" in
 	--scheduled)
 		run_schedules
+		exit 0
+		;;
+	--check-updates)
+		command -v docker >/dev/null && command -v curl >/dev/null || exit 0
+		check_updates
 		exit 0
 		;;
 	--scheduled-app)
@@ -1312,5 +1457,14 @@ case "$ACTION" in
 	remove-images)
 		write_status running removing
 		do_remove_images
+		;;
+	check-updates)
+		write_status running checking
+		[ "$APP" = atrio ] && check_updates || check_updates "$APP"
+		write_status done "" ""
+		;;
+	update-app)
+		write_status running preparing
+		do_update_app
 		;;
 esac

@@ -845,5 +845,16 @@
   "Removing…": "Removing…",
   "Remove all ({size})": "Remove all ({size})",
   "Check again": "Check again",
-  "Some images could not be removed": "Some images could not be removed"
+  "Some images could not be removed": "Some images could not be removed",
+  "Saving a backup of {title}, then updating it…": "Saving a backup of {title}, then updating it…",
+  "{title} is updated": "{title} is updated",
+  "{title} was not updated: {reason}": "{title} was not updated: {reason}",
+  "{title} is up to date": "{title} is up to date",
+  "The new version could not be downloaded, the app was not changed": "The new version could not be downloaded, the app was not changed",
+  "The app could not be started with the new version": "The app could not be started with the new version",
+  "The app was updated but is not running properly": "The app was updated but is not running properly",
+  "Downloading the new version…": "Downloading the new version…",
+  "Starting the new version…": "Starting the new version…",
+  "Saving a backup": "Saving a backup",
+  "Checking": "Checking"
 }
