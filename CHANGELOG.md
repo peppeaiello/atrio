@@ -2,7 +2,7 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
-## 0.1.17 — unreleased
+## 0.1.17 — 2026-11-13
 
 **Run the install command one last time** after updating to this version: from now on, updating Atrio from the
 settings also updates the services on the server (updater, push alerts, backups), so new versions no longer ask for
