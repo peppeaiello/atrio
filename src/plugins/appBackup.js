@@ -99,6 +99,68 @@ export const forgetFolder = (app, from) => run({ ACTION: 'forget', APP: app, FRO
 export const saveSchedule = (app, { every, time, day, keep }, folders) =>
 	run({ ACTION: 'schedule', APP: app, EVERY: every, TIME: time, DAY: day, KEEP: keep, FOLDER: folders || [] })
 
+// --- Settings file: everything needed to set Atrio up again on a new machine ---------------------
+
+// Saved by the CasaOS user service for the account: dashboard, wallpaper, widgets, app order, links
+const CUSTOM_KEYS = ['system', 'wallpaper', 'widgets_config', 'app_order', 'shortcut', 'link']
+// Kept by this browser
+const LOCAL_KEYS = ['lang', 'atrio:layout-width', 'atrio:console-view', 'atrio:greeting', 'atrio:app-filter',
+	'atrio:app-density', 'atrio.files.prefs', 'atrio-files-wrap', 'temperatureFormat']
+
+async function writeFile(path, content) {
+	await api.file.create(path)
+	const res = await api.file.update(path, content)
+	if (res.data.success !== 200) throw new Error('Could not reach the backup service on the server')
+}
+
+async function removeFile(path) {
+	try {
+		await api.batch.delete(JSON.stringify([path]))
+	}
+	catch (e) {
+		// Left behind: root-only, and replaced by the next export or import
+	}
+}
+
+/** The encrypted settings file as text, ready to download. */
+export async function exportSettings(password) {
+	const custom = {}
+	for (const key of CUSTOM_KEYS) {
+		try {
+			const res = await api.users.getCustomStorage(key)
+			if (res.data.success === 200 && res.data.data) custom[key] = res.data.data
+		}
+		catch (e) {
+			// Not set on this server
+		}
+	}
+	const local = {}
+	for (const key of LOCAL_KEYS) {
+		const value = localStorage.getItem(key)
+		if (value !== null) local[key] = value
+	}
+	await writeFile(`${STATE}/settings-ui.json`, JSON.stringify({ custom, local }))
+	await run({ ACTION: 'export-settings', APP: 'atrio', PASSWORD: password })
+	const text = await read(`${STATE}/settings-export.txt`)
+	await removeFile(`${STATE}/settings-export.txt`)
+	if (!text) throw new Error('The settings could not be saved')
+	return text
+}
+
+/** Puts back the settings of a file made by exportSettings; the page reloads after it. */
+export async function importSettings(text, password, replaceKey = false) {
+	await writeFile(`${STATE}/settings-import.txt`, text)
+	await run({ ACTION: 'import-settings', APP: 'atrio', PASSWORD: password, REPLACE_KEY: replaceKey ? 1 : 0 })
+	const ui = await readJson(`${STATE}/settings-imported.json`)
+	await removeFile(`${STATE}/settings-imported.json`)
+	for (const [key, value] of Object.entries(ui?.custom || {})) {
+		if (CUSTOM_KEYS.includes(key)) await api.users.setCustomStorage(key, value)
+	}
+	for (const [key, value] of Object.entries(ui?.local || {})) {
+		if (LOCAL_KEYS.includes(key) && typeof value === 'string') localStorage.setItem(key, value)
+	}
+}
+
 /** The key that encrypts and signs this server's backups, created with the first backup. */
 export async function backupKey() {
 	return ((await read(`${STATE}/backup.key`)) || '').trim()

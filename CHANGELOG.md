@@ -2,6 +2,20 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## 0.1.18 — unreleased
+
+**New**
+
+- **Settings file**, to move to a new machine: Settings → Settings file saves the dashboard, the push alerts, the
+  backup folder and automatic backups, and the backup key in one file, encrypted on the server with a password you
+  choose. Loading it on a new install puts them back; a server that already has another backup key asks before
+  replacing it and keeps the old one. The README has a short guide to moving.
+
+**Fixed**
+
+- The install command run with ATRIO_SOURCE, to try the services of a checkout, kept the services of the release
+  instead.
+
 ## 0.1.17 — 2026-11-13
 
 **Run the install command one last time** after updating to this version: from now on, updating Atrio from the

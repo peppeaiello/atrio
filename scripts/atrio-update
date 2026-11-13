@@ -106,6 +106,8 @@ signed() {
 # from the settings brings them too, not only the web UI. Only for installs that have the release key.
 update_server() {
 	[ -f "$KEYRING" ] && command -v gpgv >/dev/null || return 0
+	# install.sh trying the services of a checkout (ATRIO_SOURCE): keep them
+	[ -n "${ATRIO_KEEP_SERVER:-}" ] && return 0
 	# install.sh has just set them up from this same release
 	[ "$(cat "$SERVER_VERSION" 2>/dev/null)" = "$1" ] && return 0
 	write_status running "Updating the services on the server"

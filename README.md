@@ -110,6 +110,16 @@ Updating CasaOS puts its own UI back. About half a minute later the updater noti
 as the copy used by the uninstaller, and installs Atrio again (from the last release it kept, if GitHub cannot be
 reached). Installs made before Atrio 0.1.4 lack this: run the install command once more to add it.
 
+## Moving to a new machine
+
+1. Before, on the old server: in Atrio's settings, **Settings file → Save** downloads one file with the dashboard,
+   push alerts, backup folder and automatic backups, and the backup key, encrypted with a password you choose. Keep it
+   off the server, with its password. Your app backups should be on another disk, a network folder or a cloud drive.
+2. On the new machine, install CasaOS, then Atrio with the command above.
+3. In Atrio's settings, **Settings file → Load** that file. Connect the disk, network folder or cloud drive with the
+   backups in Files, and choose it again as the backup folder if its path changed.
+4. Install each app again from the App Store, then in its **Backup** tab pick the backup to restore.
+
 ## Uninstall
 
 ```shell

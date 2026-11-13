@@ -1,6 +1,7 @@
 <script>
 import AtrioUpdate from '@/components/settings/AtrioUpdate.vue'
 import PushAlerts from '@/components/settings/PushAlerts.vue'
+import SettingsBackup from '@/components/settings/SettingsBackup.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
@@ -23,6 +24,7 @@ export default {
   components: {
     AtrioUpdate,
     PushAlerts,
+    SettingsBackup,
     AccountPanel,
   },
   mixins: [mixin],
@@ -766,6 +768,8 @@ export default {
               </section>
 
               <PushAlerts />
+
+              <SettingsBackup />
 
               <section class="atrio-settings-section">
                 <h3>{{ $t('System') }}</h3>

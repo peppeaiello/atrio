@@ -38,7 +38,7 @@ HEALTH_WAIT="${ATRIO_HEALTH_WAIT:-60}"
 HEALTH_STEADY="${ATRIO_HEALTH_STEADY:-20}"
 
 ACTION="" APP="" ID="" REASON="manual" TOKEN="" DEST="$DEFAULT_DEST" DEST_MOUNT="" NEW_DEST="" FROM=""
-EVERY="" AT="" DAY="" KEEP=""
+EVERY="" AT="" DAY="" KEEP="" PASSWORD="" REPLACE_KEY=0
 # The folder new backups go to; DEST can be an older one for a restore or a delete
 CONF_DEST="$DEFAULT_DEST"
 CONF_MOUNT=""
@@ -131,11 +131,13 @@ read_request() {
 			TIME) AT="$value" ;;
 			DAY) DAY="$value" ;;
 			KEEP) KEEP="$value" ;;
+			PASSWORD) PASSWORD="$value" ;;
+			REPLACE_KEY) [ "$value" = 1 ] && REPLACE_KEY=1 ;;
 		esac
 	done < "$REQUEST"
 	rm -f "$REQUEST"
 	case "$ACTION" in
-		scan|backup|restore|delete|destination|forget|schedule) ;;
+		scan|backup|restore|delete|destination|forget|schedule|export-settings|import-settings) ;;
 		*) ACTION=""; APP=""; ID=""; fail "Unknown request" ;;
 	esac
 	if ! [[ "$APP" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
@@ -1024,6 +1026,153 @@ run_schedules() {
 	done
 }
 
+# --- Settings file ----------------------------------------------------------------------------
+
+# Everything needed to set Atrio up again on a new machine, in one file encrypted with a password:
+# the web UI's settings (sent by the web UI as settings-ui.json), the push alert settings, the
+# backup folder and schedules, and the backup key, without which the backups cannot be read.
+SETTINGS_UI="$STATE/settings-ui.json"
+SETTINGS_EXPORT="$STATE/settings-export.txt"
+SETTINGS_IMPORT="$STATE/settings-import.txt"
+SETTINGS_IMPORTED="$STATE/settings-imported.json"
+SETTINGS_FORMAT=1
+
+# The password goes to openssl through a file only root can read, never on a command line
+password_file() {
+	local file
+	file=$(mktemp) || return 1
+	chmod 600 "$file"
+	printf '%s' "$PASSWORD" > "$file"
+	printf '%s' "$file"
+}
+
+do_export_settings() {
+	local work pass app
+	[ "${#PASSWORD}" -ge 8 ] || fail "The password must be at least 8 characters long"
+	command -v openssl >/dev/null || fail "openssl is missing on the server: the settings cannot be encrypted"
+	[ -f "$SETTINGS_UI" ] || fail "The settings of the web UI did not reach the server"
+	work=$(mktemp -d) || fail "Could not create a temporary folder"
+	chmod 700 "$work"
+	mkdir -p "$work/atrio-settings/schedules" "$work/atrio-settings/folders"
+	printf '%s\n' "$SETTINGS_FORMAT" > "$work/atrio-settings/format"
+	head -c 1048576 "$SETTINGS_UI" > "$work/atrio-settings/ui.json"
+	rm -f "$SETTINGS_UI"
+	local file
+	for file in alerts.conf backup.conf backup-folders backup.key; do
+		[ -f "$STATE/$file" ] && cp "$STATE/$file" "$work/atrio-settings/$file"
+	done
+	for file in "$SCHEDULES"/*; do
+		app=$(basename "$file")
+		[ -f "$file" ] && [[ "$app" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] && [[ "$app" != *.tmp ]] || continue
+		grep -E '^(EVERY|TIME|DAY|KEEP)=' "$file" > "$work/atrio-settings/schedules/$app"
+	done
+	for file in "$INDEX"/*.folders; do
+		app=$(basename "$file" .folders)
+		[ -f "$file" ] && [[ "$app" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || continue
+		cp "$file" "$work/atrio-settings/folders/$app"
+	done
+	pass=$(password_file) || { rm -rf "$work"; fail "Could not create a temporary file"; }
+	# Text (base64), so that the web UI can read it and hand it to the browser as a download
+	tar --owner=0 --group=0 -czf - -C "$work" atrio-settings 2>/dev/null \
+		| openssl enc -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -salt -a -pass "file:$pass" -out "$SETTINGS_EXPORT.tmp" 2>/dev/null
+	local codes=("${PIPESTATUS[@]}")
+	rm -f "$pass"
+	rm -rf "$work"
+	[ "${codes[0]}" -eq 0 ] && [ "${codes[1]}" -eq 0 ] || { rm -f "$SETTINGS_EXPORT.tmp"; fail "The settings could not be saved"; }
+	chmod 600 "$SETTINGS_EXPORT.tmp"
+	mv "$SETTINGS_EXPORT.tmp" "$SETTINGS_EXPORT"
+	write_status done "" ""
+}
+
+do_import_settings() {
+	local work pass app file value slot every at day keep
+	[ -f "$SETTINGS_IMPORT" ] || fail "The settings file did not reach the server"
+	command -v openssl >/dev/null || fail "openssl is missing on the server: the settings cannot be read"
+	work=$(mktemp -d) || fail "Could not create a temporary folder"
+	chmod 700 "$work"
+	pass=$(password_file) || { rm -rf "$work"; fail "Could not create a temporary file"; }
+	head -c 4194304 "$SETTINGS_IMPORT" | openssl enc -d -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -a -pass "file:$pass" -out "$work/settings.tar.gz" 2>/dev/null
+	local code=$?
+	rm -f "$pass" "$SETTINGS_IMPORT"
+	if [ "$code" -ne 0 ] || ! tar -tzf "$work/settings.tar.gz" >/dev/null 2>&1; then
+		rm -rf "$work"
+		fail "Wrong password, or this is not an Atrio settings file"
+	fi
+	# Only plain files and folders, all inside atrio-settings/
+	if LC_ALL=C tar --quoting-style=literal -tvzf "$work/settings.tar.gz" | awk '
+		$1 !~ /^[-d]/ { bad = 1 }
+		{ name = $0; sub(/^[^ ]+ +[^ ]+ +[^ ]+ +[^ ]+ +[^ ]+ /, "", name)
+		  if (name !~ /^atrio-settings(\/[A-Za-z0-9_.-]+)*\/?$/ || name ~ /(^|\/)\.\.(\/|$)/) bad = 1 }
+		END { exit !bad }'; then
+		rm -rf "$work"
+		fail "This settings file contains unexpected files and was not used"
+	fi
+	tar -xzf "$work/settings.tar.gz" -C "$work" --no-same-owner --no-same-permissions 2>/dev/null || { rm -rf "$work"; fail "This settings file is damaged"; }
+	local src="$work/atrio-settings"
+	value=$(head -n 1 "$src/format" 2>/dev/null)
+	[[ "$value" =~ ^[0-9]+$ ]] && [ "$value" -le "$SETTINGS_FORMAT" ] || { rm -rf "$work"; fail "This settings file was made by a newer Atrio: update Atrio first"; }
+
+	# The key first: a server that already made backups with another key would lose them
+	if [ -s "$src/backup.key" ]; then
+		value=$(head -n 1 "$src/backup.key" | tr -cd 'a-f0-9')
+		[ "${#value}" -eq 64 ] || { rm -rf "$work"; fail "This settings file is damaged"; }
+		if [ -s "$KEY" ] && [ "$(cat "$KEY")" != "$value" ]; then
+			if [ "$REPLACE_KEY" != 1 ]; then
+				rm -rf "$work"
+				fail "This server already has its own backup key"
+			fi
+			cp "$KEY" "$KEY.replaced-$(date +%Y%m%d-%H%M%S)"
+		fi
+		(umask 077 && printf '%s\n' "$value" > "$KEY.tmp" && mv "$KEY.tmp" "$KEY")
+	fi
+
+	# Read as they would be anyway: atrio-alerts and this script check every value they use
+	if [ -f "$src/alerts.conf" ]; then
+		(umask 077 && grep -E '^[A-Z_]+=' "$src/alerts.conf" > "$STATE/alerts.conf.tmp" && mv "$STATE/alerts.conf.tmp" "$STATE/alerts.conf")
+	fi
+	if [ -f "$src/backup.conf" ]; then
+		value=$(sed -n 's/^DEST=//p' "$src/backup.conf" | head -n 1)
+		if [ -n "$value" ] && allowed_dest "$value"; then
+			grep -E '^(DEST|MOUNT)=' "$src/backup.conf" > "$CONF.tmp" && mv "$CONF.tmp" "$CONF"
+		fi
+	fi
+	if [ -f "$src/backup-folders" ]; then
+		while IFS=$'\t' read -r file value; do
+			allowed_dest "$file" && printf '%s\t%s\n' "$file" "$value"
+		done < "$src/backup-folders" > "$KNOWN.tmp"
+		mv "$KNOWN.tmp" "$KNOWN"
+	fi
+	for file in "$src"/folders/*; do
+		app=$(basename "$file")
+		[ -f "$file" ] && [[ "$app" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || continue
+		while IFS= read -r value; do
+			allowed_folder "$value" && printf '%s\n' "$value"
+		done < "$file" > "$INDEX/$app.folders"
+	done
+	# Schedules start from the next planned time, not with a backup of every app at once
+	mkdir -p "$SCHEDULES"
+	chmod 700 "$SCHEDULES"
+	for file in "$src"/schedules/*; do
+		app=$(basename "$file")
+		[ -f "$file" ] && [[ "$app" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || continue
+		every=$(sed -n 's/^EVERY=//p' "$file" | head -n 1)
+		at=$(sed -n 's/^TIME=//p' "$file" | head -n 1)
+		day=$(sed -n 's/^DAY=//p' "$file" | head -n 1)
+		keep=$(sed -n 's/^KEEP=//p' "$file" | head -n 1)
+		[[ "$every" =~ ^(daily|weekly)$ ]] && [[ "$at" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
+			&& [[ "$day" =~ ^[1-7]$ ]] && [[ "$keep" =~ ^([1-9]|[12][0-9]|30)$ ]] || continue
+		slot=$(last_slot "$every" "$at" "$day") || continue
+		printf 'EVERY=%s\nTIME=%s\nDAY=%s\nKEEP=%s\nSLOT=%s\n' "$every" "$at" "$day" "$keep" "$slot" > "$SCHEDULES/$app"
+	done
+
+	# The web UI applies its own settings, then deletes this file
+	if [ -f "$src/ui.json" ]; then
+		(umask 077 && head -c 1048576 "$src/ui.json" > "$SETTINGS_IMPORTED")
+	fi
+	rm -rf "$work"
+	write_status done "" ""
+}
+
 # --- Main -------------------------------------------------------------------------------------
 
 case "${1:-}" in
@@ -1071,4 +1220,6 @@ case "$ACTION" in
 	destination) do_destination ;;
 	forget) do_forget ;;
 	schedule) do_schedule ;;
+	export-settings) do_export_settings ;;
+	import-settings) do_import_settings ;;
 esac

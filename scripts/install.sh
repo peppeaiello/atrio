@@ -92,7 +92,12 @@ main() {
 		rm -f "$STATE/server-version"
 	fi
 
-	/usr/local/bin/atrio-update --force
+	# The services just set up from a checkout stay: the updater installs only the web UI then
+	if [ -n "${ATRIO_SOURCE:-}" ]; then
+		ATRIO_KEEP_SERVER=1 /usr/local/bin/atrio-update --force
+	else
+		/usr/local/bin/atrio-update --force
+	fi
 
 	echo
 	echo "Done: open CasaOS in your browser and reload the page (Ctrl+F5)."
