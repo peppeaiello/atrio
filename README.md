@@ -91,8 +91,8 @@ Then reload CasaOS in your browser with `Ctrl+F5`. The script:
 - watches the UI folder (`atrio-restore.path`) so Atrio comes back on its own after a CasaOS update.
 - installs the push alert service (`/usr/local/bin/atrio-alerts`, run every 5 minutes by `atrio-alerts.timer`),
   which stays off until you set it up in Settings → Push notifications;
-- installs the backup service (`/usr/local/bin/atrio-backup`, with `atrio-backup.path` and, for automatic backups,
-  `atrio-backup-schedule.timer`).
+- installs the backup service (`/usr/local/bin/atrio-backup`, with `atrio-backup.path`, `atrio-backup-schedule.timer`
+  for automatic backups and `atrio-check-updates.timer`, which looks for new versions of the apps every 6 hours).
 
 Nothing else changes: CasaOS, your apps and their data are left as they are.
 

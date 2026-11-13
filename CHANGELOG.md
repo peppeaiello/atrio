@@ -2,7 +2,7 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
-## 0.1.18 — unreleased
+## 0.1.18 — 2026-11-13
 
 **New**
 
@@ -18,14 +18,15 @@ What changes in each Atrio release. The section for a version is also the text o
   another tag, so apps on `latest`, or on a tag like `3` that keeps getting new builds, never showed one. Every 6
   hours the server now asks each registry (Docker Hub, GitHub, linuxserver and others) which image the app's tag
   points at, and the tile shows Update available when it is newer than the one running. Update now saves a backup,
-  downloads the new image of the same tag, recreates the app and checks that it stays up. The tag never changes, and nothing updates on its own. Apps pinned to a digest, and images built on the
-  server, are left out.
+  downloads the new image of the same tag, recreates the app and checks that it stays up. The tag never changes, and
+  nothing updates on its own. Apps pinned to a digest, and images built on the server, are left out.
 - **Ignore updates** in an app's menu turns its Update available badge off, for an app you keep on its version on
   purpose. It can still be updated from the same menu, and Show updates again brings the badge back.
 - **Activity**, a tab of the notification centre (also opened from Settings → System and the command palette): what
-  happened on the server, newest first and by day. Apps installed, removed and updated (also outside Atrio), backups by hand, automatic and before updates,
-  restores, backup folder and schedule changes, image cleanups, settings files and Atrio's own updates, with the
-  reason when something failed. The services on the server write it, so it is there even when nobody had Atrio open.
+  happened on the server, newest first and by day. Apps installed, removed and updated (also outside Atrio), backups
+  by hand, automatic and before updates, restores, backup folder and schedule changes, image cleanups, settings files
+  and Atrio's own updates, with the reason when something failed. The services on the server write it, so it is
+  there even when nobody had Atrio open.
 - **Safe updates, run by the server.** Updates to the App Store's version now go through the server too, like the
   ones above: a backup first, then the App Store's image written in the app's compose file (only the image line of
   each service, and only another version of the same image), the download, the app recreated and a check that it
