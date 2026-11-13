@@ -5,7 +5,7 @@ import { renderSize } from '@/mixins/file_utils'
 import FilesIcon from '@/components/files/FilesIcon.vue'
 import { errorMessage, listFolder, listLocations, parentPath } from '@/components/files/files.js'
 import '@/components/files/messages.js'
-import { backupApp, backupKey, backupRun, backupsInstalled, deleteBackup, escapeHtml, forgetFolder, loadIndex, restoreApp, saveDestination, scanApp } from '@/plugins/appBackup'
+import { backupApp, backupKey, backupRun, backupsInstalled, deleteBackup, escapeHtml, forgetFolder, loadIndex, restoreApp, saveDestination, saveSchedule, scanApp } from '@/plugins/appBackup'
 
 const INSTALL = 'curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/install.sh | sudo bash'
 const STEPS = {
@@ -18,7 +18,9 @@ const STEPS = {
 	downloading: 'Getting the backup from its folder…',
 	restoring: 'Putting the files back…',
 	starting: 'Starting the app…',
+	waiting: 'Waiting for an automatic backup to finish…',
 }
+const NO_PLAN = { every: 'off', time: '03:00', day: 1, keep: 7 }
 
 export default {
 	name: 'AppBackups',
@@ -44,6 +46,7 @@ export default {
 			places: [],
 			install: INSTALL,
 			run: backupRun,
+			plan: { ...NO_PLAN },
 		}
 	},
 	computed: {
@@ -71,6 +74,21 @@ export default {
 		connected() {
 			return this.index?.connected !== false
 		},
+		schedule() {
+			return this.index?.schedule || null
+		},
+		savedPlan() {
+			const saved = this.schedule
+			return saved ? { every: saved.every, time: saved.time, day: saved.day, keep: saved.keep } : { ...NO_PLAN }
+		},
+		planChanged() {
+			return JSON.stringify(this.plan) !== JSON.stringify(this.savedPlan)
+		},
+		// 1 (Monday) to 7, in the language of the page
+		weekdays() {
+			const locale = this.$i18n.locale?.replace('_', '-')
+			return [1, 2, 3, 4, 5, 6, 7].map((day) => ({ day, name: new Date(2024, 0, day).toLocaleDateString(locale, { weekday: 'long' }) }))
+		},
 	},
 	watch: {
 		app() {
@@ -86,6 +104,7 @@ export default {
 			this.index = index
 			if (!index) return
 			this.selected = index.folders.filter((folder) => folder.selected).map((folder) => folder.path)
+			this.plan = { ...this.savedPlan }
 		},
 		async load() {
 			const app = this.app
@@ -116,6 +135,12 @@ export default {
 				this.error = this.$t(e.message)
 				this.applyIndex(await loadIndex(this.app))
 				return false
+			}
+		},
+		async savePlan() {
+			const plan = { ...this.plan, keep: Math.min(30, Math.max(1, Math.round(Number(this.plan.keep)) || 7)) }
+			if (await this.act(() => saveSchedule(this.app, plan, this.selected))) {
+				this.$buefy.toast.open({ message: plan.every === 'off' ? this.$t('Automatic backups turned off') : this.$t('Automatic backups saved'), type: 'is-success' })
 			}
 		},
 		async create() {
@@ -206,7 +231,7 @@ export default {
 			return Number.isNaN(date.getTime()) ? time : date.toLocaleString(this.$i18n.locale?.replace('_', '-'), { dateStyle: 'medium', timeStyle: 'short' })
 		},
 		reason(backup) {
-			return { 'before-update': this.$t('Before an update'), 'before-restore': this.$t('Before a restore') }[backup.reason] || ''
+			return { 'before-update': this.$t('Before an update'), 'before-restore': this.$t('Before a restore'), 'scheduled': this.$t('Automatic') }[backup.reason] || ''
 		},
 		async toggleKey() {
 			if (this.key) {
@@ -263,6 +288,45 @@ export default {
 				</li>
 			</ul>
 			<p v-if="folders.length" class="atrio-backups-total">{{ $t('Selected: {size}', { size: renderSize(chosenSize) }) }}</p>
+
+			<h4>{{ $t('Automatic backups') }}</h4>
+			<template v-if="index && !index.scheduler">
+				<p class="atrio-backups-note">{{ $t('Automatic backups need the latest version of the service on the server. Run the install command once more, then reload the page:') }}</p>
+				<div class="atrio-backups-install">
+					<code>{{ install }}</code>
+					<button class="atrio-button is-small" type="button" @click="copyInstall">{{ $t('Copy') }}</button>
+				</div>
+			</template>
+			<template v-else-if="index">
+				<div class="atrio-backups-plan">
+					<label>
+						<span>{{ $t('When') }}</span>
+						<select v-model="plan.every" :disabled="busy" class="atrio-backups-input">
+							<option value="off">{{ $t('Never') }}</option>
+							<option value="daily">{{ $t('Every day') }}</option>
+							<option value="weekly">{{ $t('Every week') }}</option>
+						</select>
+					</label>
+					<label v-if="plan.every === 'weekly'">
+						<span>{{ $t('Day') }}</span>
+						<select v-model.number="plan.day" :disabled="busy" class="atrio-backups-input">
+							<option v-for="weekday in weekdays" :key="weekday.day" :value="weekday.day">{{ weekday.name }}</option>
+						</select>
+					</label>
+					<label v-if="plan.every !== 'off'">
+						<span>{{ $t('At') }}</span>
+						<input v-model="plan.time" :disabled="busy" class="atrio-backups-input" required type="time">
+					</label>
+					<label v-if="plan.every !== 'off'">
+						<span>{{ $t('Keep the last') }}</span>
+						<input v-model.number="plan.keep" :disabled="busy" class="atrio-backups-input" max="30" min="1" type="number">
+					</label>
+					<button :disabled="busy || !planChanged || (plan.every !== 'off' && !plan.time)" class="atrio-button is-small" type="button" @click="savePlan">{{ $t('Save') }}</button>
+				</div>
+				<p v-if="plan.every !== 'off'" class="atrio-backups-note">{{ $t('At the server\'s time. They save the folders ticked above, stopping the app as a backup made by hand does, and the oldest automatic ones are deleted. A server that is off at that time makes the backup once it is back on.') }}</p>
+				<p v-if="schedule?.last_error" class="atrio-backups-error" role="alert">{{ $t('The automatic backup of {time} failed: {reason}', { time: when(schedule.last_time), reason: $t(schedule.last_error) }) }}</p>
+				<p v-else-if="schedule?.last_time" class="atrio-backups-note">{{ $t('Last automatic backup: {time}', { time: when(schedule.last_time) }) }}</p>
+			</template>
 
 			<h4>{{ $t('Saved backups') }}</h4>
 			<p v-if="index && !backups.length" class="atrio-config-empty">{{ $t('No backups yet') }}</p>
@@ -519,6 +583,50 @@ export default {
 		&:hover {
 			background: rgba(255, 255, 255, 0.1);
 		}
+	}
+}
+
+.atrio-backups-plan {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 0.75rem;
+	align-items: flex-end;
+
+	label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.75rem;
+
+		span {
+			color: var(--atrio-text-muted);
+		}
+	}
+
+	input[type='number'] {
+		width: 5rem;
+	}
+}
+
+.atrio-backups-input {
+	height: 2.25rem;
+	padding: 0 0.625rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 0.75rem;
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--atrio-text);
+	font: inherit;
+	font-size: 0.875rem;
+	color-scheme: dark;
+	outline: none;
+
+	&:focus {
+		border-color: var(--atrio-accent);
+	}
+
+	option {
+		background: #0f172a;
+		color: #e2e8f0;
 	}
 }
 

@@ -33,9 +33,14 @@ pnpm build
 mkdir -p "$out"
 tar -czf "$out/atrio.tar.gz" -C build/sysroot/var/lib/casaos/www .
 (cd "$out" && sha256sum atrio.tar.gz > atrio.tar.gz.sha256)
-gpg --batch --yes --local-user "Atrio release signing" --detach-sign -o "$out/atrio.tar.gz.sig" "$out/atrio.tar.gz"
-gpgv --keyring "$PWD/scripts/atrio-release-key.gpg" "$out/atrio.tar.gz.sig" "$out/atrio.tar.gz" 2>/dev/null \
-	|| die "The signature does not match scripts/atrio-release-key.gpg"
+# The services that run on the server, installed by install.sh and by the updater (atrio-setup)
+tar -czf "$out/atrio-server.tar.gz" --owner=0 --group=0 -C scripts \
+	atrio-update atrio-alerts atrio-backup atrio-setup atrio-release-key.gpg
+for file in atrio.tar.gz atrio-server.tar.gz; do
+	gpg --batch --yes --local-user "Atrio release signing" --detach-sign -o "$out/$file.sig" "$out/$file"
+	gpgv --keyring "$PWD/scripts/atrio-release-key.gpg" "$out/$file.sig" "$out/$file" 2>/dev/null \
+		|| die "The signature does not match scripts/atrio-release-key.gpg"
+done
 scripts/release-notes.sh "$tag" > "$out/notes.md"
 
 # The token never goes on a command line, where other users of this machine could see it
@@ -55,7 +60,7 @@ release=$(python3 -c 'import json, sys; print(json.dumps({"tag_name": sys.argv[1
 	"$tag" "$out/notes.md" "$prerelease" | api -X POST "https://api.github.com/repos/$repo/releases" --data-binary @-)
 id=$(printf '%s' "$release" | python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])')
 
-for file in atrio.tar.gz atrio.tar.gz.sha256 atrio.tar.gz.sig; do
+for file in atrio.tar.gz atrio.tar.gz.sha256 atrio.tar.gz.sig atrio-server.tar.gz atrio-server.tar.gz.sig; do
 	api -X POST -H 'Content-Type: application/octet-stream' --data-binary @"$out/$file" \
 		"https://uploads.github.com/repos/$repo/releases/$id/assets?name=$file" >/dev/null
 done

@@ -4,8 +4,19 @@ What changes in each Atrio release. The section for a version is also the text o
 
 ## 0.1.17 — unreleased
 
+**Run the install command one last time** after updating to this version: from now on, updating Atrio from the
+settings also updates the services on the server (updater, push alerts, backups), so new versions no longer ask for
+it.
+
 **New**
 
+- **Automatic backups.** In the Backup tab of an app, choose every day or every week, the time, and how many
+  automatic backups to keep (1 to 30). They save the folders ticked in the tab and stop the app while they run, like
+  a backup made by hand, and the oldest automatic ones are deleted; backups made by hand stay. A server that was off
+  at that time makes the backup once it is back on. The tab shows the last automatic backup, and a push alert says
+  when one fails.
+- **Updating from the settings updates the services on the server too.** Each release now carries them in a signed
+  bundle, checked with the same key as the web UI before anything is installed.
 - **Edit text files in Files**, as in the classic CasaOS panel: Edit in the preview of a text or code file, such as
   an app's docker-compose.yml, then Save. The preview is now a code editor with line numbers, syntax colours for
   about thirty languages, folding, bracket matching, undo and redo, and a search bar with replace. YAML and JSON are
@@ -18,6 +29,8 @@ What changes in each Atrio release. The section for a version is also the text o
 - **The install command shows what it is doing**: a line for each step and a progress bar while it downloads Atrio,
   instead of a long silence between the first and the last line.
 - Clicking the Atrio row in the settings no longer turns it white.
+- A backup started from the Backup tab while another one runs on the server waits for it, and says so, instead of
+  failing after 30 seconds.
 
 ## 0.1.16 — 2026-11-11
 

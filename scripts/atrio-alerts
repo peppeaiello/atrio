@@ -81,6 +81,8 @@ text() {
 			removed_body) echo "$1 è stata rimossa." ;;
 			app_updated_title) echo "App aggiornata" ;;
 			app_updated_body) echo "$1 è stata aggiornata." ;;
+			backup_title) echo "Backup automatico non riuscito" ;;
+			backup_body) echo "Il backup automatico di $1 non è riuscito: $2" ;;
 			update_title) echo "Nuova versione di Atrio" ;;
 			update_body) echo "È disponibile Atrio $1. Apri le impostazioni di Atrio per aggiornare." ;;
 		esac
@@ -100,6 +102,8 @@ text() {
 			removed_body) echo "$1 was removed." ;;
 			app_updated_title) echo "App updated" ;;
 			app_updated_body) echo "$1 was updated." ;;
+			backup_title) echo "Automatic backup failed" ;;
+			backup_body) echo "The automatic backup of $1 failed: $2" ;;
 			update_title) echo "New Atrio version" ;;
 			update_body) echo "Atrio $1 is available. Open Atrio's settings to update." ;;
 		esac
@@ -281,6 +285,21 @@ check_app_updates() {
 	done
 }
 
+# Automatic backups that failed, each one once (atrio-backup writes the result in schedules/)
+check_backups() {
+	local file name error time
+	for file in "$STATE/schedules"/*; do
+		[ -f "$file" ] || continue
+		name=$(basename "$file")
+		[[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] && [[ "$name" != *.tmp ]] || continue
+		error=$(sed -n 's/^LAST_ERROR=//p' "$file" | head -n 1 | head -c 200)
+		time=$(sed -n 's/^LAST_TIME=//p' "$file" | head -n 1)
+		[ -n "$error" ] && [ -n "$time" ] || continue
+		[ "$(memory_get "backup_$name")" = "$time" ] && continue
+		send "$(text backup_title)" "$(text backup_body "$(app_title "$name")" "$error")" 4 "warning" && memory_set "backup_$name" "$time"
+	done
+}
+
 check_updates() {
 	# GitHub is asked every 6 hours at most
 	local last now latest installed
@@ -351,6 +370,7 @@ fi
 if [ "$APPS_CHANGES" = 1 ]; then check_apps; else SEND_APPS=0 check_apps; fi
 if [ "$APP_UPDATES" = 1 ]; then check_app_updates; else SEND_APPS=0 check_app_updates; fi
 [ "$UPDATES" = 1 ] && check_updates
+check_backups
 
 if [ -n "$LAST_ERROR" ]; then
 	write_status error "$LAST_ERROR"

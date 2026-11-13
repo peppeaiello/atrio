@@ -37,8 +37,8 @@ its respective owners.
 - **A panel for every app**: open, restart, stop, update; overview, logs, terminal and settings as tabs. Install and
   settings forms in sections, with errors that say what to type.
 - **Backups for each app**: its settings and the folders you choose, to another disk, a USB drive, a network folder
-  or a cloud drive connected in Files. Going back takes one click, and an update saves a backup first. Backups need
-  the install command run once more, and are encrypted and signed with a key that stays on the server.
+  or a cloud drive connected in Files, by hand or automatically every day or week. Going back takes one click, and
+  an update saves a backup first. Backups are encrypted and signed with a key that stays on the server.
 - **Many apps at once**: select apps and start, stop, restart or update them together.
 - **Hardware details**: machine, BIOS, processor, memory and every sensor the machine reports.
 - **Notifications** for installs, updates, a disk almost full or unhealthy, and a hot processor, also as push
@@ -90,7 +90,9 @@ Then reload CasaOS in your browser with `Ctrl+F5`. The script:
 - installs a small updater (`/usr/local/bin/atrio-update` and the `atrio-update.path` systemd unit);
 - watches the UI folder (`atrio-restore.path`) so Atrio comes back on its own after a CasaOS update.
 - installs the push alert service (`/usr/local/bin/atrio-alerts`, run every 5 minutes by `atrio-alerts.timer`),
-  which stays off until you set it up in Settings → Push notifications.
+  which stays off until you set it up in Settings → Push notifications;
+- installs the backup service (`/usr/local/bin/atrio-backup`, with `atrio-backup.path` and, for automatic backups,
+  `atrio-backup-schedule.timer`).
 
 Nothing else changes: CasaOS, your apps and their data are left as they are.
 
@@ -98,7 +100,9 @@ Nothing else changes: CasaOS, your apps and their data are left as they are.
 
 A red dot on the settings icon (the sliders at the top) tells you a new release is out. Open the settings: under
 **Updates**, the **Atrio** row shows your version and an **Update** button. Atrio asks the updater on the server to
-download the release from GitHub, checks its checksum and installs it, showing each step, then reloads the page.
+download the release from GitHub, checks its signature and installs it, showing each step, then reloads the page.
+The services on the server (updater, push alerts, backups) are updated with it, from a bundle signed with the same
+key. Installs made before Atrio 0.1.17 update only the web UI: run the install command once more to get this.
 
 From a terminal you can do the same with `sudo atrio-update`.
 

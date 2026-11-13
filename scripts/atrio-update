@@ -17,6 +17,8 @@ DOWNLOAD="${ATRIO_DOWNLOAD:-https://github.com/$REPO/releases/latest/download}"
 # Releases are signed on the maintainer's machine, with a key GitHub never sees: a release that
 # someone else uploaded, even with access to the GitHub account, is not installed
 KEYRING="${ATRIO_RELEASE_KEY:-/usr/local/share/atrio/release-key.gpg}"
+# The release whose services (this updater, push alerts, backups) are installed, see update_server
+SERVER_VERSION="$STATE/server-version"
 MODE="${1:-}"
 
 mkdir -p "$STATE"
@@ -100,6 +102,25 @@ signed() {
 		gpgv --keyring "$KEYRING" "$1/atrio.tar.gz.sig" "$1/atrio.tar.gz" >/dev/null 2>&1
 }
 
+# The services of the release, from its own signed bundle, installed by its own atrio-setup: updating
+# from the settings brings them too, not only the web UI. Only for installs that have the release key.
+update_server() {
+	[ -f "$KEYRING" ] && command -v gpgv >/dev/null || return 0
+	# install.sh has just set them up from this same release
+	[ "$(cat "$SERVER_VERSION" 2>/dev/null)" = "$1" ] && return 0
+	write_status running "Updating the services on the server"
+	local CURL=(curl -fsSL --connect-timeout 20 --max-time 300 --retry 2)
+	"${CURL[@]}" -o "$TMP/atrio-server.tar.gz" "$DOWNLOAD/atrio-server.tar.gz" 2>/dev/null &&
+		"${CURL[@]}" -o "$TMP/atrio-server.tar.gz.sig" "$DOWNLOAD/atrio-server.tar.gz.sig" 2>/dev/null || return 1
+	gpgv --keyring "$KEYRING" "$TMP/atrio-server.tar.gz.sig" "$TMP/atrio-server.tar.gz" >/dev/null 2>&1 || return 1
+	rm -rf "$TMP/server"
+	mkdir "$TMP/server"
+	tar -xzf "$TMP/atrio-server.tar.gz" -C "$TMP/server" --no-same-owner --no-same-permissions || return 1
+	[ -z "$(find "$TMP/server" -mindepth 1 ! -type f)" ] && [ -f "$TMP/server/atrio-setup" ] || return 1
+	bash "$TMP/server/atrio-setup" "$TMP/server" --update || return 1
+	echo "$1" > "$SERVER_VERSION"
+}
+
 use_local_copy() {
 	rm -f "$TMP/atrio.tar.gz" "$TMP/atrio.tar.gz.sha256" "$TMP/atrio.tar.gz.sig"
 	cp "$LOCAL/atrio.tar.gz" "$LOCAL/atrio.tar.gz.sha256" "$TMP/"
@@ -142,6 +163,10 @@ fi
 latest=$(installed_version "$TMP/www")
 # A CasaOS update can leave our atrio-version.json behind, so --restore always installs
 if [ "$latest" = "$(installed_version "$WWW")" ] && [ -z "$MODE" ]; then
+	# The web UI is current; the services may not be, after a failed try or an older updater
+	if [ "$(cat "$SERVER_VERSION" 2>/dev/null)" != "$latest" ] && [ -f "$KEYRING" ]; then
+		update_server "$latest" || fail "Atrio $latest is installed, but the services on the server could not be updated"
+	fi
 	write_status done "Atrio $latest is already installed"
 	exit 0
 fi
@@ -181,6 +206,12 @@ if [ -f "$TMP/atrio.tar.gz.sig" ]; then
 	cp "$TMP/atrio.tar.gz.sig" "$LOCAL/"
 fi
 
+# A restore after a CasaOS update only puts the web UI back: the services were not touched
+DONE="Atrio $latest installed"
+if [ "$MODE" != "--restore" ] && ! update_server "$latest"; then
+	DONE="Atrio $latest installed, but the services on the server could not be updated: run the install command once more"
+fi
+
 # The gateway dates every file with its own start time, so browsers that revalidate their cached
 # index.html get 304 forever. A restart gives a new date and every browser loads the new version.
 # Done before reporting "done", so the web UI only reloads once the gateway is back.
@@ -188,5 +219,5 @@ write_status running "Restarting the CasaOS gateway"
 systemctl try-restart casaos-gateway.service 2>/dev/null || true
 sleep 3
 
-write_status done "Atrio $latest installed"
-echo "Atrio $latest installed"
+write_status done "$DONE"
+echo "$DONE"

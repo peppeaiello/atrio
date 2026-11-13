@@ -1,0 +1,191 @@
+#!/bin/bash
+# Installs Atrio's services on the server from a folder that holds this release's scripts:
+# the updater, push alerts and backups in /usr/local/bin, the public release key, and their
+# systemd units. Run as root by install.sh, and by atrio-update after it checked the signature of
+# the release, so that updating from the settings brings the services of the new version too.
+#
+#   atrio-setup DIR [--update]
+set -euo pipefail
+
+SRC="${1:-}"
+MODE="${2:-}"
+[ -n "$SRC" ] && [ -d "$SRC" ] || { echo "Usage: atrio-setup DIR [--update]" >&2; exit 1; }
+[ "$(id -u)" -eq 0 ] || { echo "atrio-setup must run as root" >&2; exit 1; }
+for file in atrio-update atrio-alerts atrio-backup atrio-release-key.gpg; do
+	[ -f "$SRC/$file" ] && [ ! -L "$SRC/$file" ] || { echo "Missing $file in $SRC" >&2; exit 1; }
+done
+
+# Each file is written next to the old one, then moved in place: a script that is running (the
+# updater replaces itself) keeps reading its old copy
+install_script() {
+	cp "$SRC/$1" "/usr/local/bin/$1.tmp"
+	chown root:root "/usr/local/bin/$1.tmp"
+	chmod 755 "/usr/local/bin/$1.tmp"
+	mv "/usr/local/bin/$1.tmp" "/usr/local/bin/$1"
+}
+
+# The public key that releases are signed with: the updater installs only what it signed
+mkdir -p /usr/local/share/atrio
+cp "$SRC/atrio-release-key.gpg" /usr/local/share/atrio/release-key.gpg.tmp
+chmod 644 /usr/local/share/atrio/release-key.gpg.tmp
+mv /usr/local/share/atrio/release-key.gpg.tmp /usr/local/share/atrio/release-key.gpg
+
+# Updater: Atrio writes $STATE/update-request through the CasaOS file API,
+# the path unit sees it and runs atrio-update as root.
+install_script atrio-update
+# Push alerts: checks the server every 5 minutes and sends warnings to ntfy, Gotify or Apprise,
+# as set in Atrio's settings ($STATE/alerts.conf)
+install_script atrio-alerts
+install_script atrio-backup
+
+echo "Setting up their services..."
+cat > /etc/systemd/system/atrio-update.service <<'UNIT'
+[Unit]
+Description=Install the latest Atrio web UI for CasaOS
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-update
+TimeoutStartSec=10min
+UNIT
+
+cat > /etc/systemd/system/atrio-update.path <<'UNIT'
+[Unit]
+Description=Watch for update requests from the Atrio web UI
+
+[Path]
+PathExists=/var/lib/casaos/atrio/update-request
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# CasaOS updates put their own UI back: this puts Atrio back after them
+cat > /etc/systemd/system/atrio-restore.service <<'UNIT'
+[Unit]
+Description=Put Atrio back after a CasaOS update replaces the web UI
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-update --restore
+TimeoutStartSec=10min
+UNIT
+
+cat > /etc/systemd/system/atrio-restore.path <<'UNIT'
+[Unit]
+Description=Watch the CasaOS web UI for updates that replace Atrio
+
+[Path]
+PathChanged=/var/lib/casaos/www/index.html
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat > /etc/systemd/system/atrio-alerts.service <<'UNIT'
+[Unit]
+Description=Send Atrio's warnings to ntfy, Gotify or Apprise
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-alerts
+TimeoutStartSec=3min
+UNIT
+
+cat > /etc/systemd/system/atrio-alerts.timer <<'UNIT'
+[Unit]
+Description=Check the server for Atrio's push alerts every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+# "Send a test" in the settings writes $STATE/alerts-test
+cat > /etc/systemd/system/atrio-alerts-test.service <<'UNIT'
+[Unit]
+Description=Send a test push alert for Atrio
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-alerts --test
+TimeoutStartSec=1min
+UNIT
+
+cat > /etc/systemd/system/atrio-alerts-test.path <<'UNIT'
+[Unit]
+Description=Watch for test requests from Atrio's push alert settings
+
+[Path]
+PathExists=/var/lib/casaos/atrio/alerts-test
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# App backups: Atrio writes $STATE/backup-request, the same way as the updater
+cat > /etc/systemd/system/atrio-backup.service <<'UNIT'
+[Unit]
+Description=Back up or restore an app for Atrio
+# Several operations in a row are normal here: no limit on starts
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-backup
+TimeoutStartSec=infinity
+UNIT
+
+cat > /etc/systemd/system/atrio-backup.path <<'UNIT'
+[Unit]
+Description=Watch for backup requests from Atrio
+StartLimitIntervalSec=0
+
+[Path]
+PathExists=/var/lib/casaos/atrio/backup-request
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# Automatic backups: every 15 minutes, the apps whose planned time has come get their backup
+cat > /etc/systemd/system/atrio-backup-schedule.service <<'UNIT'
+[Unit]
+Description=Make Atrio's automatic app backups
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/atrio-backup --scheduled
+TimeoutStartSec=infinity
+UNIT
+
+cat > /etc/systemd/system/atrio-backup-schedule.timer <<'UNIT'
+[Unit]
+Description=Check for Atrio's automatic app backups every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnCalendar=*:0/15
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+systemctl daemon-reload
+systemctl reset-failed atrio-backup.path atrio-backup.service 2>/dev/null || true
+systemctl enable --now atrio-update.path >/dev/null
+systemctl enable --now atrio-restore.path >/dev/null
+systemctl enable --now atrio-alerts.timer >/dev/null
+systemctl enable --now atrio-alerts-test.path >/dev/null
+systemctl enable --now atrio-backup.path >/dev/null
+systemctl enable --now atrio-backup-schedule.timer >/dev/null
+echo "Starting push alerts and backups..."
+# A first run writes the status the settings read (alerts stay off until set up there)
+[ "$MODE" = "--update" ] || /usr/local/bin/atrio-alerts || true
+# Tells the web UI that backups are available
+/usr/local/bin/atrio-backup --init || true

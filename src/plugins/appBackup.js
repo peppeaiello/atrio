@@ -63,7 +63,7 @@ async function run(fields) {
 		const renamed = written.data.success === 200 && await api.file.rename(temp, REQUEST)
 		if (!renamed || renamed.data.success !== 200) throw new Error('Could not reach the backup service on the server')
 
-		const started = Date.now()
+		let started = Date.now()
 		for (;;) {
 			await new Promise((resolve) => setTimeout(resolve, POLL_MS))
 			const status = await readJson(STATUS)
@@ -71,6 +71,11 @@ async function run(fields) {
 				backupRun.step = status.step
 				if (status.state === 'done') return status
 				if (status.state === 'error') throw new Error(status.message)
+			}
+			else if (status?.state === 'running') {
+				// An automatic backup is running: the service takes this request once it is done
+				backupRun.step = 'waiting'
+				started = Date.now()
 			}
 			else if (Date.now() - started > PICKUP_MS) {
 				throw new Error('Could not reach the backup service on the server')
@@ -90,6 +95,9 @@ export const backupApp = (app, folders, reason = 'manual') => run({ ACTION: 'bac
 export const restoreApp = (app, id, from) => run({ ACTION: 'restore', APP: app, ID: id, ...(from ? { FROM: from } : {}) })
 export const deleteBackup = (app, id, from) => run({ ACTION: 'delete', APP: app, ID: id, ...(from ? { FROM: from } : {}) })
 export const forgetFolder = (app, from) => run({ ACTION: 'forget', APP: app, FROM: from })
+// Automatic backups: `every` is 'off', 'daily' or 'weekly'; `day` 1 (Monday) to 7; they save `folders`
+export const saveSchedule = (app, { every, time, day, keep }, folders) =>
+	run({ ACTION: 'schedule', APP: app, EVERY: every, TIME: time, DAY: day, KEEP: keep, FOLDER: folders || [] })
 
 /** The key that encrypts and signs this server's backups, created with the first backup. */
 export async function backupKey() {
