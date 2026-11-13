@@ -72,11 +72,39 @@ json() {
 	printf '%s' "$1" | tr -d '\000-\037' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+# Activity log, read by the web UI: "time<tab>action<tab>ok|error<tab>app<tab>detail", newest last
+log_activity() {
+	local line
+	line=$(printf '%s\t%s\t%s\t%s\t%s' "$(date -Iseconds)" "$1" "$2" "$3" "$4" | tr -d '\000-\010\012-\037' | head -c 600)
+	printf '%s\n' "$line" >> "$STATE/activity.log" 2>/dev/null
+	chmod 644 "$STATE/activity.log" 2>/dev/null
+}
+
+# What each finished request leaves in the activity log; looking around (scan, images, checks) leaves nothing
+log_result() {
+	local detail="$2"
+	case "$ACTION" in
+		backup) [ "$1" = ok ] && detail="$REASON $ID" ;;
+		restore|delete) [ "$1" = ok ] && detail="$ID" ;;
+		destination) [ "$1" = ok ] && detail="$CONF_DEST" ;;
+		schedule) [ "$1" = ok ] && detail="$EVERY $AT $DAY" ;;
+		ignore-updates) [ "$1" = ok ] && detail="$IGNORE" ;;
+		update-app) [ "$1" = ok ] && detail="$ID" ;;
+		remove-images|export-settings|import-settings) ;;
+		*) return 0 ;;
+	esac
+	log_activity "$ACTION" "$1" "$([ "$APP" = atrio ] || printf '%s' "$APP")" "$detail"
+}
+
 # The web UI follows the operation through this file
 write_status() {
 	printf '{"state":"%s","action":"%s","app":"%s","id":"%s","step":"%s","message":"%s","token":"%s","time":"%s"}\n' \
 		"$1" "$ACTION" "$APP" "$ID" "$2" "$(json "${3:-}")" "$TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
 	mv "$STATUS.tmp" "$STATUS"
+	case "$1" in
+		done) log_result ok "${3:-}" ;;
+		error) log_result error "${3:-}" ;;
+	esac
 }
 
 fail() {

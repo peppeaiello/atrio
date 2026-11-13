@@ -23,6 +23,10 @@ What changes in each Atrio release. The section for a version is also the text o
   server, are left out.
 - **Ignore updates** in an app's menu turns its Update available badge off, for an app you keep on its version on
   purpose. It can still be updated from the same menu, and Show updates again brings the badge back.
+- **Activity**, in Settings → System and in the command palette: what happened on the server, newest first and by
+  day. Apps installed, removed and updated (also outside Atrio), backups by hand, automatic and before updates,
+  restores, backup folder and schedule changes, image cleanups, settings files and Atrio's own updates, with the
+  reason when something failed. The services on the server write it, so it is there even when nobody had Atrio open.
 - While an app updates, its tile shows each step on its ring (backup, download, start, check) instead of the menu
   staying open with a loading animation.
 

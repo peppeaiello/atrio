@@ -50,6 +50,14 @@ installed_version() {
 	sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$1/atrio-version.json" 2>/dev/null || true
 }
 
+# Activity log, read by the web UI: "time<tab>action<tab>ok|error<tab>app<tab>detail", newest last
+log_activity() {
+	local line
+	line=$(printf '%s\t%s\t%s\t%s\t%s' "$(date -Iseconds)" "$1" "$2" "$3" "$4" | tr -d '\000-\010\012-\037' | head -c 600)
+	printf '%s\n' "$line" >> "$STATE/activity.log" 2>/dev/null
+	chmod 644 "$STATE/activity.log" 2>/dev/null
+}
+
 # The web UI reads this file to follow the update
 write_status() {
 	printf '{"state":"%s","version":"%s","message":"%s","token":"%s","time":"%s"}\n' \
@@ -222,4 +230,5 @@ systemctl try-restart casaos-gateway.service 2>/dev/null || true
 sleep 3
 
 write_status done "$DONE"
+log_activity atrio-update ok "" "$latest"
 echo "$DONE"

@@ -61,6 +61,30 @@ memory_set() {
 	mv "$MEMORY.tmp" "$MEMORY"
 }
 
+# Activity log, read by the web UI: "time<tab>action<tab>ok|error<tab>app<tab>detail", newest last
+log_activity() {
+	local line
+	line=$(printf '%s\t%s\t%s\t%s\t%s' "$(date -Iseconds)" "$1" "$2" "$3" "$4" | tr -d '\000-\010\012-\037' | head -c 600)
+	printf '%s\n' "$line" >> "$STATE/activity.log" 2>/dev/null
+	chmod 644 "$STATE/activity.log" 2>/dev/null
+}
+
+# atrio-backup logs the updates it makes itself; the image change it leaves is the same update
+recently_updated_here() {
+	local since
+	since=$(date -d '-30 min' +%s)
+	tail -n 200 "$STATE/activity.log" 2>/dev/null | awk -F'\t' -v app="$1" -v since="$since" '
+		$2 == "update-app" && $3 == "ok" && $4 == app { cmd = "date -d \"" $1 "\" +%s"; cmd | getline t; close(cmd); if (t >= since) found = 1 }
+		END { exit !found }'
+}
+
+# Keeps the activity log to its last 1500 events
+trim_activity() {
+	local file="$STATE/activity.log"
+	[ -f "$file" ] && [ "$(wc -l < "$file")" -gt 2000 ] || return 0
+	tail -n 1500 "$file" > "$file.tmp" && chmod 644 "$file.tmp" && mv "$file.tmp" "$file"
+}
+
 # --- Messages ----------------------------------------------------------------------------------
 
 text() {
@@ -235,13 +259,17 @@ check_apps() {
 	now=$(find "$APPS" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tr '\n' ' ')
 	before=$(memory_get apps)
 	memory_set apps "$now"
-	# The first run, and runs with app alerts off, only take note of what is installed
-	[ -n "$before" ] && [ "${SEND_APPS:-1}" = 1 ] || return 0
+	# The first run only takes note of what is installed; runs with app alerts off only log
+	[ -n "$before" ] || return 0
 	for name in $now; do
-		[[ " $before " == *" $name "* ]] || send "$(text installed_title)" "$(text installed_body "$(app_title "$name")")" 3 "white_check_mark"
+		[[ " $before " == *" $name "* ]] && continue
+		log_activity app-installed ok "$name" ""
+		[ "${SEND_APPS:-1}" = 1 ] && send "$(text installed_title)" "$(text installed_body "$(app_title "$name")")" 3 "white_check_mark"
 	done
 	for name in $before; do
-		[[ " $now " == *" $name "* ]] || send "$(text removed_title)" "$(text removed_body "$name")" 2 "wastebasket"
+		[[ " $now " == *" $name "* ]] && continue
+		log_activity app-removed ok "$name" ""
+		[ "${SEND_APPS:-1}" = 1 ] && send "$(text removed_title)" "$(text removed_body "$name")" 2 "wastebasket"
 	done
 }
 
@@ -278,8 +306,15 @@ check_app_updates() {
 		now=$(app_images "$name")
 		[ -n "$now" ] || continue
 		before=$(memory_get "image_$name")
-		if [ "${SEND_APPS:-1}" = 1 ] && images_changed "$before" "$now"; then
-			send "$(text app_updated_title)" "$(text app_updated_body "$(app_title "$name")")" 3 "arrow_up" || continue
+		if images_changed "$before" "$now"; then
+			# Once per change, also when the alert has to be tried again
+			if [ "$(memory_get "logged_$name")" != "$now" ]; then
+				recently_updated_here "$name" || log_activity app-updated ok "$name" ""
+				memory_set "logged_$name" "$now"
+			fi
+			if [ "${SEND_APPS:-1}" = 1 ]; then
+				send "$(text app_updated_title)" "$(text app_updated_body "$(app_title "$name")")" 3 "arrow_up" || continue
+			fi
 		fi
 		memory_set "image_$name" "$now"
 	done
@@ -338,6 +373,7 @@ configured() {
 
 read_conf
 REQUEST_TOKEN=""
+trim_activity
 
 if [ "$MODE" = "--test" ]; then
 	# The request carries a token so the settings recognise the answer to their own test

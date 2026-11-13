@@ -263,6 +263,10 @@ export default {
       this.closeSettings(false)
       this.$EventBus.$emit('atrio:open-hardware')
     },
+    openActivity() {
+      this.closeSettings(false)
+      this.$EventBus.$emit('atrio:open-activity')
+    },
 
     /**
      * @description: Show SideBar
@@ -780,6 +784,16 @@ export default {
                   <b-icon icon="chip" pack="mdi" size="is-20" />
                   <span class="atrio-setting-label">{{ $t('Hardware details') }}</span>
                   <button class="atrio-button is-small" type="button" @click="openHardware">
+                    {{ $t('Open') }}
+                  </button>
+                </div>
+                <div class="atrio-setting-row">
+                  <b-icon icon="history" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">
+                    {{ $t('Activity') }}
+                    <small class="atrio-setting-note">{{ $t('Installs, updates, backups and restores') }}</small>
+                  </span>
+                  <button class="atrio-button is-small" type="button" @click="openActivity">
                     {{ $t('Open') }}
                   </button>
                 </div>

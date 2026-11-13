@@ -21,6 +21,7 @@ export default {
 				{ id: 'store', label: 'App Store', hint: this.$t('Install new apps'), icon: 'app-store-outline', run: () => this.homeShowAppStore() },
 				{ id: 'settings', label: this.$t('Settings'), hint: this.$t('Language, wallpaper, search, updates and more'), icon: 'control-outline', run: () => this.$EventBus.$emit('atrio:open-settings') },
 				{ id: 'wallpaper', label: this.$t('Wallpaper'), hint: this.$t('Change the wallpaper'), icon: 'wallpaper-outline', run: () => this.$EventBus.$emit(events.SHOW_CHANGE_WALLPAPER_MODAL) },
+				{ id: 'activity', label: this.$t('Activity'), hint: this.$t('Installs, updates, backups and restores'), icon: 'history', pack: 'mdi', run: () => this.$EventBus.$emit('atrio:open-activity') },
 			].map((item) => ({ ...item, group: this.$t('System') }))
 			const apps = this.apps.flatMap((app) => {
 				const name = ice_i18n(app.title) || app.name
@@ -192,7 +193,7 @@ export default {
 							>
 								<span class="atrio-palette-icon">
 									<img v-if="item.image" :src="item.image" alt="" @error="$event.target.src = $asset('@/assets/img/app/default.svg')">
-									<b-icon v-else :icon="item.icon" pack="casa" size="is-20" />
+									<b-icon v-else :icon="item.icon" :pack="item.pack || 'casa'" size="is-20" />
 								</span>
 								<span class="atrio-palette-text">
 									<span class="atrio-palette-label">{{ item.label }}</span>
