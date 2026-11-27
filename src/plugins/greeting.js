@@ -1,5 +1,5 @@
-// The greeting above the dashboard: shown or not, and its size from 0 (smallest) to 100 (largest).
-// Kept in this browser.
+// The greeting above the dashboard: shown or not, its size from 0 (smallest) to 100 (largest),
+// and an optional custom text. Kept in this browser.
 import { reactive } from 'vue'
 
 const STORAGE_KEY = 'atrio:greeting'
@@ -18,14 +18,18 @@ function load() {
 	try {
 		const value = localStorage.getItem(STORAGE_KEY)
 		// 0.1.11 kept a choice of three
-		if (value === 'hidden') return { visible: false, size: GREETING_DEFAULT }
-		if (value === 'small') return { visible: true, size: 13 }
-		if (value === 'large' || !value) return { visible: true, size: GREETING_DEFAULT }
+		if (value === 'hidden') return { visible: false, size: GREETING_DEFAULT, customText: '' }
+		if (value === 'small') return { visible: true, size: 13, customText: '' }
+		if (value === 'large' || !value) return { visible: true, size: GREETING_DEFAULT, customText: '' }
 		const saved = JSON.parse(value)
-		return { visible: saved.visible !== false, size: clampSize(saved.size) }
+		return {
+			visible: saved.visible !== false,
+			size: clampSize(saved.size),
+			customText: typeof saved.customText === 'string' ? saved.customText : ''
+		}
 	}
 	catch (e) {
-		return { visible: true, size: GREETING_DEFAULT }
+		return { visible: true, size: GREETING_DEFAULT, customText: '' }
 	}
 }
 
@@ -37,7 +41,11 @@ export function greetingRem(size = greeting.size) {
 
 function save() {
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify({ visible: greeting.visible, size: greeting.size }))
+		localStorage.setItem(STORAGE_KEY, JSON.stringify({
+			visible: greeting.visible,
+			size: greeting.size,
+			customText: greeting.customText
+		}))
 	}
 	catch (e) {
 		// Private window: the choice lasts until the page closes
@@ -52,4 +60,18 @@ export function setGreetingVisible(visible) {
 export function setGreetingSize(size) {
 	greeting.size = clampSize(size)
 	save()
+}
+
+// A custom greeting line. Empty means use the time-based default.
+// The text may contain {name}, replaced with the signed-in username.
+export function setGreetingText(text) {
+	greeting.customText = typeof text === 'string' ? text.slice(0, 120) : ''
+	save()
+}
+
+// Resolve the greeting text: custom first (with {name} substituted), else the translated default.
+export function greetingText(fallback, name) {
+	const custom = (greeting.customText || '').trim()
+	if (!custom) return fallback
+	return custom.replace(/\{name\}/g, name || '')
 }
