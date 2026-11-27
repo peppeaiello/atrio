@@ -1,7 +1,6 @@
 <script>
 import { defineAsyncComponent } from 'vue'
 import AppSideBar from './AppSideBar.vue'
-import ImportPanel from '../forms/ImportPanel.vue'
 import LottieAnimation from 'lottie-web-vue'
 import '@/plugins/vee-validate'
 import uniq from 'lodash/uniq'
@@ -19,6 +18,8 @@ import { ice_i18n } from '@/mixins/base/common-i18n'
 import { escapeHtml } from '@/plugins/appBackup'
 import AppDetailInfo from '@/components/Apps/AppDetailInfo.vue'
 import ComposeConfig from '@/components/Apps/ComposeConfig.vue'
+import ComposeEditor from '@/components/Apps/ComposeEditor.vue'
+import { composeIsValid, prepareCompose } from '@/plugins/composeFile'
 import business_OpenThirdApp from '@/mixins/app/Business_OpenThirdApp'
 import business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
 import AppsInstallationLocation from '@/components/Apps/AppsInstallationLocation'
@@ -62,6 +63,7 @@ export default {
     LottieAnimation,
     AppsInstallationLocation,
     ComposeConfig,
+    ComposeEditor,
     ValidationObserver,
     ValidationProvider,
   },
@@ -119,6 +121,9 @@ export default {
       // about @compose
       // Assign value to compose_config component
       dockerComposeConfig: '',
+      // The compose file as text instead of the form, and that text
+      composeMode: false,
+      composeText: '',
       capArray: data,
       errInfo: {},
       dockerComposeCommands: '',
@@ -726,7 +731,8 @@ export default {
         .installComposeApp(dockerComposeCommands, false, true)
         .then((res) => {
           if (res.status !== 200) {
-            this.dockerComposeConfig = dockerComposeCommands
+            if (!this.composeMode)
+              this.dockerComposeConfig = dockerComposeCommands
             this.currentSlide = 1
             this.errInfo = res.data
 
@@ -738,7 +744,8 @@ export default {
         })
         .catch((e) => {
           if (e.response?.status === 400) {
-            this.dockerComposeConfig = dockerComposeCommands
+            if (!this.composeMode)
+              this.dockerComposeConfig = dockerComposeCommands
             this.currentSlide = 1
             this.errInfo = e.response.data.data
           }
@@ -785,41 +792,21 @@ export default {
       // Two clicks on Save would send the settings twice
       if (this.savingSettings)
         return
+      if (this.composeMode) {
+        if (!composeIsValid(this.composeText)) {
+          this.$buefy.toast.open({ message: this.$t('Fix the errors in the compose file first'), type: 'is-danger' })
+          return
+        }
+        this.savingSettings = true
+        this.sendSettings(prepareCompose(this.composeText))
+        return
+      }
       this.savingSettings = true
       this.$refs.ComposeConfig.checkStep().then((valid) => {
         if (!valid.every(v => v === true))
           this.savingSettings = false
         if (valid.every(v => v === true)) {
-          this.$openAPI.appManagement.compose
-            .applyComposeAppSettings(this.id, this.dockerComposeCommands, false, true)
-            .then((res) => {
-              if (res.status == 200) {
-                this.$emit('updateState')
-              }
-              else {
-                this.errInfo = res.data
-
-                this.$buefy.toast.open({
-                  message: this.$t('The information filled in needs to be corrected'),
-                  duration: 10000,
-                  type: 'is-warning',
-                })
-              }
-              this.$emit('close')
-            })
-            .catch((err) => {
-              if (err.response?.status === 400) {
-                this.errInfo = err.response?.data
-              }
-              this.$buefy.toast.open({
-                message: escapeHtml(err.response?.data?.message || this.$t('Update failure')),
-                duration: 5000,
-                type: 'is-warning',
-              })
-            })
-            .finally(() => {
-              this.savingSettings = false
-            })
+          this.sendSettings(this.dockerComposeCommands)
         }
         else {
           // toast info error.
@@ -829,7 +816,44 @@ export default {
             type: 'is-danger',
           })
         }
+      }).catch(() => {
+        // A check that failed on its own must not leave Save disabled
+        this.savingSettings = false
       })
+    },
+
+    // The settings of an installed app, from the form or the compose file
+    sendSettings(compose) {
+      this.$openAPI.appManagement.compose
+        .applyComposeAppSettings(this.id, compose, false, true)
+        .then((res) => {
+          if (res.status == 200) {
+            this.$emit('updateState')
+          }
+          else {
+            this.errInfo = res.data
+
+            this.$buefy.toast.open({
+              message: this.$t('The information filled in needs to be corrected'),
+              duration: 10000,
+              type: 'is-warning',
+            })
+          }
+          this.$emit('close')
+        })
+        .catch((err) => {
+          if (err.response?.status === 400) {
+            this.errInfo = err.response?.data
+          }
+          this.$buefy.toast.open({
+            message: escapeHtml(err.response?.data?.message || this.$t('Update failure')),
+            duration: 5000,
+            type: 'is-warning',
+          })
+        })
+        .finally(() => {
+          this.savingSettings = false
+        })
     },
 
     updateContainer() {
@@ -862,63 +886,40 @@ export default {
       })
     },
 
-    /**
-     * @description: Show import panel
-     * @return {*} void
-     */
+    // The compose file as text: it starts from what the form holds now
+    enterCompose() {
+      if (this.composeMode)
+        return
+      this.composeText = this.dockerComposeCommands || this.dockerComposeConfig || ''
+      this.composeMode = true
+    },
+    // Back to the form, which reads the text; a file with errors stays open to be fixed
+    leaveCompose() {
+      if (!this.composeMode)
+        return
+      if (!composeIsValid(this.composeText)) {
+        this.$buefy.toast.open({ message: this.$t('Fix the errors in the compose file first'), type: 'is-danger' })
+        return
+      }
+      this.dockerComposeConfig = this.composeText
+      this.composeMode = false
+    },
+    // The Import button: docker run commands or a compose file, in the compose file view
     showImportPanel() {
-      this.$buefy.modal.open({
-        component: ImportPanel,
-        hasModalCard: true,
-        customClass: '',
-        trapFocus: true,
-        canCancel: ['escape'],
-        scroll: 'keep',
-        animation: 'zoom-in',
-        events: {
-          update: (e) => {
-            this.dockerComposeConfig = e
-            this.$buefy.dialog.alert({
-              title: `⚠️ ${this.$t('Attention')}`,
-              message:
-								`<div class="nobrk"><h4 class="title is-5">${
-								  this.$t('AutoFill only helps you to complete most of the configuration.')
-								}</h4>`
-								+ `<p class="mb-3">${
-								  this.$t('Some configuration information such as:')
-								}</p>`
-								+ `<ul>`
-								+ `<li>1. ${
-								  this.$t('the port and path of the Web UI')
-								}</li>`
-								+ `<li>2. ${
-								  this.$t('the mount location of the volume or file')
-								}</li>`
-								+ `<li>3. ${
-								  this.$t('the port mapping of the Host')
-								}</li>`
-								+ `<li>4. ${
-								  this.$t('optional configuration items')
-								}</li>`
-								+ `</ul>`
-								+ `<p class="mt-3">${
-								  this.$t(
-								    'These include but are not limited to these cases and <b>still need to be confirmed or modified by you.</b>',
-								  )
-								}</p>`
-								+ `<p class="mt-3">${
-								  this.$t('Feel free to suggest improvements to this feature in Discord Server!')
-								}</p></div>`,
-              type: 'is-dark',
-            })
-          },
-        },
-        props: {
-          netWorks: this.networks,
-          oriNetWorks: this.tempNetworks,
-          deviceMemory: this.totalMemory,
-        },
-      })
+      this.enterCompose()
+      this.$nextTick(() => this.$refs.composeEditor?.openConverter())
+    },
+    installFromCompose() {
+      if (!composeIsValid(this.composeText)) {
+        this.$buefy.toast.open({ message: this.$t('Fix the errors in the compose file first'), type: 'is-danger' })
+        return
+      }
+      const text = prepareCompose(this.composeText)
+      this.isLoading = true
+      this.installComposeApp(text, parse(text)?.name)
+        .finally(() => {
+          this.isLoading = false
+        })
     },
 
     /**
@@ -927,14 +928,15 @@ export default {
      * @return {*} void
      */
     exportYAML() {
-      let title = parse(this.dockerComposeCommands)?.['x-casaos']?.title
+      const compose = this.composeMode ? this.composeText : this.dockerComposeCommands
+      let title = parse(compose)?.['x-casaos']?.title
       if (title) {
         title = ice_i18n(title)
       }
       else {
         title = this.currentInstallId
       }
-      const blob = new Blob([this.dockerComposeCommands], { type: '' })
+      const blob = new Blob([compose], { type: '' })
       FileSaver.saveAs(blob, `${title}.yaml`)
     },
 
@@ -1463,8 +1465,14 @@ export default {
 
       <!-- App Install Form Start -->
       <template v-if="currentSlide == 1">
+        <div v-if="isCasa" :aria-label="$t('View')" class="atrio-segmented atrio-compose-mode" role="radiogroup">
+          <button :aria-checked="!composeMode" :class="{ 'is-active': !composeMode }" role="radio" type="button" @click="leaveCompose">{{ $t('Form') }}</button>
+          <button :aria-checked="composeMode" :class="{ 'is-active': composeMode }" role="radio" type="button" @click="enterCompose">{{ $t('Compose file') }}</button>
+        </div>
+        <ComposeEditor v-if="isCasa && composeMode" ref="composeEditor" v-model="composeText" />
         <ComposeConfig
           v-if="isCasa"
+          v-show="!composeMode"
           ref="ComposeConfig"
           :cap-array="capArray"
           :docker-compose-commands="dockerComposeConfig"
@@ -1593,7 +1601,7 @@ export default {
             :loading="isLoading"
             rounded
             type="is-primary"
-            @click="checkComposeAppAndInstallComposeApp(dockerComposeCommands, currentInstallId)"
+            @click="composeMode ? installFromCompose() : checkComposeAppAndInstallComposeApp(dockerComposeCommands, currentInstallId)"
           />
           <b-button
             v-if="isCasa && currentSlide == 1 && state == 'update'"
@@ -1634,6 +1642,12 @@ export default {
 </template>
 
 <style lang="scss">
+// Form or compose file, above the install and settings screens
+.atrio-compose-mode {
+  align-self: flex-start;
+  margin: 0.75rem 1.5rem 0;
+}
+
 // appPanel global style
 .app-panel {
     .modal-card-head {

@@ -28,8 +28,10 @@ const props = defineProps({
   value: { type: String, required: true },
   name: { type: String, required: true },
   editable: { type: Boolean, default: false },
+  // More checks on YAML that parses: (text) => [{ from, to, severity, message }], for compose files
+  check: { type: Function, default: null },
 })
-const emit = defineEmits(['dirty'])
+const emit = defineEmits(['dirty', 'change'])
 
 const host = ref(null)
 const view = shallowRef(null)
@@ -75,12 +77,14 @@ async function yamlErrors(view) {
   const text = view.state.doc.toString()
   try {
     loadAll(text, () => {})
-    return []
   }
   catch (e) {
     const at = Math.min(e.mark?.position ?? 0, text.length)
     return [{ from: at, to: Math.min(at + 1, text.length), severity: 'error', message: e.reason || e.message }]
   }
+  return props.check
+    ? props.check(text).map(d => ({ ...d, from: Math.min(d.from, text.length), to: Math.min(d.to, text.length) }))
+    : []
 }
 
 async function jsonErrors(view) {
@@ -138,6 +142,8 @@ const theme = EditorView.theme({
   '.cm-diagnostic': { padding: '6px 10px', fontSize: '13px' },
   '.cm-diagnostic-error': { borderLeftColor: '#FB7185' },
   '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy #FB7185', textUnderlineOffset: '3px' },
+  '.cm-diagnostic-warning': { borderLeftColor: '#FBBF24' },
+  '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy #FBBF24', textUnderlineOffset: '3px' },
 }, { dark: true })
 
 function editableExtensions(on) {
@@ -201,10 +207,12 @@ function onUpdate(update) {
       wasDirty = dirty
       emit('dirty', dirty)
     }
+    emit('change', state.doc.toString())
   }
   if (checker && update.transactions.some(tr => tr.effects.length)) {
     const found = []
-    forEachDiagnostic(state, (d, from) => found.push({ line: state.doc.lineAt(from).number, message: d.message }))
+    // Warnings are underlined in the text, only errors are counted
+    forEachDiagnostic(state, (d, from) => d.severity === 'error' && found.push({ line: state.doc.lineAt(from).number, message: d.message }))
     errors.value = found
   }
 }
@@ -281,6 +289,11 @@ defineExpose({
     emit('dirty', false)
   },
   focus: () => view.value?.focus(),
+  // New text that can be undone, such as services converted from docker run
+  replace: (text) => {
+    view.value?.dispatch({ changes: { from: 0, to: view.value.state.doc.length, insert: text } })
+    view.value?.focus()
+  },
   hasErrors: () => errors.value.length > 0,
   firstError: () => errors.value[0] || null,
   showErrors: () => run(nextDiagnostic),

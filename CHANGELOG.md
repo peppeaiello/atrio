@@ -13,6 +13,12 @@ What changes in each Atrio release. The section for a version is also the text o
   in its place: then the folder as it was is kept next to it under another name, so nothing is lost and no extra
   space is needed. A folder on a disk that is not plugged in is never backed up as empty. The folders and their
   schedules are in the settings file too.
+- **Compose file editor**: the install screen and the settings of an app have a Compose file view next to the form.
+  Every setting of Docker Compose can be written there, also the ones the form does not have, and it is installed
+  or saved exactly as written. It is checked as you type, with the problem underlined on its line: a missing image,
+  a wrong or repeated port, a volume that is not a full path, and more. **From docker run** turns one or more
+  `docker run` commands into services, and **Load a file** opens a compose file from your computer. The Import
+  button opens this view, and replaces the old import window.
 
 ## 0.1.31 — 2026-11-27
 

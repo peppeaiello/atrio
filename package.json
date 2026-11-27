@@ -7,7 +7,8 @@
     "build": "node message_bus.build.mjs && vite build",
     "build:messagebus": "node message_bus.build.mjs",
     "preview": "vite preview",
-    "test:server": "bash tests/server/run.sh"
+    "test:server": "bash tests/server/run.sh",
+    "test:ui": "node --no-warnings --test tests/ui/compose.test.mjs"
   },
   "installConfig": {
     "hoistingLimits": "workspaces"
