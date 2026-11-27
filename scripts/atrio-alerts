@@ -1052,6 +1052,18 @@ check_backups() {
 		[ "$(memory_get "backup_$name")" = "$time" ] && continue
 		send "$(text backup_title)" "$(text backup_body "$(app_title "$name")" "$error")" 4 "warning" && memory_set "backup_$name" "$time"
 	done
+	# Folder backups: the same alert, with the folder where the app would be
+	for file in "$STATE/folder-jobs"/*; do
+		[ -f "$file" ] || continue
+		name=$(basename "$file")
+		[[ "$name" =~ ^[a-f0-9]{12}$ ]] || continue
+		error=$(sed -n 's/^LAST_ERROR=//p' "$file" | head -n 1 | head -c 200)
+		time=$(sed -n 's/^LAST_TIME=//p' "$file" | head -n 1)
+		[ -n "$error" ] && [ -n "$time" ] || continue
+		[ "$(memory_get "folder_backup_$name")" = "$time" ] && continue
+		send "$(text backup_title)" "$(text backup_body "$(sed -n 's/^PATH=//p' "$file" | head -n 1 | tr -d '\000-\037' | head -c 200)" "$error")" 4 "warning" \
+			&& memory_set "folder_backup_$name" "$time"
+	done
 }
 
 # Automatic updates that failed, each one once (atrio-backup writes the results)

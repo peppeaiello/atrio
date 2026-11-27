@@ -2,6 +2,18 @@
 
 What changes in each Atrio release. The section for a version is also the text of its GitHub release.
 
+## Unreleased
+
+**New**
+
+- **Folder backups**: documents, photos or any other folder on the server can be backed up now, by hand or every day
+  or week, keeping the last few automatic ones. Open them from Settings → System, from the command palette, or with
+  "Back up this folder" on a folder in Files. Backups are encrypted and signed like those of apps, in the same backup
+  folder, and a failed automatic one sends a push alert. A backup goes back either as a copy next to the folder, or
+  in its place: then the folder as it was is kept next to it under another name, so nothing is lost and no extra
+  space is needed. A folder on a disk that is not plugged in is never backed up as empty. The folders and their
+  schedules are in the settings file too.
+
 ## 0.1.31 — 2026-11-27
 
 **New**

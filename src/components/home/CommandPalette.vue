@@ -34,6 +34,7 @@ export default {
 				{ id: 'wallpaper', label: this.$t('Wallpaper'), hint: this.$t('Change the wallpaper'), icon: 'wallpaper-outline', run: () => this.$EventBus.$emit(events.SHOW_CHANGE_WALLPAPER_MODAL) },
 				{ id: 'network', label: this.$t('Network detail'), hint: this.$t('Which apps and services use the network'), icon: 'swap-vertical', pack: 'mdi', run: () => this.$EventBus.$emit('atrio:open-network') },
 				{ id: 'tailscale', label: this.$t('Remote access'), hint: this.$t('Reach this server from anywhere with Tailscale'), icon: 'vpn', pack: 'mdi', run: () => this.$EventBus.$emit('atrio:open-tailscale') },
+				{ id: 'folder-backups', label: this.$t('Folder backups'), hint: this.$t('Documents, photos and other folders, by hand or on a schedule'), icon: 'folder-sync-outline', pack: 'mdi', run: () => this.$EventBus.$emit('atrio:open-folder-backups') },
 				{ id: 'activity', label: this.$t('Activity'), hint: this.$t('Installs, updates, backups and restores'), icon: 'history', pack: 'mdi', run: () => this.$EventBus.$emit('atrio:open-activity') },
 			].map((item) => ({ ...item, group: this.$t('System') }))
 			const apps = this.apps.flatMap((app) => {

@@ -268,6 +268,10 @@ export default {
       this.closeSettings(false)
       this.$EventBus.$emit('atrio:open-activity')
     },
+    openFolderBackups() {
+      this.closeSettings(false)
+      this.$EventBus.$emit('atrio:open-folder-backups')
+    },
     openTailscale() {
       this.closeSettings(false)
       this.$EventBus.$emit('atrio:open-tailscale')
@@ -775,6 +779,16 @@ export default {
                   <b-icon icon="chip" pack="mdi" size="is-20" />
                   <span class="atrio-setting-label">{{ $t('Hardware details') }}</span>
                   <button class="atrio-button is-small" type="button" @click="openHardware">
+                    {{ $t('Open') }}
+                  </button>
+                </div>
+                <div class="atrio-setting-row">
+                  <b-icon icon="folder-sync-outline" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">
+                    {{ $t('Folder backups') }}
+                    <small class="atrio-setting-note">{{ $t('Documents, photos and other folders, by hand or on a schedule') }}</small>
+                  </span>
+                  <button class="atrio-button is-small" type="button" @click="openFolderBackups">
                     {{ $t('Open') }}
                   </button>
                 </div>

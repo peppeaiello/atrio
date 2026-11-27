@@ -24,6 +24,12 @@ const ACTIONS = {
 	'delete': ['archive-remove-outline', 'A backup of {app} was deleted', 'A backup of {app} could not be deleted: {detail}'],
 	'destination': ['folder-outline', 'New backup folder: {detail}', 'The backup folder was not changed: {detail}'],
 	'schedule': ['calendar-clock', 'Automatic backups of {app}: {detail}', 'Automatic backups of {app} were not changed: {detail}'],
+	// Folder backups: {app} is the folder
+	'folder-backup': ['archive-outline', 'Backup of {app} ({detail})', 'Backup of {app} failed: {detail}'],
+	'folder-restore': ['backup-restore', '{detail}', 'Restore of {app} failed: {detail}'],
+	'folder-delete': ['archive-remove-outline', 'A backup of {app} was deleted', 'A backup of {app} could not be deleted: {detail}'],
+	'folder-save': ['calendar-clock', 'Automatic backups of {app}: {detail}', 'Automatic backups of {app} were not changed: {detail}'],
+	'folder-remove': ['folder-remove-outline', '{app} is no longer backed up', '{app} is still backed up: {detail}'],
 	'ignore-updates': ['bell-off-outline', '{detail}'],
 	'auto-updates': ['update', '{detail}'],
 	'auto-update': ['arrow-up-circle-outline', '{app} was updated automatically to a newer image of the same version, after a backup', '{app} was not updated automatically: {detail}'],
@@ -97,8 +103,16 @@ export default {
 		detail(event) {
 			const words = event.detail.split(' ')
 			switch (event.action) {
-				case 'backup': return event.result === 'ok' ? this.$t(REASONS[words[0]] || 'by hand') : this.$t(event.detail)
+				case 'backup':
+				case 'folder-backup': return event.result === 'ok' ? this.$t(REASONS[words[0]] || 'by hand') : this.$t(event.detail)
+				case 'folder-restore':
+					// "copy <where it went>" or "replace <the folder>"
+					if (event.result === 'error') return this.$t(event.detail)
+					return words[0] === 'copy'
+						? this.$t('A backup of {app} was restored to {folder}', { app: this.title(event), folder: event.detail.slice(5) })
+						: this.$t('{app} went back to a backup', { app: this.title(event) })
 				case 'schedule':
+				case 'folder-save':
 					if (event.result === 'error') return this.$t(event.detail)
 					if (words[0] === 'off') return this.$t('turned off')
 					return words[0] === 'weekly'

@@ -3,9 +3,7 @@
 // The work runs on the server, see plugins/appBackup.js.
 import { copyText } from '@/plugins/copyText'
 import { renderSize } from '@/mixins/file_utils'
-import FilesIcon from '@/components/files/FilesIcon.vue'
-import { errorMessage, listFolder, listLocations, parentPath } from '@/components/files/files.js'
-import '@/components/files/messages.js'
+import BackupFolderPicker from '@/components/home/BackupFolderPicker.vue'
 import { backupApp, backupKey, backupRun, backupsInstalled, deleteBackup, escapeHtml, forgetFolder, loadIndex, restoreApp, saveDestination, saveSchedule, scanApp } from '@/plugins/appBackup'
 
 const INSTALL = 'curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/install.sh | sudo bash'
@@ -29,7 +27,7 @@ const NO_PLAN = { every: 'off', time: '03:00', day: 1, keep: 7 }
 export default {
 	name: 'AppBackups',
 	compatConfig: { MODE: 3 },
-	components: { FilesIcon },
+	components: { BackupFolderPicker },
 	props: {
 		app: { type: String, required: true },
 		title: { type: String, default: '' },
@@ -43,11 +41,6 @@ export default {
 			error: '',
 			key: '',
 			picking: false,
-			pickDir: '',
-			pickFolders: [],
-			pickLoading: false,
-			pickError: '',
-			places: [],
 			install: INSTALL,
 			run: backupRun,
 			plan: { ...NO_PLAN },
@@ -195,35 +188,10 @@ export default {
 			this.picking = false
 			this.error = ''
 		},
-		async openPicker() {
+		openPicker() {
 			this.picking = true
 			this.error = ''
-			this.pickError = ''
-			this.goTo(this.connected && !this.isDefaultDest ? this.index.dest : '/DATA')
-			const { places, storage } = await listLocations()
-			this.places = [...places.slice(0, 1), ...storage.filter((place) => place.kind)]
 		},
-		async goTo(dir) {
-			this.pickDir = dir
-			this.pickLoading = true
-			this.pickError = ''
-			try {
-				const items = await listFolder(dir)
-				if (dir !== this.pickDir) return
-				this.pickFolders = items.filter((item) => item.is_dir && !item.name.startsWith('.')).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
-			}
-			catch (e) {
-				this.pickFolders = []
-				this.pickError = errorMessage(e)
-			}
-			finally {
-				this.pickLoading = false
-			}
-		},
-		placeName(place) {
-			return place.label || this.$t(`files.${place.name}`)
-		},
-		parentPath,
 		async setDest(path) {
 			if (await this.act(() => saveDestination(this.app, path))) {
 				this.picking = false
@@ -361,26 +329,10 @@ export default {
 			</div>
 			<p v-if="index && !connected" class="atrio-backups-error" role="alert">{{ $t('This folder is not connected right now: plug in the disk or reconnect the folder, or choose another one. Backups before updates cannot run until then.') }}</p>
 
-			<div v-if="picking" class="atrio-backups-picker">
-				<p class="atrio-backups-note">{{ $t('Disks, USB drives, network folders and cloud drives connected in Files appear here. To add one, connect it in Files first.') }}</p>
-				<div class="atrio-backups-places">
-					<button v-for="place in places" :key="place.path" :class="{ 'is-active': pickDir === place.path }" type="button" @click="goTo(place.path)">
-						<FilesIcon :name="place.icon" :size="15" />{{ placeName(place) }}
-					</button>
-				</div>
-				<strong class="is-mono">{{ pickDir }}</strong>
-				<div class="atrio-backups-pick-list">
-					<button v-if="pickDir !== '/'" type="button" @click="goTo(parentPath(pickDir))"><FilesIcon :size="16" name="arrowUp" />..</button>
-					<p v-if="pickLoading" class="atrio-config-empty">{{ $t('Loading…') }}</p>
-					<p v-else-if="pickError" class="atrio-backups-note" role="alert">{{ pickError }}</p>
-					<button v-for="folder in pickFolders" v-else :key="folder.path" type="button" @click="goTo(folder.path)"><FilesIcon :size="16" name="folder" />{{ folder.name }}</button>
-				</div>
-				<p class="atrio-backups-note">{{ $t('Atrio creates a folder called atrio-backups in here.') }}</p>
-				<div class="atrio-backups-actions">
-					<button :disabled="busy || !!pickError" class="atrio-button is-small" type="button" @click="setDest(pickDir)">{{ $t('Use this folder') }}</button>
-					<button :disabled="busy" class="atrio-button is-small" type="button" @click="cancelPicker">{{ $t('Cancel') }}</button>
-				</div>
-			</div>
+			<BackupFolderPicker
+				v-if="picking" :busy="busy" :note="$t('Atrio creates a folder called atrio-backups in here.')"
+				:start="connected && !isDefaultDest ? index.dest : '/DATA'" @cancel="cancelPicker" @pick="setDest"
+			/>
 
 			<p v-if="index?.same_disk" class="atrio-backups-note">{{ $t('This folder is on the same disk as your apps: backups protect from mistakes and bad updates, not from a broken disk. Use a folder on another disk to be safe.') }}</p>
 			<p v-if="index?.remote" class="atrio-backups-note">{{ $t('Network folder or cloud drive: the app restarts first and the backup is sent afterwards, so it needs the same space free on this server for a while.') }}</p>
@@ -515,77 +467,6 @@ export default {
 	.is-mono {
 		flex: 1 1 12rem;
 		min-width: 0;
-	}
-}
-
-.atrio-backups-picker {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	margin: 0.75rem 0;
-	padding: 0.75rem;
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	border-radius: 0.75rem;
-
-	strong {
-		color: inherit;
-	}
-
-	button {
-		color: inherit;
-		font: inherit;
-		cursor: pointer;
-	}
-}
-
-.atrio-backups-places {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-
-	button {
-		display: flex;
-		gap: 0.375rem;
-		align-items: center;
-		min-height: 2rem;
-		padding: 0 0.75rem;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.06);
-		font-size: 0.8125rem;
-
-		&.is-active {
-			background: rgba(255, 255, 255, 0.18);
-		}
-	}
-}
-
-.atrio-backups-pick-list {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	height: 12rem;
-	padding: 0.25rem;
-	overflow-y: auto;
-	border-radius: 0.5rem;
-	background: rgba(0, 0, 0, 0.25);
-
-	button {
-		display: flex;
-		flex: none;
-		gap: 0.5rem;
-		align-items: center;
-		min-height: 2.25rem;
-		padding: 0 0.5rem;
-		border: 0;
-		border-radius: 0.375rem;
-		background: transparent;
-		font-size: 0.875rem;
-		text-align: left;
-
-		&:hover {
-			background: rgba(255, 255, 255, 0.1);
-		}
 	}
 }
 

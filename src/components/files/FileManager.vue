@@ -649,6 +649,7 @@ function itemActions(list) {
     else {
       actions.push({ id: 'share', label: t('share'), icon: 'share' })
     }
+    actions.push({ id: 'backUp', label: t('backUp'), icon: 'archive' })
   }
   actions.push({ id: 'd2', divider: true })
   actions.push({ id: 'delete', label: t('delete'), icon: 'trash', danger: true, shortcut: 'Del' })
@@ -762,6 +763,8 @@ function runAction(id) {
     share: () => startShare(list[0]),
     shareInfo: () => showShareInfo(list[0]),
     unshare: () => startUnshare(shareOf(list[0])),
+    // The folder backups panel opens over Files, with this folder ready to add
+    backUp: () => vm.$EventBus?.$emit('atrio:open-folder-backups', list[0].path),
     delete: () => startDelete(list),
     upload: () => fileInput.value.click(),
     uploadFolder: () => folderInput.value.click(),

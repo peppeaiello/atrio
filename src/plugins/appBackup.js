@@ -112,6 +112,33 @@ export const forgetFolder = (app, from) => run({ ACTION: 'forget', APP: app, FRO
 export const saveSchedule = (app, { every, time, day, keep }, folders) =>
 	run({ ACTION: 'schedule', APP: app, EVERY: every, TIME: time, DAY: day, KEEP: keep, FOLDER: folders || [] })
 
+// --- Folder backups: documents, photos and any other folder, by hand or on a schedule -------------
+
+/** The folders and their backups, as the server listed them last time (null before the first time). */
+export function loadFolderIndex() {
+	return readJson(`${STATE}/folder-backups.json`)
+}
+
+/** Lists them again, measuring the folders and reading every backup folder. */
+export async function scanFolders() {
+	await run({ ACTION: 'folders', APP: 'atrio' })
+	return loadFolderIndex()
+}
+
+const PLAN = ({ every, time, day, keep }) => (every === 'off' ? { EVERY: 'off' } : { EVERY: every, TIME: time, DAY: day, KEEP: keep })
+/** Adds a folder by its path, with a schedule (`every` 'off' for backups by hand only). */
+export const addFolder = (path, plan) => run({ ACTION: 'folder-save', APP: 'atrio', FOLDER: path, ...PLAN(plan) })
+export const saveFolderPlan = (job, plan) => run({ ACTION: 'folder-save', APP: 'atrio', JOB: job, ...PLAN(plan) })
+export const removeFolder = (job) => run({ ACTION: 'folder-remove', APP: 'atrio', JOB: job })
+export const backupFolder = (job) => run({ ACTION: 'folder-backup', APP: 'atrio', JOB: job })
+/** `mode`: 'copy' next to the folder, or 'replace'; resolves with the folder the files went to. */
+export async function restoreFolder(job, id, mode, from) {
+	const status = await run({ ACTION: 'folder-restore', APP: 'atrio', JOB: job, ID: id, MODE: mode, ...(from ? { FROM: from } : {}) })
+	return status.message
+}
+export const deleteFolderBackup = (job, id, from) => run({ ACTION: 'folder-delete', APP: 'atrio', JOB: job, ID: id, ...(from ? { FROM: from } : {}) })
+export const forgetBackupFolder = (from) => run({ ACTION: 'forget', APP: 'atrio', FROM: from })
+
 // --- Settings file: everything needed to set Atrio up again on a new machine ---------------------
 
 // Saved by the CasaOS user service for the account: dashboard, wallpaper, widgets, app order, links
