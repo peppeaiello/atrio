@@ -28,8 +28,13 @@ a sketch or a screenshot of another app that does it well helps a lot.
 
 ## Contributing code
 
+**New features start as an issue, not as a pull request.** Open an issue with the **Idea** template and wait until
+we agree on whether and how to add it before writing code: pull requests with features that were not agreed in an
+issue are closed, however good the code is. Small fixes for a bug you found can go straight to a pull request.
+Translations are always welcome without asking first (see [Translations](#translations)).
+
 1. Read [DEVELOPMENT.md](DEVELOPMENT.md) to run Atrio against your CasaOS server and build it.
-2. For anything larger than a small fix, open an issue first so we can agree on the approach.
+2. For a feature, link the issue where it was agreed.
 3. Fork [peppeaiello/atrio](https://github.com/peppeaiello/atrio), work on a branch and open a pull request against
    its `main` branch.
 
@@ -52,6 +57,9 @@ Check that `pnpm build` passes before opening the pull request, and describe how
 Atrio inherits many languages from CasaOS-UI, but the new screens are only in English and Italian. To translate them,
 copy the keys missing from your language file in `src/assets/lang/` from `en_US.json` and translate the values;
 keep the `{placeholders}` as they are.
+
+A translation pull request only changes files in `src/assets/lang/`. To improve the wording of the English text or
+to make a string translatable, open an issue instead.
 
 ## License
 
