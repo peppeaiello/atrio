@@ -21,6 +21,8 @@ previous=$(awk -v v="$version" '/^## / { if (seen) { print $2; exit } if ($2 == 
 if [ -n "$section" ]; then
 	printf '%s\n\n' "$section"
 fi
+# The same short note under every release, never more than this
+printf -- '---\nAtrio is free and open source. If it saves you time, you can support its development on [Ko-fi](https://ko-fi.com/peppeaiello). Bug reports and stars are just as welcome.\n\n'
 if [ -n "$previous" ]; then
 	printf '**Full changelog**: https://github.com/%s/compare/v%s...%s\n' "$repo" "$previous" "$tag"
 fi

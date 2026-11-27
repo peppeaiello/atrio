@@ -3,13 +3,14 @@
 // The check and the update live in plugins/atrioRelease, shared with the settings icon dot and
 // the full-page progress screen.
 import { copyText } from '@/plugins/copyText'
+import { KOFI } from '@/plugins/supportNote'
 import { CURRENT, INSTALL_COMMAND, checkLatest, checkServices, release, repair, repairServer, services, startUpdate, updateAvailable } from '@/plugins/atrioRelease'
 
 export default {
 	name: 'AtrioUpdate',
 	compatConfig: { MODE: 3 },
 	data() {
-		return { current: CURRENT, release, services, repair, install: INSTALL_COMMAND }
+		return { current: CURRENT, release, services, repair, install: INSTALL_COMMAND, kofi: KOFI }
 	},
 	computed: {
 		dev() {
@@ -68,6 +69,11 @@ export default {
 			</template>
 		</div>
 
+		<p class="atrio-update-support pl-55 ml-1">
+			{{ $t('Atrio is free and made by one person. If you find it useful, you can support it on Ko-fi.') }}
+			<a :href="kofi" rel="noopener" target="_blank">{{ $t('Support Atrio on Ko-fi') }}</a>
+		</p>
+
 		<!-- Services older than the web UI: Atrio brings them up to date by itself (repairServer) -->
 		<template v-if="services.outdated && !dev">
 			<p v-if="repair.running" class="atrio-update-services atrio-update-services-ok pl-55 ml-1" role="status">
@@ -112,6 +118,19 @@ export default {
 	text-align: left;
 	word-break: break-all;
 	cursor: pointer;
+}
+
+.atrio-update-support {
+	margin-top: 0.375rem;
+	padding-right: 0.5rem;
+	color: var(--atrio-text-muted, #94a3b8);
+	font-size: 0.75rem;
+	line-height: 1.4;
+
+	a {
+		color: var(--atrio-text-soft, #cbd5e1);
+		text-decoration: underline;
+	}
 }
 
 .atrio-update-logo {

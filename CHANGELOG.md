@@ -19,6 +19,10 @@ What changes in each Atrio release. The section for a version is also the text o
   a wrong or repeated port, a volume that is not a full path, and more. **From docker run** turns one or more
   `docker run` commands into services, and **Load a file** opens a compose file from your computer. The Import
   button opens this view, and replaces the old import window.
+- **Supporting Atrio**: Atrio stays free, with no paid features, ads or telemetry. The README has a short Support
+  section, every release ends with one line about Ko-fi, and the Atrio row in Settings says how to support it. After
+  an update, once and only once in each browser, a small message at the bottom mentions Ko-fi; closed, it does not
+  come back.
 
 ## 0.1.31 — 2026-11-27
 

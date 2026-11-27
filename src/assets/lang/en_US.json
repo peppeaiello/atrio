@@ -1236,5 +1236,8 @@
   "Line {line}": "Line {line}",
   "View": "View",
   "Form": "Form",
-  "Compose file": "Compose file"
+  "Compose file": "Compose file",
+  "Atrio is now on version {version}. It is free and made by one person: if it is useful to you, you can support it on Ko-fi.": "Atrio is now on version {version}. It is free and made by one person: if it is useful to you, you can support it on Ko-fi.",
+  "Support on Ko-fi": "Support on Ko-fi",
+  "Atrio is free and made by one person. If you find it useful, you can support it on Ko-fi.": "Atrio is free and made by one person. If you find it useful, you can support it on Ko-fi."
 }

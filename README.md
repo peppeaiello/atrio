@@ -153,6 +153,19 @@ curl -fsSL https://raw.githubusercontent.com/peppeaiello/atrio/main/scripts/unin
 
 It puts the original CasaOS UI back and removes the updater. Reload the page with `Ctrl+F5`.
 
+## Support Atrio
+
+Atrio is free, open source (Apache-2.0) and made by one person in their spare time. There are no paid features, no
+ads and no telemetry, and that will not change.
+
+If Atrio is useful to you and you would like to help, a small tip on Ko-fi goes towards the costs of the website and
+the domain, and towards the time spent fixing bugs and adding features:
+
+**[ko-fi.com/peppeaiello](https://ko-fi.com/peppeaiello)**
+
+Other ways to help that cost nothing: star the repository, report bugs, translate a few strings, or tell one friend
+who runs a home server. Thank you!
+
 ## Credits
 
 Atrio builds on the work of the IceWhale team and the CasaOS community: thank you for making CasaOS and releasing

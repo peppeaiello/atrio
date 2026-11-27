@@ -10,6 +10,7 @@ import AppDetailsPanel from '@/components/home/AppDetailsPanel.vue'
 import HardwarePanel from '@/components/home/HardwarePanel.vue'
 import NetworkPanel from '@/components/home/NetworkPanel.vue'
 import FolderBackups from '@/components/home/FolderBackups.vue'
+import { maybeAskSupport } from '@/plugins/supportNote'
 import TailscalePanel from '@/components/home/TailscalePanel.vue'
 import AtrioUpdateScreen from '@/components/settings/AtrioUpdateScreen.vue'
 import NotificationCenter from '@/components/home/NotificationCenter.vue'
@@ -98,6 +99,8 @@ export default {
     this.$EventBus.$on('atrio:apps-summary', this.setAppsSummary)
     window.addEventListener('resize', this.onResize)
     this.onResize()
+    // After an update of Atrio, once: a word about Ko-fi, a few seconds after the page is ready
+    this.supportTimer = setTimeout(() => maybeAskSupport(this), 4000)
     if (localStorage.getItem('is_update') === 'true') {
       this.showUpdateCompleteModal()
       localStorage.removeItem('is_update')
@@ -114,6 +117,7 @@ export default {
   },
   beforeUnmount() {
     clearTimeout(this.hardwareRetry)
+    clearTimeout(this.supportTimer)
     clearInterval(this.clockTimer)
     this.$EventBus.$off('atrio:apps-summary', this.setAppsSummary)
     window.removeEventListener('resize', this.onResize)
