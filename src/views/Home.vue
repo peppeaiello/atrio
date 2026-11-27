@@ -15,7 +15,7 @@ import NotificationCenter from '@/components/home/NotificationCenter.vue'
 import FilePanel from '@/components/files/FileManager.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
 import { mixin } from '@/mixins/mixin'
-import { greeting as greetingPrefs, greetingRem } from '@/plugins/greeting'
+import { greeting as greetingPrefs, greetingRem, greetingText } from '@/plugins/greeting'
 import events from '@/events/events'
 
 const wallpaperConfig = 'wallpaper'
@@ -78,7 +78,9 @@ export default {
       const hour = this.now.getHours()
       const part = hour < 5 ? 'Good evening' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
       const name = this.$store.state.user?.username
-      return name ? `${this.$t(part)}, ${name}` : this.$t(part)
+      const fallback = name ? `${this.$t(part)}, ${name}` : this.$t(part)
+      // A user-defined greeting wins; {name} is replaced with the username.
+      return greetingText(fallback, name)
     },
     sidebarOpen() {
       return this.$store.state.sidebarOpen

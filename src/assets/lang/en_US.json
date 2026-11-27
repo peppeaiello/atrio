@@ -1160,5 +1160,8 @@
   "Version": "Version",
   "Waiting for approval": "Waiting for approval",
   "Waiting for you to sign in": "Waiting for you to sign in",
-  "What is Tailscale?": "What is Tailscale?"
+  "What is Tailscale?": "What is Tailscale?",
+  "Greeting text": "Custom greeting",
+  "Greeting text hint": "Leave empty for the time-based greeting. Use {name} for the username.",
+  "Greeting text placeholder": "e.g. Welcome home, {name}!"
 }

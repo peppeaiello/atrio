@@ -72,7 +72,7 @@
   "Logs": "日志",
   "Terminal icon opens": "终端图标可打开终端",
   "Please check if the username and port are correct, and make sure that ssh server is installed.": "请检查用户名和端口是否正确。请确保SSH服务器已经安装。",
-  "Widgets Settings": "小部件设置",
+  "Widgets Settings": "小组件设置",
   "Time": "时间",
   "System Status": "系统状态",
   "Storage Status": "存储状态",
@@ -1158,5 +1158,10 @@
   "Version": "版本",
   "Waiting for approval": "等待批准",
   "Waiting for you to sign in": "等待您登录",
-  "What is Tailscale?": "什么是 Tailscale？"
+  "What is Tailscale?": "什么是 Tailscale？",
+  "Greeting text": "自定义问候语",
+  "Greeting text hint": "留空则按时间自动生成，用 {name} 代表用户名。",
+  "Greeting text placeholder": "例如：欢迎回家，{name}！",
+  "No newer image of {title} was found: the registry of its image did not answer.": "未找到 {title} 的更新镜像：其镜像仓库未响应。",
+  "{title} runs an image chosen in its settings: Atrio updates it on the server, where its services are not installed yet.": "{title} 使用在其设置中指定的镜像：Atrio 会在服务器上更新它，但那里的服务尚未安装。"
 }

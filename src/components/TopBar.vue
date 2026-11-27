@@ -6,7 +6,7 @@ import UnusedImages from '@/components/settings/UnusedImages.vue'
 import { startRechecking, updateAvailable as atrioUpdateAvailable } from '@/plugins/atrioRelease'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
 import { unreadCount } from '@/plugins/notifications'
-import { GREETING_DEFAULT, greeting as greetingPrefs, setGreetingSize, setGreetingVisible } from '@/plugins/greeting'
+import { GREETING_DEFAULT, greeting as greetingPrefs, setGreetingSize, setGreetingVisible, setGreetingText } from '@/plugins/greeting'
 import { layout as layoutPrefs, setLayoutWidth } from '@/plugins/layoutWidth'
 import { consolePrefs, setConsoleView } from '@/plugins/consoleView'
 import AccountPanel from './account/AccountPanel.vue'
@@ -188,6 +188,7 @@ export default {
   methods: {
     setGreetingSize,
     setGreetingVisible,
+    setGreetingText,
     setLayoutWidth,
     setConsoleView,
     /*************************************************
@@ -665,6 +666,18 @@ export default {
                     @dblclick="setGreetingSize(greetingDefault)" @input="setGreetingSize($event.target.value)"
                   >
                   <span aria-hidden="true" class="atrio-slider-end is-large-a">A</span>
+                </div>
+                <div v-if="greetingPrefs.visible" class="atrio-setting-row">
+                  <b-icon icon="text" pack="mdi" size="is-20" />
+                  <span class="atrio-setting-label">
+                    {{ $t('Greeting text') }}
+                    <small class="atrio-setting-note">{{ $t('Greeting text hint') }}</small>
+                  </span>
+                  <b-input
+                    :aria-label="$t('Greeting text')" :value="greetingPrefs.customText"
+                    :placeholder="$t('Greeting text placeholder')" class="atrio-setting-text" maxlength="120"
+                    size="is-small" @update:model-value="setGreetingText"
+                  />
                 </div>
                 <div class="atrio-setting-row is-hidden-touch">
                   <b-icon icon="arrow-expand-horizontal" pack="mdi" size="is-20" />
