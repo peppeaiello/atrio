@@ -43,9 +43,23 @@ export default {
 			plan: { ...NO_PLAN },
 			// The backup whose restore choices are shown: "dest/id"
 			restoring: '',
+			// A folder from Files waiting for the list, while another backup runs
+			pending: '',
 			run: backupRun,
 			install: INSTALL,
 		}
+	},
+	watch: {
+		// Opened while another backup ran: the list is read once it is done
+		async busy(now) {
+			if (now || !this.open || !this.installed)
+				return
+			if (!this.index) this.index = await loadFolderIndex()
+			if (this.pending) {
+				this.choose(this.pending)
+				this.pending = ''
+			}
+		},
 	},
 	computed: {
 		busy() {
@@ -95,15 +109,23 @@ export default {
 			if (!this.installed) return
 			// The last known list right away, measured again in the background
 			this.index = await loadFolderIndex()
-			if (typeof path === 'string' && path) this.choose(path)
-			if (this.busy) return
+			// A folder from Files is taken once the list is known, so that what is typed meanwhile stays
+			let pending = typeof path === 'string' && path ? path : ''
+			if (pending && this.index) {
+				this.choose(pending)
+				pending = ''
+			}
+			if (this.busy) {
+				this.pending = pending
+				return
+			}
 			try {
 				this.index = await scanFolders()
 			}
 			catch (e) {
 				this.error = this.message(e)
 			}
-			if (typeof path === 'string' && path) this.choose(path)
+			if (pending) this.choose(pending)
 		},
 		close() {
 			this.open = false
@@ -224,7 +246,7 @@ export default {
 		removeBackup(folder, backup) {
 			this.$buefy.dialog.confirm({
 				title: this.$t('Delete this backup?'),
-				message: this.$t('The backup of {time} is deleted for good.', { time: this.when(backup.time) }),
+				message: this.$t('The backup of {time} is deleted for good.', { time: escapeHtml(this.when(backup.time)) }),
 				confirmText: this.$t('Delete'),
 				cancelText: this.$t('Cancel'),
 				type: 'is-danger',

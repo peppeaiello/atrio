@@ -25,6 +25,26 @@ done
 ln -s "$photos" "$SB/docs/link"
 request ACTION=folder-save APP=atrio "FOLDER=$SB/docs/link"
 check "nor a symbolic link" is "$MESSAGE" "This folder cannot be backed up: choose another one"
+# A link in the middle of the path would lead into a folder that is not allowed, such as the apps'
+ln -s "$ATRIO_APPS" "$SB/docs/apps-link"
+request ACTION=folder-save APP=atrio "FOLDER=$SB/docs/apps-link/web"
+check "nor a folder reached through a link" is "$MESSAGE" "This folder cannot be backed up: choose another one"
+for bad in /var/lib/dpkg /var/log /tmp/x /snap/x; do
+	request ACTION=folder-save APP=atrio "FOLDER=$bad"
+	check "$bad belongs to the system" is "$MESSAGE" "This folder cannot be backed up: choose another one"
+done
+# A backslash in a name is part of the name, for tar and for the checks of a restore
+odd="$SB/docs/a\\b"
+mkdir -p "$odd"
+echo odd > "$odd/f.txt"
+request ACTION=folder-save APP=atrio "FOLDER=$odd"
+oddjob=$(printf '%s' "$odd" | sha256sum | cut -c1-12)
+request ACTION=folder-backup APP=atrio JOB="$oddjob"
+check "a folder with a backslash in its name is backed up" is "$STATE_" done
+request ACTION=folder-restore APP=atrio JOB="$oddjob" ID="$ID" MODE=copy
+# The status file is JSON: its backslashes come doubled
+check "and restored" is "$(cat "$(printf '%s' "$MESSAGE" | sed 's/\\\\/\\/g')/f.txt" 2>/dev/null)" odd
+request ACTION=folder-remove APP=atrio JOB="$oddjob"
 
 request ACTION=folder-backup APP=atrio JOB="$job"
 check "a backup by hand is made" is "$STATE_" done
@@ -49,8 +69,12 @@ check "nothing is left behind" is "$(ls -A "$SB/docs" | grep -c atrio-restore)" 
 request ACTION=folder-restore APP=atrio JOB="$job" ID="$first" MODE=copy
 check "a second copy gets a name of its own" is "$(ls -d "$SB/docs/My Photos (backup "* | wc -l)" 2
 
+# A restore stopped halfway left this behind: the next restore there removes it
+mkdir -p "$SB/docs/.atrio-restore-abc123/My Photos"
+touch -d '2 hours ago' "$SB/docs/.atrio-restore-abc123"
 request ACTION=folder-restore APP=atrio JOB="$job" ID="$first" MODE=replace
 check "a backup is restored in place" is "$STATE_" done
+check "what an old restore left behind is cleaned up" test ! -e "$SB/docs/.atrio-restore-abc123"
 check "the folder is as it was" is "$(cat "$photos/2026/a.txt")" first
 check "without the newer files" test ! -e "$photos/new.txt"
 aside=$(ls -d "$SB/docs/My Photos (before restore "* 2>/dev/null | head -n 1)
@@ -90,6 +114,8 @@ sed -i 's|^MOUNT=.*|MOUNT=/nowhere|' "$ATRIO_STATE/folder-jobs/$job"
 run_due
 check "a folder whose disk is gone is not backed up" is "$(backups)" 3
 check "the failure is recorded" has "$ATRIO_STATE/folder-jobs/$job" "LAST_ERROR=The folder is not there: plug in its disk or reconnect it"
+request ACTION=folder-restore APP=atrio JOB="$job" ID="$first" MODE=copy
+check "nor is a backup restored onto the main disk in its place" is "$MESSAGE" "The place of this folder is not there: plug in its disk or reconnect it"
 printf 'ENABLED=1\nSERVICE=ntfy\nURL=https://ntfy.example\nTOPIC=t\nDISK=0\nHEALTH=0\nTEMP=0\nAPPS=0\nAPP_UPDATES=0\nUPDATES=0\nLANGUAGE=en\n' > "$ATRIO_STATE/alerts.conf"
 bash "$SCRIPTS/atrio-alerts" >/dev/null 2>&1
 check "and sends a push alert" has "$FAKE_DOCKER/sent.log" "The automatic backup of $photos failed: The folder is not there"

@@ -793,12 +793,11 @@ export default {
       if (this.savingSettings)
         return
       if (this.composeMode) {
-        if (!composeIsValid(this.composeText)) {
-          this.$buefy.toast.open({ message: this.$t('Fix the errors in the compose file first'), type: 'is-danger' })
+        const text = this.readyCompose()
+        if (!text)
           return
-        }
         this.savingSettings = true
-        this.sendSettings(prepareCompose(this.composeText))
+        this.sendSettings(text)
         return
       }
       this.savingSettings = true
@@ -909,12 +908,24 @@ export default {
       this.enterCompose()
       this.$nextTick(() => this.$refs.composeEditor?.openConverter())
     },
-    installFromCompose() {
+    // The compose file as CasaOS gets it, or null after telling what is wrong
+    readyCompose() {
       if (!composeIsValid(this.composeText)) {
         this.$buefy.toast.open({ message: this.$t('Fix the errors in the compose file first'), type: 'is-danger' })
-        return
+        return null
       }
-      const text = prepareCompose(this.composeText)
+      try {
+        return prepareCompose(this.composeText)
+      }
+      catch (e) {
+        this.$buefy.toast.open({ message: escapeHtml(e.message), type: 'is-danger' })
+        return null
+      }
+    },
+    installFromCompose() {
+      const text = this.readyCompose()
+      if (!text)
+        return
       this.isLoading = true
       this.installComposeApp(text, parse(text)?.name)
         .finally(() => {

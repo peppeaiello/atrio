@@ -517,6 +517,8 @@ on_exit() {
 	exit "$code"
 }
 trap on_exit EXIT
+# Bash skips the EXIT trap when killed: a stop or a timeout must still start the apps again and clean up
+trap 'exit 143' TERM INT HUP
 
 # running, or the reason it is not: the app has to stay up for HEALTH_STEADY seconds
 app_health() {
@@ -797,7 +799,7 @@ make_archive() {
 		members+=("${folder#/}")
 	done
 	# Encrypted with the server's key: a backup on a share or a cloud holds the app's data and passwords
-	tar --numeric-owner --xattrs --exclude="${DEST#/}" -czf - -C / -- "${members[@]}" 2>/dev/null \
+	tar --numeric-owner --xattrs --no-unquote --exclude="${DEST#/}" -czf - -C / -- "${members[@]}" 2>/dev/null \
 		| openssl enc -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -salt -pass "file:$KEY" -out "$TMP_ARCHIVE" 2>/dev/null
 	local codes=("${PIPESTATUS[@]}")
 	# tar 1: a file changed while reading, which a stopped app does not do to its own data
@@ -901,13 +903,14 @@ archive_is_safe() {
 	local archive="$1" list
 	shift
 	list=$(plain_archive "$archive" | LC_ALL=C tar --quoting-style=literal -tvzf - 2>/dev/null) || return 1
-	printf '%s\n' "$list" | LC_ALL=C awk -v prefixes="$(printf '%s\n' "$@")" '
+	# Through the environment: awk -v would read backslashes in a folder name as escapes
+	printf '%s\n' "$list" | PREFIXES="$(printf '%s\n' "$@")" LC_ALL=C awk '
 		function inside(path,   i) {
 			if (path == "" || path ~ /^\// || path ~ /(^|\/)\.\.(\/|$)/) return 0
 			for (i = 1; i <= n; i++) if (p[i] != "" && (path == p[i] || index(path, p[i] "/") == 1)) return 1
 			return 0
 		}
-		BEGIN { n = split(prefixes, p, "\n"); bad = 0; links = 0; count = 0 }
+		BEGIN { n = split(ENVIRON["PREFIXES"], p, "\n"); bad = 0; links = 0; count = 0 }
 		{
 			# A line that is not a listing entry comes from a name with a line break in it
 			if ($0 !~ /^[-dlhp][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT][-rwxsStT]/) { bad = 1; next }
@@ -1279,7 +1282,12 @@ folder_allowed() {
 	allowed_folder "$1" || return 1
 	case "$1" in
 		"$APPS"|"$APPS"/*|"$STATE"|"$STATE"/*) return 1 ;;
+		# The volumes of apps can be backed up; the rest of /var, /tmp and /snap belongs to the system
+		/var/lib/docker/volumes/*) ;;
+		/var/*|/tmp|/tmp/*|/snap|/snap/*) return 1 ;;
 	esac
+	# A symbolic link anywhere in the path could lead past every check above: the path must be the real one
+	[ "$(realpath -m -- "$1" 2>/dev/null)" = "$1" ] || return 1
 	while IFS=$'\t' read -r known _; do
 		[ -n "$known" ] || continue
 		case "$1/" in "$known"/*) return 1 ;; esac
@@ -1463,7 +1471,8 @@ make_folder_archive() {
 	done < <(known_folders)
 
 	write_status running archiving
-	tar --numeric-owner --xattrs "${excludes[@]}" -czf - -C / -- "${path#/}" 2>/dev/null \
+	# --no-unquote: a backslash in a folder name is part of the name
+	tar --numeric-owner --xattrs --no-unquote "${excludes[@]}" -czf - -C / -- "${path#/}" 2>/dev/null \
 		| openssl enc -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -salt -pass "file:$KEY" -out "$TMP_ARCHIVE" 2>/dev/null
 	local codes=("${PIPESTATUS[@]}")
 	# tar 1: a file changed while reading; the folder is in use, and the rest is saved
@@ -1556,6 +1565,14 @@ do_folder_restore() {
 	parent=$(dirname "$path")
 	base=$(basename "$path")
 	timeout 20 test -d "$parent" || fail "The place of this folder is not there: plug in its disk or reconnect it"
+	# A disk that is not plugged in leaves an empty folder on the main disk: nothing is restored there
+	local mount
+	mount=$(conf_value "$FOLDER_JOBS/$JOB" MOUNT)
+	if [ -n "$mount" ] && [ "$mount" != "$path" ] && [ "$(mount_of "$parent")" != "$mount" ]; then
+		fail "The place of this folder is not there: plug in its disk or reconnect it"
+	fi
+	# What a restore stopped halfway left behind (the server turned off, for example)
+	find "$parent" -maxdepth 1 -name '.atrio-restore-??????' -type d -mmin +60 -exec rm -rf -- {} + 2>/dev/null
 	if [ "$MODE" = replace ]; then
 		[ "$(mount_of "$path")" = "$path" ] && fail "This folder is a disk of its own and cannot be replaced: restore the backup as a copy"
 		# Renaming the folder would take the backups with it

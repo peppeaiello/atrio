@@ -2,7 +2,7 @@
 //   pnpm test:ui        or        node --test tests/ui
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { checkCompose, composeIsValid, fromDockerRun, prepareCompose } from '../../src/plugins/composeFile.js'
+import { checkCompose, composeIsValid, fromDockerRun, hasServices, prepareCompose } from '../../src/plugins/composeFile.js'
 
 const messages = text => checkCompose(text).map(p => p.message)
 const lineOf = (text, problem) => text.slice(0, problem.from).split('\n').length
@@ -121,4 +121,61 @@ test('prepareCompose adds what CasaOS needs and keeps the rest', () => {
 test('a new file from docker run starts with its name', () => {
   const { text } = fromDockerRun('docker run -d nginx')
   assert.match(text, /^name: nginx\nservices:/)
+})
+
+test('variables, relative folders and aliases are valid compose', () => {
+  assert.deepEqual(messages('services:\n  a:\n    image: x\n    ports:\n      - "${PORT:-8080}:80"\n      - "8081:${P}"\n      - published: ${PP}\n        target: 80\n    volumes:\n      - ${DATA:-/data}:/data\n'), [])
+  assert.deepEqual(checkCompose('services:\n  a:\n    image: x\n    volumes:\n      - .:/app\n').map(p => p.severity), ['warning'])
+  const anchors = `x-common: &common
+  image: nginx
+  restart: unless-stopped
+  environment: &env
+    TZ: Europe/Rome
+x-ports: &ports
+  - "80:80"
+services:
+  a: &a
+    <<: *common
+    ports: *ports
+  b:
+    <<: *common
+    environment:
+      <<: *env
+      EXTRA: "1"
+  c: *a
+`
+  assert.deepEqual(messages(anchors), ['Port {port} is used twice in this file'])
+})
+
+test('the same port on two addresses is not a repeat', () => {
+  assert.deepEqual(messages('services:\n  a:\n    image: x\n    ports:\n      - 127.0.0.1:3306:3306\n      - 3306:3306\n'), [])
+  assert.deepEqual(messages('services:\n  a:\n    image: x\n    ports:\n      - 127.0.0.1:3306:3306\n      - 127.0.0.1:3306:3306\n'), ['Port {port} is used twice in this file'])
+})
+
+test('prepareCompose replaces an empty or plain x-casaos', () => {
+  for (const casaos of ['x-casaos:\n', 'x-casaos: foo\n']) {
+    const text = prepareCompose(`services:\n  a:\n    image: x\n${casaos}`)
+    assert.match(text, /main: a/)
+    assert.ok(composeIsValid(text))
+  }
+})
+
+test('docker run keeps ; and # inside quotes', () => {
+  const { text, added } = fromDockerRun('docker run -d -e "PASS=a;b#c" -e P=\'x #y\' -p 80:80 nginx sh -c "echo a; echo b" # a comment\ndocker run -d redis')
+  assert.deepEqual(added, ['nginx', 'redis'])
+  assert.match(text, /PASS=a;b#c/)
+  assert.match(text, /x #y/)
+  assert.match(text, /echo a; echo b/)
+  assert.doesNotMatch(text, /a comment/)
+})
+
+test('a docker run command that gives no usable service is refused', () => {
+  assert.throws(() => fromDockerRun('docker run -d "x<img src=a onerror=alert(1)>"'), /could not be read/)
+})
+
+test('hasServices reads the file, comments and flow style too', () => {
+  assert.ok(hasServices('services: # mine\n  a:\n    image: x\n'))
+  assert.ok(hasServices('services: {a: {image: x}}\n'))
+  assert.ok(!hasServices('name: x\n'))
+  assert.ok(!hasServices('services: ['))
 })

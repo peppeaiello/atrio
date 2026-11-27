@@ -3,7 +3,8 @@
 // setting Docker Compose knows, checked as you type with the problem marked on its line, and docker run
 // commands turned into services. What is written here is what CasaOS gets, see plugins/composeFile.js.
 import { defineAsyncComponent } from 'vue'
-import { checkCompose, fromDockerRun } from '@/plugins/composeFile'
+import { checkCompose, fromDockerRun, hasServices } from '@/plugins/composeFile'
+import { escapeHtml } from '@/plugins/appBackup'
 import '@/components/files/messages.js'
 
 export default {
@@ -44,7 +45,7 @@ export default {
       return this.problems.filter(problem => problem.severity === 'warning')
     },
     hasServices() {
-      return /^services:\s*\n\s+\S/m.test(this.modelValue)
+      return hasServices(this.modelValue)
     },
   },
   methods: {
@@ -78,7 +79,7 @@ export default {
         this.$emit('update:modelValue', text)
         this.converting = false
         this.command = ''
-        this.$buefy.toast.open({ message: this.$t('Added from docker run: {services}', { services: added.join(', ') }), type: 'is-success' })
+        this.$buefy.toast.open({ message: this.$t('Added from docker run: {services}', { services: escapeHtml(added.join(', ')) }), type: 'is-success' })
       }
       catch (e) {
         this.convertError = this.$t(e.message, e.values)
