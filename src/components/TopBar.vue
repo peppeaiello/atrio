@@ -681,11 +681,11 @@ export default {
                 </div>
                 <!-- On a row of its own, like the size slider: next to the label it would be too narrow on a phone -->
                 <div v-if="greetingPrefs.visible" class="atrio-setting-row atrio-setting-slider">
-                  <b-input
-                    :has-counter="false" :model-value="greetingPrefs.customText"
-                    :placeholder="$t('Greeting text placeholder', { name: '{name}' })" aria-labelledby="atrio-greeting-text-label"
-                    expanded maxlength="120" size="is-small" @update:model-value="setGreetingText"
-                  />
+                  <input
+                    :placeholder="$t('Greeting text placeholder', { name: '{name}' })" :value="greetingPrefs.customText"
+                    aria-labelledby="atrio-greeting-text-label" class="atrio-setting-input" maxlength="120" type="text"
+                    @input="setGreetingText($event.target.value)"
+                  >
                 </div>
                 <div class="atrio-setting-row is-hidden-touch">
                   <b-icon icon="arrow-expand-horizontal" pack="mdi" size="is-20" />
@@ -1403,6 +1403,28 @@ export default {
 			color: #0b1120;
 			font-weight: 700;
 		}
+	}
+}
+
+.atrio-setting-input {
+	flex: 1;
+	min-width: 0;
+	height: 2.25rem;
+	padding: 0 0.75rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 0.75rem;
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--atrio-text);
+	font: inherit;
+	font-size: 0.875rem;
+	outline: none;
+
+	&::placeholder {
+		color: var(--atrio-text-muted);
+	}
+
+	&:focus-visible {
+		border-color: var(--atrio-accent);
 	}
 }
 
