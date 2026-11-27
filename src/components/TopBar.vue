@@ -673,14 +673,18 @@ export default {
                 </div>
                 <div v-if="greetingPrefs.visible" class="atrio-setting-row">
                   <b-icon icon="text" pack="mdi" size="is-20" />
-                  <span class="atrio-setting-label">
+                  <span id="atrio-greeting-text-label" class="atrio-setting-label">
                     {{ $t('Greeting text') }}
-                    <small class="atrio-setting-note">{{ $t('Greeting text hint') }}</small>
+                    <!-- {name} stays as it is: it is what the user types, not a value to fill in -->
+                    <small class="atrio-setting-note">{{ $t('Greeting text hint', { name: '{name}' }) }}</small>
                   </span>
+                </div>
+                <!-- On a row of its own, like the size slider: next to the label it would be too narrow on a phone -->
+                <div v-if="greetingPrefs.visible" class="atrio-setting-row atrio-setting-slider">
                   <b-input
-                    :aria-label="$t('Greeting text')" :value="greetingPrefs.customText"
-                    :placeholder="$t('Greeting text placeholder')" class="atrio-setting-text" maxlength="120"
-                    size="is-small" @update:model-value="setGreetingText"
+                    :has-counter="false" :model-value="greetingPrefs.customText"
+                    :placeholder="$t('Greeting text placeholder', { name: '{name}' })" aria-labelledby="atrio-greeting-text-label"
+                    expanded maxlength="120" size="is-small" @update:model-value="setGreetingText"
                   />
                 </div>
                 <div class="atrio-setting-row is-hidden-touch">

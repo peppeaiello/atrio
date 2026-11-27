@@ -23,6 +23,8 @@ What changes in each Atrio release. The section for a version is also the text o
   section, every release ends with one line about Ko-fi, and the Atrio row in Settings says how to support it. After
   an update, once and only once in each browser, a small message at the bottom mentions Ko-fi; closed, it does not
   come back.
+- **Custom greeting** (#16, by @YuuuHG): the greeting above the dashboard can be your own line, set in Settings →
+  Dashboard, with `{name}` for the user name. Left empty, it still changes with the time of day.
 
 ## 0.1.31 — 2026-11-27
 

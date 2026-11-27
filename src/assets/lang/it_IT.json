@@ -1239,5 +1239,8 @@
   "Compose file": "File compose",
   "Atrio is now on version {version}. It is free and made by one person: if it is useful to you, you can support it on Ko-fi.": "Atrio ora è alla versione {version}. È gratuito e fatto da una persona sola: se ti è utile, puoi sostenerlo su Ko-fi.",
   "Support on Ko-fi": "Sostieni su Ko-fi",
-  "Atrio is free and made by one person. If you find it useful, you can support it on Ko-fi.": "Atrio è gratuito e fatto da una persona sola. Se ti è utile, puoi sostenerlo su Ko-fi."
+  "Atrio is free and made by one person. If you find it useful, you can support it on Ko-fi.": "Atrio è gratuito e fatto da una persona sola. Se ti è utile, puoi sostenerlo su Ko-fi.",
+  "Greeting text": "Saluto personalizzato",
+  "Greeting text hint": "Lascia vuoto per il saluto che cambia con l'ora. Usa {name} per il nome utente.",
+  "Greeting text placeholder": "es. Ciao {name}, buona giornata!"
 }
