@@ -255,6 +255,23 @@ if [ ! -f "$TMP/www/index.html" ] || [ ! -f "$TMP/www/atrio-version.json" ]; the
 fi
 
 latest=$(installed_version "$TMP/www")
+newest=$(cat "$STATE/highest-version" 2>/dev/null || true)
+# After a CasaOS update, GitHub may only have a release older than the one that was installed (from
+# a local build, or a release withdrawn since): the copy kept here of that one goes back
+if [ "$MODE" = "--restore" ] && [ -n "$newest" ] && [ -n "$latest" ] && [ "$latest" != "$newest" ] &&
+	[ "$(printf '%s\n%s\n' "$latest" "$newest" | sort -V | tail -n 1)" = "$newest" ]; then
+	kept=$(tar -xzOf "$LOCAL/atrio.tar.gz" --wildcards '*atrio-version.json' 2>/dev/null |
+		sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' || true)
+	if [ "$kept" = "$newest" ]; then
+		echo "The release on GitHub ($latest) is older than the installed one: restoring Atrio $newest"
+		use_local_copy
+		(cd "$TMP" && sha256sum -c atrio.tar.gz.sha256 >/dev/null)
+		rm -rf "$TMP/www"
+		mkdir "$TMP/www"
+		tar -xzf "$TMP/atrio.tar.gz" -C "$TMP/www" --no-same-owner --no-same-permissions
+		latest=$newest
+	fi
+fi
 # A CasaOS update can leave our atrio-version.json behind, so --restore always installs
 if [ "$latest" = "$(installed_version "$WWW")" ] && [ -z "$MODE" ]; then
 	# The web UI is current; the services may not be, after a failed try or an older updater
@@ -272,7 +289,6 @@ fi
 # restore compares with the newest release ever installed here instead (the same one is fine).
 installed=$(installed_version "$WWW")
 HIGHEST="$STATE/highest-version"
-newest=$(cat "$HIGHEST" 2>/dev/null || true)
 if [ -z "$MODE" ] && [ -n "$installed" ] && [ -n "$latest" ] &&
 	[ "$(printf '%s\n%s\n' "$latest" "$installed" | sort -V | tail -n 1)" = "$installed" ]; then
 	fail "The release on GitHub ($latest) is older than the installed one ($installed): nothing was changed"

@@ -100,6 +100,22 @@ check "a restore refuses a release older than one installed before" is "$(status
 echo 9.9.9 > "$ATRIO_STATE/highest-version"
 ATRIO_RESTORE_DELAY=0 bash "$SCRIPTS/atrio-update" --restore >/dev/null 2>&1
 check "and puts back the same release" has "$ATRIO_WWW/index.html" Atrio
+
+# The release on GitHub is older than the one installed (installed from a local build): the restore
+# puts back the copy kept of the installed one
+cp "$ATRIO_STATE"/release/atrio.tar.gz* "$SB/"
+mkdir "$SB/newer"
+cp "$SB/build/index.html" "$SB/newer/"
+echo '{"version":"10.0.0"}' > "$SB/newer/atrio-version.json"
+tar -czf "$ATRIO_STATE/release/atrio.tar.gz" -C "$SB/newer" .
+(cd "$ATRIO_STATE/release" && sha256sum atrio.tar.gz > atrio.tar.gz.sha256)
+echo 10.0.0 > "$ATRIO_STATE/highest-version"
+echo '<html>CasaOS</html>' > "$ATRIO_WWW/index.html"
+ATRIO_RESTORE_DELAY=0 bash "$SCRIPTS/atrio-update" --restore >/dev/null 2>&1
+check "with an older release on GitHub, the installed one is restored" is "$(status)" "Atrio 10.0.0 installed"
+check "from the copy kept of it" has "$ATRIO_WWW/atrio-version.json" 10.0.0
+cp "$SB"/atrio.tar.gz* "$ATRIO_STATE/release/"
+echo 9.9.9 > "$ATRIO_STATE/highest-version"
 echo '{"version":"10.0.0"}' > "$ATRIO_WWW/atrio-version.json"
 
 # Another update running: this one waits, and when it gives up leaves no request for the path unit

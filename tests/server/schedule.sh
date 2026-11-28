@@ -71,4 +71,40 @@ touch -d '8 days ago' "$ATRIO_STATE/schedules/other"
 bash "$SCRIPTS/atrio-backup" --scheduled >/dev/null 2>&1
 check "the schedule of an uninstalled app goes away after a week" test ! -e "$ATRIO_STATE/schedules/other"
 check "and its list too, as it has no backups" test ! -e "$ATRIO_STATE/backups/other.json"
+
+# A request that comes while a run holds the lock without saying "running" (between two automatic
+# backups, asking the registries): the web UI drops a request after 30 seconds of that, so the one
+# waiting says it is waiting, also after the run writes its status again
+status_line() { printf '{"state":"%s","action":"backup","app":"web","id":"20260101-040000","step":"","message":"","token":"","time":"x"}\n' "$1" > "$ATRIO_STATE/backup-status.json"; }
+status_line done
+( flock 9; sleep 9 ) 9>"$ATRIO_STATE/backup.lock" &
+holder=$!
+sleep 0.5
+printf '%s\n' ACTION=scan APP=web TOKEN=waits > "$ATRIO_STATE/backup-request"
+bash "$SCRIPTS/atrio-backup" >/dev/null 2>&1 &
+waiter=$!
+sleep 3
+read_status
+check "a waiting request shows the service as running" is "$STATE_" running
+check "and keeps what the run reads there" is "$ID" 20260101-040000
+status_line done
+sleep 3
+read_status
+check "also after the run reports again" is "$STATE_" running
+wait "$holder" "$waiter"
+check "the request is then done" has "$ATRIO_STATE/backup-status.json" '"state":"done","action":"scan","app":"web","id":"","step":"","message":"","token":"waits"'
+
+# The page gave up and removed its request while it waited: the status does not stay on "running"
+status_line done
+( flock 9; sleep 5 ) 9>"$ATRIO_STATE/backup.lock" &
+holder=$!
+sleep 0.5
+printf '%s\n' ACTION=scan APP=web TOKEN=gone > "$ATRIO_STATE/backup-request"
+bash "$SCRIPTS/atrio-backup" >/dev/null 2>&1 &
+waiter=$!
+sleep 3
+rm -f "$ATRIO_STATE/backup-request"
+wait "$holder" "$waiter"
+read_status
+check "a request removed while waiting leaves the service idle" is "$STATE_" idle
 finish
