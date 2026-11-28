@@ -85,9 +85,30 @@ fi
 # One run at a time. A request that comes during an automatic backup waits for it (the web UI
 # shows that): leaving now would leave the request file, and the path unit would start us again
 # at once, over and over. A scheduled run started by another one already holds the lock.
+# The run that holds the lock does not always say "running" (between two automatic backups, asking
+# the registries), and the web UI drops a request that is not taken for 30 seconds: while a request
+# waits, "done" or "error" becomes "running". The other fields stay: the scheduled run reads the id.
+show_waiting() {
+	(
+		flock 8
+		[ -f "$REQUEST" ] && [ -f "$STATUS" ] || exit 0
+		sed -E 's/"state":"(idle|done|error)"(.*)"step":"[^"]*"/"state":"running"\2"step":"waiting"/' "$STATUS" > "$STATUS.wait"
+		mv "$STATUS.wait" "$STATUS"
+	) 8>"$STATE/status.lock"
+}
+
 if [ -z "${ATRIO_BACKUP_LOCKED:-}" ]; then
 	exec 9>"$STATE/backup.lock"
-	flock 9
+	if [ $# -eq 0 ]; then
+		until flock -w 2 9; do show_waiting; done
+		# The request was removed while it waited: nothing is going to replace that "running"
+		if ! [ -f "$REQUEST" ] && grep -q '"step":"waiting"' "$STATUS" 2>/dev/null; then
+			sed 's/"state":"running"/"state":"idle"/; s/"step":"waiting"/"step":""/' "$STATUS" > "$STATUS.wait"
+			mv "$STATUS.wait" "$STATUS"
+		fi
+	else
+		flock 9
+	fi
 fi
 
 json() {
@@ -135,9 +156,13 @@ log_result() {
 
 # The web UI follows the operation through this file
 write_status() {
-	printf '{"state":"%s","action":"%s","app":"%s","id":"%s","step":"%s","message":"%s","token":"%s","time":"%s"}\n' \
-		"$1" "$ACTION" "$APP" "$ID" "$2" "$(json "${3:-}")" "$TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
-	mv "$STATUS.tmp" "$STATUS"
+	# Not while a waiting request rewrites it (show_waiting)
+	(
+		flock 8
+		printf '{"state":"%s","action":"%s","app":"%s","id":"%s","step":"%s","message":"%s","token":"%s","time":"%s"}\n' \
+			"$1" "$ACTION" "$APP" "$ID" "$2" "$(json "${3:-}")" "$TOKEN" "$(date -Iseconds)" > "$STATUS.tmp"
+		mv "$STATUS.tmp" "$STATUS"
+	) 8>"$STATE/status.lock"
 	case "$1" in
 		done) log_result ok "${3:-}" ;;
 		error) log_result error "${3:-}" ;;
