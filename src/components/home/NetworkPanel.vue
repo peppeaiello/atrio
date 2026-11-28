@@ -9,6 +9,8 @@ import { backupsInstalled, measureNetwork } from '@/plugins/appBackup'
 import { loadDayTraffic } from '@/plugins/history'
 
 const REFRESH_MS = 6000
+// After a failed measure (the server busy, say), a longer wait before the next one
+const RETRY_MS = 15000
 // Four series at most on the bar, then "Others": validated for colour blindness on the dark panel
 const COLORS = ['#0aa5c4', '#8b5cf6', '#d97706', '#db2777']
 const REST = '#475569'
@@ -151,7 +153,7 @@ export default {
 				if (this.open) this.measure()
 				return
 			}
-			if (this.open && !this.error) this.timer = setTimeout(this.measure, REFRESH_MS)
+			if (this.open) this.timer = setTimeout(this.measure, this.error ? RETRY_MS : REFRESH_MS)
 		},
 		title(app) {
 			return this.grid[app]?.title || app

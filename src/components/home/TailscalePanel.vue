@@ -6,7 +6,7 @@
 import api from '@/service/api.js'
 import { copyText } from '@/plugins/copyText'
 import { restoreFocus, trapTab } from '@/plugins/focusTrap'
-import { backupsInstalled, escapeHtml, lastTailscale, tailscale } from '@/plugins/appBackup'
+import { backupRun, backupsInstalled, escapeHtml, lastTailscale, tailscale } from '@/plugins/appBackup'
 import QrCode from './QrCode.vue'
 
 // While a sign-in is waiting, how often to look whether it is done
@@ -136,6 +136,14 @@ export default {
 		async refresh() {
 			// An action under way: it looks again itself when it ends (follow)
 			if (this.loading || this.busy) return
+			// A backup or an update holds the service: show what it found last time, look again later
+			if (backupRun.app) {
+				this.info = (await lastTailscale()) || this.info
+				this.error = ''
+				clearTimeout(this.timer)
+				if (this.open) this.timer = setTimeout(this.refresh, WAIT_POLL_MS)
+				return
+			}
 			this.loading = true
 			try {
 				this.info = await tailscale('status')

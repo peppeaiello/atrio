@@ -547,21 +547,27 @@ export default {
 			this.loadUpdates()
 		},
 		async loadUpdates () {
+			// Calls can overlap and end out of order: only the latest one writes its results
+			const run = this.updatesRun = (this.updatesRun || 0) + 1
 			try {
 				const res = await this.$openAPI.appManagement.compose.myComposeAppList()
 				const apps = Object.entries(res.data.data || {})
 				// Atrio: apps on "latest" get theirs from the digests the server checks every 6 hours
 				const digests = await loadDigestUpdates()
-				this.health = await loadHealth()
+				const health = await loadHealth()
 				// Apps whose updates were set to be ignored show no badge
 				const ignored = await loadIgnoredUpdates()
-				this.ignoredUpdates = ignored
-				this.autoUpdates = await loadAutoUpdates()
-				this.updates = Object.fromEntries(await Promise.all(apps.map(async ([name, app]) => [
+				const auto = await loadAutoUpdates()
+				const updates = Object.fromEntries(await Promise.all(apps.map(async ([name, app]) => [
 					name,
 					!ignored.includes(name) && ((Boolean(app.update_available) && !(await findDowngrade(this.$openAPI, name, app.compose)))
 						|| digests[name]?.state === 'update'),
 				])))
+				if (run !== this.updatesRun) return
+				this.health = health
+				this.ignoredUpdates = ignored
+				this.autoUpdates = auto
+				this.updates = updates
 			} catch (e) {
 				// Kept as it was: checked again in a minute
 			}
