@@ -32,9 +32,12 @@ check "a weekly schedule is saved" has "$ATRIO_STATE/schedules/web" "DAY=3"
 slot=$(sed -n 's/^SLOT=//p' "$ATRIO_STATE/schedules/web")
 check "its first time is a Wednesday at 04:30" is "$(date -d "@$slot" '+%u %H:%M')" "3 04:30"
 # Summer time starts today at 02:00 (a zone made up for the test): 02:30 does not exist today, and
-# the backup at that time runs once the clock has jumped, instead of the schedule being refused
-today=$(( 10#$(TZ=XST-1 date +%j) - 1 ))
-gap="XST-1XDT,$today/2,$(( (today + 100) % 365 ))/3"
+# the backup at that time runs once the clock has jumped, instead of the schedule being refused.
+# The zone is set so that it is about noon there now: near midnight, the jump to summer time would
+# move its clock to the next day, and "today" would no longer be the day of the jump
+offset=$(( 10#$(date -u +%H) - 12 ))
+today=$(( 10#$(TZ="XST$offset" date +%j) - 1 ))
+gap="XST${offset}XDT,$today/2,$(( (today + 100) % 365 ))/3"
 TZ="$gap" request ACTION=schedule APP=web EVERY=daily TIME=02:30 KEEP=2
 check "a time the clock skips today is taken" is "$STATE_" done
 slot=$(sed -n 's/^SLOT=//p' "$ATRIO_STATE/schedules/web")

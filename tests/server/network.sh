@@ -30,8 +30,10 @@ check "an app on the host's network has no rate in the first sample either" is "
 dev 101 4000000 800000 > "$ATRIO_PROC/101/net/dev"
 sed -i "s/^apps_net=\([0-9]*\)/apps_net=$(( $(date +%s) - 300 ))/" "$ATRIO_STATE/alerts-memory"
 alerts
-check "an app's download over 5 minutes, exact, without its loopback" is "$(apps_row web 5)" 10000
-check "and its upload" is "$(apps_row web 6)" 2000
+# 300 seconds, or 301 when the clock ticks between the line above and the run (on a slow runner)
+within() { [ -n "$1" ] && [ "$1" -ge "$2" ] && [ "$1" -le "$3" ]; }
+check "an app's download over 5 minutes, without its loopback" within "$(apps_row web 5)" 9900 10000
+check "and its upload" within "$(apps_row web 6)" 1980 2000
 check "an app with no traffic" is "$(apps_row media 5)" 0
 check "a container on another's network (network_mode: service) is not counted again" is "$(apps_row tunnel 5)" ""
 
