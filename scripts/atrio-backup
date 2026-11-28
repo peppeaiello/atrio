@@ -373,7 +373,7 @@ compose_env() {
 	done < "$CASAOS_ENV"
 }
 
-# Docker Compose: the plugin ("docker compose"), or else the older standalone docker-compose, which
+# Docker Compose: the plugin ("docker compose"), or else the standalone docker-compose, which
 # takes the same options for what is done here. CasaOS has compose built in and needs neither, so a
 # server may have none (Docker installed from the distribution's packages): backups, image checks and
 # the rest work without it. Restoring and updating apps recreate the containers and need it: then
@@ -393,13 +393,19 @@ find_compose() {
 	[ "${#COMPOSE[@]}" -gt 0 ] && return 0
 	if docker compose version >/dev/null 2>&1; then
 		COMPOSE=(docker compose)
-	elif command -v docker-compose >/dev/null && docker-compose version >/dev/null 2>&1; then
+	elif command -v docker-compose >/dev/null && standalone_is_new; then
 		COMPOSE=(docker-compose)
 	elif own_compose_ok && "$COMPOSE_BIN" version >/dev/null 2>&1; then
 		COMPOSE=("$COMPOSE_BIN")
 	else
 		return 1
 	fi
+}
+
+# The distributions' docker-compose package can still be the old 1.x, which refuses the compose files
+# CasaOS writes (their top-level "name"): only version 2 or newer will do
+standalone_is_new() {
+	[[ "$(docker-compose version --short 2>/dev/null)" =~ ^v?([2-9]|[1-9][0-9])\. ]]
 }
 
 # The release file for this processor and its SHA-256 (from the release's checksums.txt). A 32-bit
@@ -824,7 +830,7 @@ make_archive() {
 		members+=("${folder#/}")
 	done
 	# Encrypted with the server's key: a backup on a share or a cloud holds the app's data and passwords
-	tar --numeric-owner --xattrs --no-unquote --exclude="${DEST#/}" -czf - -C / -- "${members[@]}" 2>/dev/null \
+	tar --numeric-owner --xattrs --no-unquote --no-wildcards --exclude="${DEST#/}" -czf - -C / -- "${members[@]}" 2>/dev/null \
 		| openssl enc -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -salt -pass "file:$KEY" -out "$TMP_ARCHIVE" 2>/dev/null
 	local codes=("${PIPESTATUS[@]}")
 	# tar 1: a file changed while reading, which a stopped app does not do to its own data
@@ -1496,8 +1502,8 @@ make_folder_archive() {
 	done < <(known_folders)
 
 	write_status running archiving
-	# --no-unquote: a backslash in a folder name is part of the name
-	tar --numeric-owner --xattrs --no-unquote "${excludes[@]}" -czf - -C / -- "${path#/}" 2>/dev/null \
+	# --no-unquote and --no-wildcards: a backslash or a [ in a folder name is part of the name
+	tar --numeric-owner --xattrs --no-unquote --no-wildcards "${excludes[@]}" -czf - -C / -- "${path#/}" 2>/dev/null \
 		| openssl enc -aes-256-cbc -pbkdf2 -iter "$KDF_ITER" -salt -pass "file:$KEY" -out "$TMP_ARCHIVE" 2>/dev/null
 	local codes=("${PIPESTATUS[@]}")
 	# tar 1: a file changed while reading; the folder is in use, and the rest is saved
@@ -1599,6 +1605,10 @@ do_folder_restore() {
 	# What a restore stopped halfway left behind (the server turned off, for example)
 	find "$parent" -maxdepth 1 -name '.atrio-restore-??????' -type d -mmin +60 -exec rm -rf -- {} + 2>/dev/null
 	if [ "$MODE" = replace ]; then
+		# A disk of its own that is not plugged in: its empty folder is not what to replace
+		if [ "$mount" = "$path" ] && [ "$(mount_of "$path")" != "$mount" ]; then
+			fail "The place of this folder is not there: plug in its disk or reconnect it"
+		fi
 		[ "$(mount_of "$path")" = "$path" ] && fail "This folder is a disk of its own and cannot be replaced: restore the backup as a copy"
 		# Renaming the folder would take the backups with it
 		local known

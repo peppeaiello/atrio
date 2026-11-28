@@ -5,5 +5,15 @@ if [ -e "$FAKE_DOCKER/no-standalone" ]; then
 	echo "docker-compose: command not found" >&2
 	exit 127
 fi
+# standalone-v1: the old 1.x, which gives its version and refuses CasaOS's compose files
+if [ "$*" = "version --short" ]; then
+	if [ -e "$FAKE_DOCKER/standalone-v1" ]; then echo 1.29.2; else echo 2.27.0; fi
+	exit 0
+fi
 echo "docker-compose $*" >> "$FAKE_DOCKER/calls.log"
+if [ -e "$FAKE_DOCKER/standalone-v1" ]; then
+	[ "$*" = version ] && exit 0
+	echo "'name' does not match any of the regexes: '^x-'" >&2
+	exit 1
+fi
 FAKE_STANDALONE=1 exec "$(dirname "$0")/docker" compose "$@"

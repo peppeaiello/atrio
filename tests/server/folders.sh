@@ -123,6 +123,28 @@ bash "$SCRIPTS/atrio-alerts" >/dev/null 2>&1
 check "once" is "$(grep -c "automatic backup of $photos" "$FAKE_DOCKER/sent.log")" 1
 sed -i "s|^MOUNT=.*|MOUNT=$(findmnt -n -o TARGET --target "$photos")|" "$ATRIO_STATE/folder-jobs/$job"
 
+# A folder that is a disk of its own, unplugged: its empty folder is not what to replace
+sed -i "s|^MOUNT=.*|MOUNT=$photos|" "$ATRIO_STATE/folder-jobs/$job"
+request ACTION=folder-restore APP=atrio JOB="$job" ID="$first" MODE=replace
+check "an unplugged disk of its own is not replaced" is "$MESSAGE" "The place of this folder is not there: plug in its disk or reconnect it"
+sed -i "s|^MOUNT=.*|MOUNT=$(findmnt -n -o TARGET --target "$photos")|" "$ATRIO_STATE/folder-jobs/$job"
+
+# A backup folder inside the folder is left out, also with characters that are wildcards elsewhere
+outer="$SB/docs/outer"
+mkdir -p "$outer/[nas]"
+echo kept > "$outer/kept.txt"
+request ACTION=destination APP=atrio "DEST=$outer/[nas]"
+request ACTION=folder-save APP=atrio "FOLDER=$outer"
+outerjob=$(printf '%s' "$outer" | sha256sum | cut -c1-12)
+request ACTION=folder-backup APP=atrio JOB="$outerjob"
+request ACTION=folder-backup APP=atrio JOB="$outerjob"
+request ACTION=folder-restore APP=atrio JOB="$outerjob" ID="$ID" MODE=copy
+outercopy=$(ls -d "$SB/docs/outer (backup "* 2>/dev/null | head -n 1)
+check "a folder holding the backup folder is backed up" is "$(cat "$outercopy/kept.txt" 2>/dev/null)" kept
+check "without the backups, whatever their folder is called" is "$(find "$outercopy" -name '*.tar.gz*' 2>/dev/null | wc -l)" 0
+request ACTION=folder-remove APP=atrio JOB="$outerjob"
+request ACTION=destination APP=atrio DEST=
+
 # The settings file brings the folders back on a new machine
 echo '{}' > "$ATRIO_STATE/settings-ui.json"
 request ACTION=export-settings APP=atrio "PASSWORD=long enough"
