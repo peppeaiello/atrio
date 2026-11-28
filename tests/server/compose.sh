@@ -21,6 +21,14 @@ check "and the app runs the new image" is "$(docker_query "state['containers'][0
 bash "$SCRIPTS/atrio-backup" --check-updates
 check "with a compose there, nothing is downloaded" test ! -e "$ATRIO_COMPOSE_DIR"
 
+# The old docker-compose 1.x refuses CasaOS's compose files: it counts as no compose at all
+touch "$FAKE_DOCKER/standalone-v1"
+: > "$FAKE_DOCKER/calls.log"
+ATRIO_COMPOSE_URL="file://$SB/no-release" request ACTION=update-app APP=web
+check "the old docker-compose 1.x is not used" lacks "$FAKE_DOCKER/calls.log" "docker-compose -p web"
+check "and Atrio's own copy is looked for instead" is "${MESSAGE%%,*}" "Docker Compose is not installed on the server"
+rm "$FAKE_DOCKER/standalone-v1"
+
 # Neither the plugin nor the standalone one, and no network: GitHub cannot be reached
 touch "$FAKE_DOCKER/no-standalone"
 docker_state "state['registry']['nginx:1.0'] = {'id': 'sha256:dddd', 'digest': 'sha256:' + '3' * 64}"
